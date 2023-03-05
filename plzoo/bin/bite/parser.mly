@@ -4,9 +4,11 @@
 
 %token TINT
 %token TBOOL
+%token TUNIT
 %token TARROW
 %token <Syntax.name> VAR
 %token <int> INT
+%token UNIT
 %token TRUE FALSE
 %token PLUS
 %token MINUS
@@ -19,9 +21,11 @@
 %token LPAREN RPAREN LBRACKET RBRACKET LBRACE RBRACE
 %token EFF
 %token DECL
+%token HANDLE
 %token LET IN END
 %token ASSIGN
 %token SEMI
+%token SEMISEMI
 %token EOF
 
 %start file
@@ -35,6 +39,7 @@
 %nonassoc EQUAL LESS
 %left PLUS MINUS
 %left TIMES
+%nonassoc ASSIGN
 %right TARROW
 %left SEMI
 
@@ -45,17 +50,17 @@ file:
     { [] }
   | e = expr EOF
     { [Expr e] }
-  | e = expr DOT lst = file
+  | e = expr SEMISEMI lst = file
     { Expr e :: lst }
   | eff = effect_declare EOF
     { [eff] }
-  | eff = effect_declare DOT lst = file
+  | eff = effect_declare SEMISEMI lst = file
     { eff :: lst }
 
 toplevel:
-  | e = expr DOT
+  | e = expr SEMISEMI
     { Expr e }
-  | eff = effect_declare DOT
+  | eff = effect_declare SEMISEMI
     { eff }
 
 expr: mark_position(plain_expr) { $1 }
@@ -74,6 +79,8 @@ plain_expr:
     { Equal (e1, e2) }
   | e1 = expr LESS e2 = expr
     { Less (e1, e2) }
+  | x = VAR ASSIGN e = expr
+    { Assign (x, e) }
   | IF e1 = expr THEN e2 = expr ELSE e3 = expr 
     { If (e1, e2, e3) }
   | FUN x = VAR LBRACKET es1 = names RBRACKET LBRACE hs = hd_params RBRACE LPAREN args = params RPAREN COLON t = ty UNDERSCORE LBRACKET es2 = names RBRACKET IS e = expr 
@@ -82,6 +89,8 @@ plain_expr:
     { Format.eprintf "let\n"; Let (x, e1, e2) }
   | DECL x = VAR ASSIGN e1 = expr IN e2 = expr END
     { Format.eprintf "let\n"; Decl (x, e1, e2) }
+  | HANDLE x = VAR COLON fname = VAR EQUAL e1 = expr IN e2 = expr END
+    { Format.eprintf "handle\n"; Handle (x, fname, e1, e2) }
   | e1 = expr SEMI e2 = expr
     { Seq (e1, e2) }
 
@@ -102,6 +111,8 @@ plain_simple_expr:
     { Bool false }
   | n = INT
     { Int n }
+  | UNIT
+    { Unit }
   | LPAREN e = plain_expr RPAREN	
     { e }    
 
@@ -139,6 +150,8 @@ ty:
     { TBool }
   | TINT
     { TInt }
+  | TUNIT
+    { TUnit }
   | t1 = ty TARROW t2 = ty
     { TArrow (t1, t2) }
   | LPAREN t = ty RPAREN
