@@ -40,7 +40,6 @@
 %left PLUS MINUS
 %left TIMES
 %nonassoc ASSIGN
-%right TARROW
 %left SEMI
 
 %%
@@ -154,8 +153,6 @@ ty:
     { TInt }
   | TUNIT
     { TUnit }
-  | t1 = ty TARROW t2 = ty
-    { TArrow (t1, t2) }
   | LPAREN t = ty RPAREN
     { t }
   | FORALL LBRACKET es1 = names RBRACKET DOT 

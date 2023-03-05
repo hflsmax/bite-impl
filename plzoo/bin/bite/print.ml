@@ -1,3 +1,8 @@
+open Core
+
+let effs es ppf =
+  Printf.printf "%s" (Sexp.to_string (Syntax.sexp_of_effs es))
+
 let ty t ppf =
   let rec ty ?max_level t ppf =
     if not (Format.over_max_boxes ()) then
@@ -5,8 +10,8 @@ let ty t ppf =
         | Syntax.TInt -> Zoo.print_parens ppf "int"
         | Syntax.TBool -> Zoo.print_parens ppf "bool"
         | Syntax.TUnit -> Zoo.print_parens ppf "unit"
-        | Syntax.TArrow (t1, t2) -> 
-          Zoo.print_parens ppf ~at_level:1 "%t ->@ %t" (ty ~max_level:1 t1) (ty ~max_level:0 t2)
+        (* | Syntax.TArrow (t1, t2) ->  *)
+          (* Zoo.print_parens ppf ~at_level:1 "%t ->@ %t" (ty ~max_level:1 t1) (ty ~max_level:0 t2) *)
         (* TODO *)
         | Syntax.TAbs _ -> Zoo.print_parens ppf "abs"
   in

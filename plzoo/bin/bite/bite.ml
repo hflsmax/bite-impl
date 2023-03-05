@@ -22,10 +22,10 @@ module Bite = Zoo.Main (struct
   let exec (eff_defs) = function
     | Syntax.Expr e ->
       (* check the type of [e], compile it, and run it. *)
-      let ty = Type_check.type_of eff_defs [] [] [] e in
+      let ty, es = Type_check.type_of eff_defs [] [] [] e in
       (* let frm = Compile.compile e in *)
       (* let v = Machine.run frm env in *)
-      Zoo.print_info "- : %t@." (Print.ty ty) ;
+      Zoo.print_info "- : %t_%t@." (Print.ty ty) (Print.effs es) ;
       eff_defs
     | Syntax.Decl_eff (x, ty) ->
       Type_check.ty_ok eff_defs [] [] ty ;
