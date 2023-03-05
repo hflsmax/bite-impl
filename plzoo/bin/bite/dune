@@ -1,0 +1,14 @@
+(menhir
+ (modules parser))
+
+(ocamllex lexer)
+
+(executable
+ (public_name bite)
+ (name bite)
+ (libraries zoo)
+ (modes byte exe))
+
+(env
+  (dev
+    (flags (:standard -w -27 -w -39))))

@@ -83,14 +83,11 @@ sig
   val initial_environment : environment
   val file_parser : (Lexing.lexbuf -> command list) option
   val toplevel_parser : (Lexing.lexbuf -> command) option
-  val exec : environment -> command -> environment
+  (* val exec : environment -> command -> environment *)
 end
 
 module Main (L : LANGUAGE) =
 struct
-
-  (** Should the interactive shell be run? *)
-  let interactive_shell = ref true
 
   (** The command-line wrappers that we look for. *)
   let wrapper = ref (Some ["rlwrap"; "ledit"])
@@ -104,9 +101,8 @@ struct
   (** A list of files to be loaded and run. *)
   let files = ref []
 
-  (** Add a file to the list of files to be loaded, and record whether it should
-      be processed in interactive mode. *)
-  let add_file interactive filename = (files := (filename, interactive) :: !files)
+  (** Add a file to the list of files to be loaded *)
+  let add_file filename = (files := filename :: !files)
 
   (** Command-line options *)
   let options = Arg.align ([
@@ -121,19 +117,15 @@ struct
        print_endline (L.name ^ " " ^ "(" ^ Sys.os_type ^ ")");
        exit 0),
      " Print language information and exit");
-    ("-n",
-     Arg.Clear interactive_shell,
-     " Do not run the interactive toplevel");
     ("-l",
-     Arg.String (fun str -> add_file false str),
+     Arg.String (fun str -> add_file str),
      "<file> Load <file> into the initial environment")
   ] @
   L.options)
 
   (** Treat anonymous arguments as files to be run. *)
   let anonymous str =
-    add_file true str;
-    interactive_shell := false
+    add_file str
 
   (** Parse the contents from a file, using a given [parser]. *)
   let read_file parser fn =
@@ -175,13 +167,15 @@ struct
         syntax_error ~loc:(location_of_lex lex) "syntax error"
 
   (** Load directives from the given file. *)
-  let use_file ctx (filename, interactive) =
+  let use_file ctx (filename) =
     match L.file_parser with
     | Some f ->
        let cmds = read_file (wrap_syntax_errors f) filename in
-        List.fold_left L.exec ctx cmds
+        (* List.fold_left L.exec ctx cmds *)
+        ctx
+        (* TODO *)
     | None ->
-       fatal_error "Cannot load files, only interactive shell is available"
+       fatal_error "Cannot load files"
 
   (** Interactive toplevel *)
   let toplevel ctx =
@@ -202,7 +196,9 @@ struct
           while true do
             try
               let cmd = read_toplevel (wrap_syntax_errors toplevel_parser) () in
-                ctx := L.exec !ctx cmd
+                (* ctx := L.exec !ctx cmd *)
+                ()
+                (* TODO *)
             with
               | Error err -> print_error err
               | Sys.Break -> prerr_endline "Interrupted."
@@ -216,7 +212,7 @@ struct
     (* Parse the arguments. *)
     Arg.parse options anonymous usage;
     (* Attempt to wrap yourself with a line-editing wrapper. *)
-    if !interactive_shell then
+    (* if !interactive_shell then
       begin match !wrapper with
         | None -> ()
         | Some lst ->
@@ -231,7 +227,7 @@ struct
                   Unix.execvp wrapper args
                 with Unix.Unix_error _ -> ())
               lst
-      end;
+      end; *)
     (* Files were listed in the wrong order, so we reverse them *)
     files := List.rev !files;
     (* Set the maximum depth of pretty-printing, after which it prints ellipsis. *)
@@ -240,7 +236,7 @@ struct
     try
       (* Run and load all the specified files. *)
       let ctx = List.fold_left use_file L.initial_environment !files in
-        if !interactive_shell then toplevel ctx
+        toplevel ctx
     with
         Error err -> print_error err; exit 1
 end
