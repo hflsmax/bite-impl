@@ -18,8 +18,10 @@
 %token COLON
 %token LPAREN RPAREN LBRACKET RBRACKET LBRACE RBRACE
 %token EFF
-%token LET
-%token SEMISEMI
+%token DECL
+%token LET IN END
+%token ASSIGN
+%token SEMI
 %token EOF
 
 %start file
@@ -34,6 +36,7 @@
 %left PLUS MINUS
 %left TIMES
 %right TARROW
+%left SEMI
 
 %%
 
@@ -42,28 +45,18 @@ file:
     { [] }
   | e = expr EOF
     { [Expr e] }
-  | e = expr SEMISEMI lst = file
+  | e = expr DOT lst = file
     { Expr e :: lst }
-  | ds = def EOF
-    { [ds] }
-  | ds = def SEMISEMI lst = file
-    { ds :: lst }
   | eff = effect_declare EOF
     { [eff] }
-  | eff = effect_declare SEMISEMI lst = file
+  | eff = effect_declare DOT lst = file
     { eff :: lst }
 
 toplevel:
-  | d = def SEMISEMI
-    { d }
-  | e = expr SEMISEMI
+  | e = expr DOT
     { Expr e }
-  | eff = effect_declare SEMISEMI
+  | eff = effect_declare DOT
     { eff }
-
-def:
-  | LET x = VAR EQUAL e = expr
-    { Def (x, e) }
 
 expr: mark_position(plain_expr) { $1 }
 plain_expr:
@@ -81,10 +74,16 @@ plain_expr:
     { Equal (e1, e2) }
   | e1 = expr LESS e2 = expr
     { Less (e1, e2) }
-  | IF e1 = expr THEN e2 = expr ELSE e3 = expr
+  | IF e1 = expr THEN e2 = expr ELSE e3 = expr 
     { If (e1, e2, e3) }
-  | FUN x = VAR LPAREN f = VAR COLON t1 = ty RPAREN COLON t2 = ty IS e = expr
-    { Fun (x, f, t1, t2, e) }
+  | FUN x = VAR LBRACKET es1 = names RBRACKET LBRACE hs = hd_params RBRACE LPAREN args = params RPAREN COLON t = ty UNDERSCORE LBRACKET es2 = names RBRACKET IS e = expr 
+    { FullFun (x, es1, hs, args, t, es2, e) }
+  | LET x = VAR EQUAL e1 = expr IN e2 = expr END
+    { Format.eprintf "let\n"; Let (x, e1, e2) }
+  | DECL x = VAR ASSIGN e1 = expr IN e2 = expr END
+    { Format.eprintf "let\n"; Decl (x, e1, e2) }
+  | e1 = expr SEMI e2 = expr
+    { Seq (e1, e2) }
 
 app_expr: mark_position(plain_app_expr) { $1 }
 plain_app_expr:
@@ -96,7 +95,7 @@ plain_app_expr:
 simple_expr: mark_position(plain_simple_expr) { $1 }
 plain_simple_expr:
   | x = VAR
-    { Var x }
+    { Format.eprintf "var %s\n" x; Var x }
   | TRUE    
     { Bool true }
   | FALSE
@@ -106,34 +105,34 @@ plain_simple_expr:
   | LPAREN e = plain_expr RPAREN	
     { e }    
 
-// param:
-//   | x = VAR COLON t = ty
-//     { (Var x, t) }
+param:
+  | x = VAR COLON t = ty
+    { (x, t) }
 
-// params:
-//   | { [] }
-//   | p = param
-//     { [p] }
-//   | p = param COMMA ps = params
-//     { p :: ps }
+params:
+  | { [] }
+  | p = param
+    { [p] }
+  | p = param COMMA ps = params
+    { p :: ps }
 
 hd_param:
   | x = VAR COLON t = VAR
-    { (Var x, t) }
+    { Format.eprintf "hd_param %s\n" x; (Var x, t) }
 
 hd_params:
   | { [] }
   | p = hd_param
     { [p] }
   | p = hd_param COMMA ps = hd_params
-    { Format.eprintf "hd_params"; p :: ps }
+    { Format.eprintf "hd_params\n"; p :: ps }
 
 names:
-  | { [] }
+  | { Format.eprintf "names []\n"; [] }
   | x = VAR
-    { [Var x] }
+    { Format.eprintf "names [%s]\n" x; [Var x] }
   | x = VAR COMMA xs = names
-    { Format.eprintf "names"; Var x :: xs }
+    { Format.eprintf "names\n"; Var x :: xs }
 
 ty:
   | TBOOL
@@ -148,7 +147,7 @@ ty:
     FORALL LBRACE hs = hd_params RBRACE DOT 
     LPAREN ts = tys RPAREN 
     TARROW t1 = ty UNDERSCORE LBRACKET es2 = names RBRACKET
-    { Format.eprintf "TAbs"; TAbs (es1, hs, ts, t1, es2) }
+    { Format.eprintf "TAbs\n"; TAbs (es1, hs, ts, t1, es2) }
 
 tys:
   | { [] }

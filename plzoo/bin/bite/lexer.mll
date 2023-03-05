@@ -23,8 +23,13 @@ rule token = parse
   | "if"            { IF }
   | "then"          { THEN }
   | "else"          { ELSE }
-  | "let"           { LET }  
-  | ";;"            { SEMISEMI }
+  | "let"           { LET }
+  | "dcl"           { DECL }
+  | "in"            { IN }
+  | "end"           { END }
+  | ":="            { ASSIGN }
+  (* | ";;"            { SEMISEMI } *)
+  | ";"             { SEMI }
   | '='             { EQUAL }
   | '<'             { LESS }
   | "->"            { TARROW }
