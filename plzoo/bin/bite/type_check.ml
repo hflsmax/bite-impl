@@ -4,43 +4,68 @@ open Syntax
 
 let typing_error ~loc = Zoo.error ~kind:"Type error" ~loc
 
-(** [check ctx ty e] verifies that expression [e] has type [ty] in
-    context [ctx]. If it does, it returns unit, otherwise it raises the
-    [Type_error] exception. *)
-let rec check ctx ty ({Zoo.loc;_} as e) =
-  let ty' = type_of ctx e in
+let fname_ok (eff_defs : (fname * ty) list) (fname : fname) =
+  if not (List.mem_assoc fname eff_defs) then
+    Zoo.error ~kind:"Type error" "unknown effect %s" fname
+
+let hd_ok (h_env : (hd * fname) list) (HVar s : hd) =
+  if not (List.mem_assoc (HVar s) h_env) then
+    Zoo.error ~kind:"Type error" "unknown handler %s" s
+
+let eff_ok (e_env : eff list) (h_env : (hd * fname) list) (e : eff) =
+    match e with
+      EVar s -> if not (List.mem e e_env) then
+        Zoo.error ~kind:"Type error" "unknown effect var %s" s
+    | Handler (HVar s) -> if not (List.mem_assoc (HVar s) h_env) then
+        Zoo.error ~kind:"Type error" "unknown handler var %s" s
+    
+let rec ty_ok (eff_defs : (fname * ty) list) (e_env : eff list) (h_env : (hd * fname) list) ty =
+  match ty with
+    | TAbs (es1, hs, ts, t, es2) ->
+        List.iter (ty_ok eff_defs (es1 @ e_env) (hs @ h_env)) ts ;
+        List.iter (fname_ok eff_defs) (snd (List.split hs)) ;
+        ty_ok eff_defs (es1 @ e_env) (hs @ h_env) t ;
+        List.iter (eff_ok (es1 @ e_env) (hs @ h_env)) es2
+    | _ -> ()
+
+
+let rec check (eff_defs : (fname * ty) list) (e_env : eff list) (h_env : (hd * fname) list) (v_env : (name * ty) list) ty ({Zoo.loc;_} as e) =
+  let ty' = type_of eff_defs e_env h_env v_env e in
     if ty' <> ty then
       typing_error ~loc
         "This expression has type %t but is used as if it has type %t"
         (Print.ty ty')
         (Print.ty ty)
-
-(** [type_of ctx e] computes the type of expression [e] in context
-    [ctx]. If [e] does not have a type it raises the [Type_error]
-    exception. *)
-and type_of ctx {Zoo.data=e; loc} =
+and type_of (eff_defs : (fname * ty) list) (e_env : eff list) (h_env : (hd * fname) list) (v_env : (name * ty) list) {Zoo.data=e; loc} =
   match e with
     | Var x ->
-      (try List.assoc x ctx with
+      (try List.assoc x v_env with
 	  Not_found -> typing_error ~loc "unknown variable %s" x)
     | Int _ -> TInt
     | Bool _ -> TBool
-    | Times (e1, e2) -> check ctx TInt e1 ; check ctx TInt e2 ; TInt
-    | Plus (e1, e2) -> check ctx TInt e1 ; check ctx TInt e2 ; TInt
-    | Minus (e1, e2) -> check ctx TInt e1 ; check ctx TInt e2 ; TInt
-    | Equal (e1, e2) -> check ctx TInt e1 ; check ctx TInt e2 ; TBool
-    | Less (e1, e2) -> check ctx TInt e1 ; check ctx TInt e2 ; TBool
+    | Unit -> TUnit
+    | Times (e1, e2) -> check eff_defs e_env h_env v_env TInt e1 ; check eff_defs e_env h_env v_env TInt e2 ; TInt
+    | Plus (e1, e2) -> check eff_defs e_env h_env v_env TInt e1 ; check eff_defs e_env h_env v_env TInt e2 ; TInt
+    | Minus (e1, e2) -> check eff_defs e_env h_env v_env TInt e1 ; check eff_defs e_env h_env v_env TInt e2 ; TInt
+    | Equal (e1, e2) -> check eff_defs e_env h_env v_env TInt e1 ; check eff_defs e_env h_env v_env TInt e2 ; TBool
+    | Less (e1, e2) -> check eff_defs e_env h_env v_env TInt e1 ; check eff_defs e_env h_env v_env TInt e2 ; TBool
     | If (e1, e2, e3) ->
-      check ctx TBool e1 ;
-      let ty = type_of ctx e2 in
-	check ctx ty e3 ; ty
+      check eff_defs e_env h_env v_env TBool e1 ;
+      let ty = type_of eff_defs e_env h_env v_env e2 in
+	      check eff_defs e_env h_env v_env ty e3 ; ty
+    | FullFun (x, es1, hs, ts, t, es2, exp) -> TUnit
+    | Assign (x, e) -> TUnit
+    | Let (x, e1, e2) -> TUnit
+    | Decl (x, e1, e2) -> TUnit
+    | Handle (x, fname, e1, e2) -> TUnit
     | Fun (f, x, ty1, ty2, e) ->
-      check ((f, TArrow(ty1,ty2)) :: (x, ty1) :: ctx) ty2 e ;
+      check eff_defs e_env h_env ((f, TArrow(ty1,ty2)) :: (x, ty1) :: v_env) ty2 e ;
       TArrow (ty1, ty2)
     | Apply (e1, e2) ->
-      begin match type_of ctx e1 with
-	  TArrow (ty1, ty2) -> check ctx ty1 e2 ; ty2
-	| ty ->
-	  typing_error ~loc
+      begin match type_of eff_defs e_env h_env v_env e1 with
+	      TArrow (ty1, ty2) -> check eff_defs e_env h_env v_env ty1 e2 ; ty2
+      | ty ->
+          typing_error ~loc
             "this expression is used as a function but its type is %t" (Print.ty ty)
       end
+    | Seq (e1, e2) -> TUnit

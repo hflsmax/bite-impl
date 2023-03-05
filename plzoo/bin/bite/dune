@@ -10,5 +10,6 @@
  (modes byte exe))
 
 (env
-  (dev
-    (flags (:standard -w -27 -w -39))))
+ (dev
+  (flags
+   (:standard -w -27 -w -39))))

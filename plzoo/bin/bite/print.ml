@@ -4,6 +4,7 @@ let ty t ppf =
       match t with
         | Syntax.TInt -> Zoo.print_parens ppf "int"
         | Syntax.TBool -> Zoo.print_parens ppf "bool"
+        | Syntax.TUnit -> Zoo.print_parens ppf "unit"
         | Syntax.TArrow (t1, t2) -> 
           Zoo.print_parens ppf ~at_level:1 "%t ->@ %t" (ty ~max_level:1 t1) (ty ~max_level:0 t2)
         (* TODO *)

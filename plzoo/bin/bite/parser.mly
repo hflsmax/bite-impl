@@ -16,7 +16,7 @@
 %token EQUAL LESS
 %token IF THEN ELSE
 %token FUN IS
-%token FORALL DOT COMMA UNDERSCORE
+%token FORALL DOT COMMA UNDERSCORE TILDE
 %token COLON
 %token LPAREN RPAREN LBRACKET RBRACKET LBRACE RBRACE
 %token EFF
@@ -86,11 +86,11 @@ plain_expr:
   | FUN x = VAR LBRACKET es1 = names RBRACKET LBRACE hs = hd_params RBRACE LPAREN args = params RPAREN COLON t = ty UNDERSCORE LBRACKET es2 = names RBRACKET IS e = expr 
     { FullFun (x, es1, hs, args, t, es2, e) }
   | LET x = VAR EQUAL e1 = expr IN e2 = expr END
-    { Format.eprintf "let\n"; Let (x, e1, e2) }
+    { Let (x, e1, e2) }
   | DECL x = VAR ASSIGN e1 = expr IN e2 = expr END
-    { Format.eprintf "let\n"; Decl (x, e1, e2) }
+    { Decl (x, e1, e2) }
   | HANDLE x = VAR COLON fname = VAR EQUAL e1 = expr IN e2 = expr END
-    { Format.eprintf "handle\n"; Handle (x, fname, e1, e2) }
+    { Handle (x, fname, e1, e2) }
   | e1 = expr SEMI e2 = expr
     { Seq (e1, e2) }
 
@@ -104,7 +104,7 @@ plain_app_expr:
 simple_expr: mark_position(plain_simple_expr) { $1 }
 plain_simple_expr:
   | x = VAR
-    { Format.eprintf "var %s\n" x; Var x }
+    { Var x }
   | TRUE    
     { Bool true }
   | FALSE
@@ -129,21 +129,23 @@ params:
 
 hd_param:
   | x = VAR COLON t = VAR
-    { Format.eprintf "hd_param %s\n" x; (Var x, t) }
+    { (HVar x, t) }
 
 hd_params:
   | { [] }
   | p = hd_param
     { [p] }
   | p = hd_param COMMA ps = hd_params
-    { Format.eprintf "hd_params\n"; p :: ps }
+    { p :: ps }
 
 names:
-  | { Format.eprintf "names []\n"; [] }
+  | { [] }
   | x = VAR
-    { Format.eprintf "names [%s]\n" x; [Var x] }
+    { [EVar x] }
+  | TILDE x = VAR
+    { [Handler (HVar x)] }
   | x = VAR COMMA xs = names
-    { Format.eprintf "names\n"; Var x :: xs }
+    { EVar x :: xs }
 
 ty:
   | TBOOL
@@ -160,7 +162,7 @@ ty:
     FORALL LBRACE hs = hd_params RBRACE DOT 
     LPAREN ts = tys RPAREN 
     TARROW t1 = ty UNDERSCORE LBRACKET es2 = names RBRACKET
-    { Format.eprintf "TAbs\n"; TAbs (es1, hs, ts, t1, es2) }
+    { TAbs (es1, hs, ts, t1, es2) }
 
 tys:
   | { [] }

@@ -21,6 +21,7 @@ rule token = parse
   | "."             { DOT }
   | ","             { COMMA }
   | "_"             { UNDERSCORE }
+  | "~"             { TILDE }
   | "is"            { IS }
   | "if"            { IF }
   | "then"          { THEN }

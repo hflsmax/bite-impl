@@ -7,10 +7,10 @@ type name = string
 type fname = string
 
 type hd =
-  | Var of name
+  | HVar of name
 
 type eff =
-  | Var of name
+  | EVar of name
   | Handler of hd
 
 (* Types *)

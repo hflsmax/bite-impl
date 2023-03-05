@@ -3,5 +3,6 @@
  (libraries unix))
 
 (env
-  (dev
-    (flags (:standard -w -67 -w -27 -w -26))))
+ (dev
+  (flags
+   (:standard -w -67 -w -27 -w -26))))

@@ -3,17 +3,14 @@ module Bite = Zoo.Main (struct
 
   type command = Syntax.command
 
-  (** A context describing the types of globally defined values. *)
-  type context = (Syntax.name * Syntax.ty) list
+  (** A context describing the types of effects. *)
+  type eff_defs = (Syntax.name * Syntax.ty) list
 
-  (** A runtime environment describing globally defined values. *)
-  type runtime = (Syntax.name * Machine.mvalue) list
-
-  type environment = context * runtime
+  type environment = eff_defs
 
   let options = []
 
-  let initial_environment = ([], [])
+  let initial_environment = ([])
 
   let file_parser = Some (Parser.file Lexer.token)
 
@@ -22,22 +19,18 @@ module Bite = Zoo.Main (struct
   (** [exec (ctx, env) cmd] executes the toplevel command [cmd] and returns
       the new context-environment pair and a string representing the result of
       evaluation. *)
-  (* let exec (ctx, env) = function
+  let exec (eff_defs) = function
     | Syntax.Expr e ->
       (* check the type of [e], compile it, and run it. *)
-      let ty = Type_check.type_of ctx e in
-      let frm = Compile.compile e in
-      let v = Machine.run frm env in
-      Zoo.print_info "- : %t = %t@." (Print.ty ty) (Print.mvalue v) ;
-      (ctx, env)
-    | Syntax.Def (x, e) ->
-      (* check the type of [e], compile it, run it, and return a new
-	 context-environemtn pair with [x] defined as [e]. *)
-      let ty = Type_check.type_of ctx e in
-      let frm = Compile.compile e in
-      let v = Machine.run frm env in
-      Zoo.print_info "%s : %t = %t@." x (Print.ty ty) (Print.mvalue v) ;
-      ((x,ty)::ctx, (x,v)::env) *)
+      let ty = Type_check.type_of eff_defs [] [] [] e in
+      (* let frm = Compile.compile e in *)
+      (* let v = Machine.run frm env in *)
+      Zoo.print_info "- : %t@." (Print.ty ty) ;
+      eff_defs
+    | Syntax.Decl_eff (x, ty) ->
+      Type_check.ty_ok eff_defs [] [] ty ;
+      Zoo.print_info "eff %s = %t@." x (Print.ty ty) ;
+      (x, ty) :: eff_defs
 end) ;;
 
 Bite.main ()

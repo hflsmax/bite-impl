@@ -83,7 +83,7 @@ sig
   val initial_environment : environment
   val file_parser : (Lexing.lexbuf -> command list) option
   val toplevel_parser : (Lexing.lexbuf -> command) option
-  (* val exec : environment -> command -> environment *)
+  val exec : environment -> command -> environment
 end
 
 module Main (L : LANGUAGE) =
@@ -171,8 +171,8 @@ struct
     match L.file_parser with
     | Some f ->
        let cmds = read_file (wrap_syntax_errors f) filename in
-        (* List.fold_left L.exec ctx cmds *)
-        ctx
+        List.fold_left L.exec ctx cmds
+        (* ctx *)
         (* TODO *)
     | None ->
        fatal_error "Cannot load files"

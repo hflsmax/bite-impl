@@ -1,5 +1,7 @@
 eff Fget : ∀[].∀{}.(Unit) -> int_[];;
-eff Fset : ∀[e,e].∀{lget : Fget}.() -> int_[e];;
+eff Fset : ∀[].∀{}.(int) -> int_[];;
+
+eff ex : ∀[e].∀{f : Fget}.(int) -> int_[e, ~f];;
 
 let counter =
   fun f [] {lget : Fget, lset : Fset} (n : int) : int_[] is
