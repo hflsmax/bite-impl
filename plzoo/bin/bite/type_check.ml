@@ -60,7 +60,7 @@ let rec type_of (eff_defs : f_ENV) (e_env : e_ENV) (h_env : h_ENV) (t_env : t_EN
       List.iter (eff_ok (es1 @ e_env) (hs @ h_env)) es2 ;
       let ty_e, es_e = type_of eff_defs (es1 @ e_env) (hs @ h_env) ((x, TAbs (es1, hs, ty_args, ty, es2)) :: tm_args @ t_env) exp in
       if ty_e <> ty then typing_error ~loc "The function body has the wrong type, expected %t but got %t" (Print.ty ty) (Print.ty ty_e);
-      if not (List.for_all (fun e -> List.mem e es2) es_e) then typing_error ~loc "The function body has more effects than allowed by the function type";
+      if (List.exists (fun e -> not (List.mem e es2)) es_e) then typing_error ~loc "The function body has more effects than allowed by the function type";
       (TAbs (es1, hs, ty_args, ty, es2), [])
     | Assign (x, exp) -> 
       let ty_e, es_e = type_of eff_defs e_env h_env t_env exp in
@@ -92,7 +92,7 @@ let rec type_of (eff_defs : f_ENV) (e_env : e_ENV) (h_env : h_ENV) (t_env : t_EN
           | TAbs (es1, hs, ts, t, es2) as ty_fname -> 
             if ty_handle <> t then typing_error ~loc "The type of handle expression and catch body must be the same.";
             if ty_catch <> ty_fname then typing_error ~loc "The handler's type must match the type of effect definition, expected %t but got %t" (Print.ty ty_fname) (Print.ty ty_catch);
-            (ty_handle, es_handle)
+            (ty_handle, List.filter (fun e -> e <> Handler x) es_handle)
           | _ -> typing_error ~loc "effect definition must be of type TAbs";
        with Not_found -> typing_error ~loc "unknown effect name %s" fname)
     | FullApply (exp1, es, hs, exps) ->
@@ -107,7 +107,7 @@ let rec type_of (eff_defs : f_ENV) (e_env : e_ENV) (h_env : h_ENV) (t_env : t_EN
           let expected_fnames = snd (List.split hs') in
           if actual_fnames <> expected_fnames then typing_error ~loc "Wrong handlers types, expected %s, got %s" (String.concat ", " expected_fnames) (String.concat ", " actual_fnames);
         if tys <> ts' then typing_error ~loc "Wrong types of term arguments.";
-        (t', es1 @ List.concat ess)
+        (t', es2' @ es1 @ List.concat ess)
       | _ -> typing_error ~loc "The lhs of application must be of type TAbs")
     | Raise (hvar, es, hs, exps) ->
       List.assoc_opt hvar h_env |> (function
@@ -121,7 +121,7 @@ let rec type_of (eff_defs : f_ENV) (e_env : e_ENV) (h_env : h_ENV) (t_env : t_EN
                 if List.length es <> List.length es1' then typing_error ~loc "Wrong number of effect arguments.";
                 if (List.map (fun h -> List.assoc h h_env) hs) <> snd (List.split hs') then typing_error ~loc "Wrong types of handler arguments.";
                 if tys <> ts' then typing_error ~loc "Wrong types of term arguments.";
-                (t', List.concat ess)
+                (t', Handler hvar :: es2' @ List.concat ess)
               | _ -> typing_error ~loc "effect definition must be of type TAbs";
            with Not_found -> typing_error ~loc "unknown effect name %s" fname)
         | None -> typing_error ~loc "unknown handler %s" hvar)

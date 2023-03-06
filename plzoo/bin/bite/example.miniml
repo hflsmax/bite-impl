@@ -4,7 +4,7 @@ eff Fset : ∀[].∀{}.(int) -> int_[];;
 eff ex : ∀[e].∀{f : Fget}.(int, bool) -> int_[e, ~f];;
 
 let counter =
-  fun f [] {lget : Fget, lset : Fset} (n : int) : int_[] is
+  fun f [] {lget : Fget, lset : Fset} (n : int) : int_[~lget, ~lset] is
     let i = raise lget () in
       if i = 0 then 
         n 
