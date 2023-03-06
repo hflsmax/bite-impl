@@ -49,8 +49,7 @@ type t_ENV = (name * ty) list
 
 
 (* Expressions *)
-type expr = expr' Zoo.located
-and expr' =
+type expr =
   | Var of name 		
   | Int of int  		
   | Bool of bool		

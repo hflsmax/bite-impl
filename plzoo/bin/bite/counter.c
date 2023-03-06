@@ -2,33 +2,37 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-struct closure_env_1_arg_1 {
-    void **env;
-    long (*f_ptr)(void*);
+struct get_closure {
+    struct main_env *env;
+    long (*f_ptr)(struct main_env *);
 };
 
-struct closure_env_1_arg_2 {
-    void **env;
-    long (*f_ptr)(void*, void*);
+struct put_closure {
+    struct main_env *env;
+    long (*f_ptr)(long, struct main_env *);
 };
 
-long put_handler(long n, void** env) {
-    long *s = (long*)env[0];
+struct main_env {
+    long init;
+};
+
+
+long put_handler(long n, struct main_env* env) {
+    long *s = &env->init;
     *s = n;
     return 0;
 }
 
-long get_handler(void** env) {
-    long *s = (long*)env[0];
-    return *s;
+long get_handler(struct main_env* env) {
+    return env->init;
 }
 
-long counter(struct closure_env_1_arg_2* l_put, struct closure_env_1_arg_1* l_get, long n) {
+long counter(struct put_closure* l_put, struct get_closure* l_get, long n) {
     long i = l_get->f_ptr(l_get->env);
     if (i == 0) {
         return n; 
     } else {
-        l_put->f_ptr((void*)i-1, l_put->env);
+        l_put->f_ptr(i-1, l_put->env);
         return counter(l_put, l_get, n+1);
     }
 }
@@ -36,11 +40,12 @@ long counter(struct closure_env_1_arg_2* l_put, struct closure_env_1_arg_1* l_ge
 const long init = 10;
 
 int main() {
-    void* locals[1] = {init};
 
-    struct closure_env_1_arg_2 put_handler_closure = {&locals, &put_handler};
+    struct main_env locals = {init};
 
-    struct closure_env_1_arg_1 get_handler_closure = {&locals, &get_handler};
+    struct put_closure p = {&locals, &put_handler};
 
-    counter(&put_handler_closure, &get_handler_closure, 0);
+    struct get_closure g = {&locals, &get_handler};
+
+    counter(&p, &g, 0);
 }
