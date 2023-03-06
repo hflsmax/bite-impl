@@ -11,16 +11,18 @@ let counter =
       else 
         lset (i - 1) ; f (n+1)
     end
+  end
 in 
   let main =
     fun g [] {} (n : int) : int_[] is
       dcl s := n in
-        handle lget : Fget = (fun h [] {} (n : int) : int_[] is s := n) in
-          handle lset : Fset = (fun h [] {} (n : int) : int_[] is s) in
-            counter lget lset n
+        handle lget : Fget = (fun h [] {} (n : int) : int_[] is s := n end) in
+          handle lset : Fset = (fun h [] {} (n : int) : int_[] is s end) in
+            counter {lget lset} n
           end
         end
       end
+    end
   in 
     main 10
   end

@@ -34,7 +34,7 @@
 %start toplevel
 %type <Syntax.command> toplevel
 
-%nonassoc IS
+// %nonassoc IS
 %nonassoc ELSE
 %nonassoc EQUAL LESS
 %left PLUS MINUS
@@ -62,12 +62,57 @@ toplevel:
   | eff = effect_declare SEMISEMI
     { eff }
 
+lhs: mark_position(plain_lhs) { $1 }
+plain_lhs:
+  | x = VAR
+    { Var x }
+  | FUN x = VAR LBRACKET es1 = eff_name* RBRACKET 
+                LBRACE hs = hd_param* RBRACE 
+                LPAREN args = tm_param* RPAREN 
+                COLON t = ty UNDERSCORE LBRACKET es2 = eff_name* RBRACKET IS e = expr END
+    { FullFun (x, es1, hs, args, t, es2, e) }
+
+effect_args:
+  | LBRACKET es = eff_name* RBRACKET
+    { es }
+
+handler_args:
+  | LBRACE hs = hd_arg* RBRACE
+    { hs }
+
+term_arg: mark_position(plain_term_arg) { $1 }
+plain_term_arg:
+  | x = VAR
+    { Var x }
+  | TRUE    
+    { Bool true }
+  | FALSE
+    { Bool false }
+  | n = INT
+    { Int n }
+  | UNIT
+    { Unit }
+  | LPAREN e = plain_expr RPAREN	
+    { e }
+
 expr: mark_position(plain_expr) { $1 }
 plain_expr:
-  | e = plain_app_expr
+  | LPAREN e = plain_expr RPAREN	
     { e }
+  | lhs = lhs es = effect_args? hs = handler_args? exps = term_arg+
+    { FullApply (lhs, (Option.value es ~default:[]), (Option.value hs ~default:[]), exps) }
+  | x = plain_lhs
+    { x }
+  | TRUE    
+    { Bool true }
+  | FALSE
+    { Bool false }
+  | n = INT
+    { Int n }
   | MINUS n = INT
     { Int (-n) }
+  | UNIT
+    { Unit }
   | e1 = expr PLUS e2 = expr	
     { Plus (e1, e2) }
   | e1 = expr MINUS e2 = expr
@@ -82,8 +127,6 @@ plain_expr:
     { Assign (x, e) }
   | IF e1 = expr THEN e2 = expr ELSE e3 = expr 
     { If (e1, e2, e3) }
-  | FUN x = VAR LBRACKET es1 = names RBRACKET LBRACE hs = hd_params RBRACE LPAREN args = params RPAREN COLON t = ty UNDERSCORE LBRACKET es2 = names RBRACKET IS e = expr 
-    { FullFun (x, es1, hs, args, t, es2, e) }
   | LET x = VAR EQUAL e1 = expr IN e2 = expr END
     { Let (x, e1, e2) }
   | DECL x = VAR ASSIGN e1 = expr IN e2 = expr END
@@ -93,80 +136,38 @@ plain_expr:
   | e1 = expr SEMI e2 = expr
     { Seq (e1, e2) }
 
-app_expr: mark_position(plain_app_expr) { $1 }
-plain_app_expr:
-  | e = plain_simple_expr
-    { e }
-  | e1 = app_expr e2 = simple_expr
-    { Apply (e1, e2) }
-
-simple_expr: mark_position(plain_simple_expr) { $1 }
-plain_simple_expr:
-  | x = VAR
-    { Var x }
-  | TRUE    
-    { Bool true }
-  | FALSE
-    { Bool false }
-  | n = INT
-    { Int n }
-  | UNIT
-    { Unit }
-  | LPAREN e = plain_expr RPAREN	
-    { e }    
-
-param:
-  | x = VAR COLON t = ty
+tm_param:
+  | COMMA? x = VAR COLON t = ty
     { (x, t) }
 
-params:
-  | { [] }
-  | p = param
-    { [p] }
-  | p = param COMMA ps = params
-    { p :: ps }
-
 hd_param:
-  | x = VAR COLON t = VAR
+  | COMMA? x = VAR COLON t = VAR
     { (HVar x, t) }
 
-hd_params:
-  | { [] }
-  | p = hd_param
-    { [p] }
-  | p = hd_param COMMA ps = hd_params
-    { p :: ps }
-
-names:
-  | { [] }
+hd_arg:
   | x = VAR
-    { [EVar x] }
-  | TILDE x = VAR
-    { [Handler (HVar x)] }
-  | x = VAR COMMA xs = names
-    { EVar x :: xs }
+    { HVar x }
+
+eff_name:
+  | COMMA? x = VAR
+    { EVar x }
+  | COMMA? TILDE x = VAR
+    { Handler (HVar x) }
 
 ty:
-  | TBOOL
+  | COMMA? TBOOL
     { TBool }
-  | TINT
+  | COMMA? TINT
     { TInt }
-  | TUNIT
+  | COMMA? TUNIT
     { TUnit }
-  | LPAREN t = ty RPAREN
+  | COMMA? LPAREN t = ty RPAREN
     { t }
-  | FORALL LBRACKET es1 = names RBRACKET DOT 
-    FORALL LBRACE hs = hd_params RBRACE DOT 
-    LPAREN ts = tys RPAREN 
-    TARROW t1 = ty UNDERSCORE LBRACKET es2 = names RBRACKET
+  | COMMA? FORALL LBRACKET es1 = eff_name* RBRACKET DOT 
+    FORALL LBRACE hs = hd_param* RBRACE DOT 
+    LPAREN ts = ty* RPAREN 
+    TARROW t1 = ty UNDERSCORE LBRACKET es2 = eff_name* RBRACKET
     { TAbs (es1, hs, ts, t1, es2) }
-
-tys:
-  | { [] }
-  | t = ty
-    { [t] }
-  | t = ty COMMA ts = tys
-    { t :: ts }
 
 effect_declare:
   | EFF x = VAR COLON t = ty

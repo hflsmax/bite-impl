@@ -37,33 +37,65 @@ let rec check (eff_defs : f_ENV) (e_env : e_ENV) (h_env : h_ENV) (t_env : t_ENV)
     else if not (List.for_all (fun e -> List.mem e es) es') then
       typing_error ~loc "This expression has effects %t but is used as if it has effects %t" 
         (Print.effs es') (Print.effs es)
-(* TODO: enforce A-normal form *)
 and type_of (eff_defs : f_ENV) (e_env : e_ENV) (h_env : h_ENV) (t_env : t_ENV) {Zoo.data=e; loc} : (ty * effs) =
   match e with
     | Var x ->
-      (try (List.assoc x t_env, []) with
-	     Not_found -> typing_error ~loc "unknown variable %s" x)
+      (try (List.assoc x t_env, []) 
+       with Not_found -> typing_error ~loc "unknown variable %s" x)
     | Int _ -> (TInt, [])
     | Bool _ -> (TBool, [])
     | Unit -> (TUnit, [])
-    | Times (e1, e2) -> check eff_defs e_env h_env t_env (TInt, []) e1 ; check eff_defs e_env h_env t_env (TInt, []) e2 ; (TInt, [])
-    | Plus (e1, e2) -> check eff_defs e_env h_env t_env (TInt, []) e1 ; check eff_defs e_env h_env t_env (TInt, []) e2 ; (TInt, [])
-    | Minus (e1, e2) -> check eff_defs e_env h_env t_env (TInt, []) e1 ; check eff_defs e_env h_env t_env (TInt, []) e2 ; (TInt, [])
-    | Equal (e1, e2) -> check eff_defs e_env h_env t_env (TInt, []) e1 ; check eff_defs e_env h_env t_env (TInt, []) e2 ; (TBool, [])
-    | Less (e1, e2) -> check eff_defs e_env h_env t_env (TInt, []) e1 ; check eff_defs e_env h_env t_env (TInt, []) e2 ; (TBool, [])
-    | If (e1, e2, e3) ->
-      check eff_defs e_env h_env t_env (TBool, []) e1 ;
-      let ty = type_of eff_defs e_env h_env t_env e2 in
-	      check eff_defs e_env h_env t_env ty e3 ; ty
+    | Times (exp1, exp2) | Plus (exp1, exp2) | Minus (exp1, exp2) -> 
+      let ty1, es1 = type_of eff_defs e_env h_env t_env exp1 in
+      let ty2, es2 = type_of eff_defs e_env h_env t_env exp2 in
+      if (ty1 <> TInt || ty2 <> TInt) then typing_error ~loc "This expression can't be type checked";
+      (TInt, es1 @ es2)
+    (* | Plus (exp1, exp2) -> check eff_defs e_env h_env t_env (TInt, []) exp1 ; check eff_defs e_env h_env t_env (TInt, []) exp2 ; (TInt, []) *)
+    (* | Minus (exp1, exp2) -> check eff_defs e_env h_env t_env (TInt, []) exp1 ; check eff_defs e_env h_env t_env (TInt, []) exp2 ; (TInt, []) *)
+    | Equal (exp1, exp2) | Less (exp1, exp2) ->
+      let ty1, es1 = type_of eff_defs e_env h_env t_env exp1 in
+      let ty2, es2 = type_of eff_defs e_env h_env t_env exp2 in
+      if (ty1 <> TInt || ty2 <> TInt) then typing_error ~loc "This expression can't be type checked";
+      (TBool, es1 @ es2)
+    (* | Less (exp1, exp2) -> check eff_defs e_env h_env t_env (TInt, []) exp1 ; check eff_defs e_env h_env t_env (TInt, []) exp2 ; (TBool, []) *)
+    | If (exp1, exp2, exp3) ->
+      let ty1, es1 = type_of eff_defs e_env h_env t_env exp1 in
+      let ty2, es2 = type_of eff_defs e_env h_env t_env exp2 in
+      let ty3, es3 = type_of eff_defs e_env h_env t_env exp3 in
+      if (ty1 <> TBool || ty2 <> ty3) then typing_error ~loc "This expression can't be type checked";
+      (ty2, es1 @ es2 @ es3)
     | FullFun (x, es1, hs, ts, t, es2, exp) -> (TUnit, [])
-    | Assign (x, e) -> (TUnit, [])
-    | Let (x, e1, e2) -> (TUnit, [])
-    | Decl (x, e1, e2) -> (TUnit, [])
-    | Handle (x, fname, e1, e2) -> (TUnit, [])
+    | Assign (x, exp) -> 
+      let ty_e, es_e = type_of eff_defs e_env h_env t_env exp in
+      (try 
+        match List.assoc x t_env with
+          | TMut ty_x -> if ty_x <> ty_e then typing_error ~loc "This expression can't be type checked";
+            (ty_e, es_e)
+          | _ -> typing_error ~loc "LHS of assignment must be of mutable type";
+       with Not_found -> typing_error ~loc "unknown variable %s" x)
+    | Let (x, exp1, exp2) ->
+      let ty1, es1 = type_of eff_defs e_env h_env t_env exp1 in
+      let ty2, es2 = type_of eff_defs e_env h_env ((x, ty1) :: t_env) exp2 in
+      (ty2, es1 @ es2)
+    | Decl (x, exp1, exp2) ->
+      let ty1, es1 = type_of eff_defs e_env h_env t_env exp1 in
+      let ty2, es2 = type_of eff_defs e_env h_env ((x, TMut ty1) :: t_env) exp2 in
+      (ty2, es1 @ es2)
+    | Handle (x, fname, exp_handle, exp_catch) ->
+      let ty_handle, es_handle = type_of eff_defs e_env ((HVar x, fname) :: h_env) t_env exp_handle in
+      let ty_catch, es_catch = type_of eff_defs e_env h_env t_env exp_catch in
+      (try 
+        match List.assoc fname eff_defs with
+          | TAbs (es1, hs, ts, t, es2) as ty_fname -> 
+            if ty_handle <> t then typing_error ~loc "The type of handle expression and catch body must be the same.";
+            if ty_catch <> ty_fname then typing_error ~loc "The handler's type much match the type of effect definition.";
+            (ty_handle, es_handle)
+          | _ -> typing_error ~loc "effect definition must be of type TAbs";
+       with Not_found -> typing_error ~loc "unknown effect name %s" fname)
     (* | Fun (f, x, ty1, ty2, e) ->
       check eff_defs e_env h_env ((f, TArrow(ty1,ty2)) :: (x, ty1) :: t_env) ty2 e ;
       (TArrow (ty1, ty2), []) *)
-    | Apply (exp1, exp2) ->
+    (* | Apply (exp1, exp2) ->
       begin match type_of eff_defs e_env h_env t_env exp1 with
 	      TAbs (es1, hs, ts, t, es2), es3 -> 
           (* check eff_defs e_env h_env t_env (ty1, []) exp2 ; ty2 *)
@@ -71,5 +103,10 @@ and type_of (eff_defs : f_ENV) (e_env : e_ENV) (h_env : h_ENV) (t_env : t_ENV) {
       | ty, es1 ->
           typing_error ~loc
             "this expression is used as a function but its type is %t" (Print.ty ty)
-      end
-    | Seq (exp1, exp2) -> (TUnit, [])
+      end *)
+    | FullApply (exp1, es, hs, exps) -> (TUnit, [])
+    | Seq (exp1, exp2) ->
+      let ty1, es1 = type_of eff_defs e_env h_env t_env exp1 in
+      let ty2, es2 = type_of eff_defs e_env h_env t_env exp2 in
+      (ty2, es1 @ es2)
+      

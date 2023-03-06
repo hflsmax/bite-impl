@@ -14,6 +14,7 @@ let ty t ppf =
           (* Zoo.print_parens ppf ~at_level:1 "%t ->@ %t" (ty ~max_level:1 t1) (ty ~max_level:0 t2) *)
         (* TODO *)
         | Syntax.TAbs _ -> Zoo.print_parens ppf "abs"
+        | Syntax.TMut t' -> Zoo.print_parens ppf "mut %t" (ty ~max_level:9999 t')
   in
     ty ~max_level:9999 t ppf
 

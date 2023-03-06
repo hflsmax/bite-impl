@@ -31,6 +31,7 @@ type ty =
   | TBool             (* Booleans *)
   | TUnit             (* Unit *)
   | TAbs of effs * hds * tys * ty * effs
+  | TMut of ty
   (* | TArrow of ty * ty  *)
 [@@deriving sexp]
 and tys = ty list
@@ -65,13 +66,15 @@ and expr' =
   | If of expr * expr * expr 		(* Conditional [if e1 then e2 else e3] *)
   | Let of name * expr * expr 		(* Local [let x = e1 in e2] *)
   | Decl of name * expr * expr 		  (* Local Assignable [dcl x := e1 in e2] *)
-  | Handle of name * string * expr * expr (* Handle [handle e1 : F = e1 in e2] *)
+  | Handle of name * fname * expr * expr (* Handle [handle e1 : F = e1 in e2] *)
   (* | Fun of name * name * ty * ty * expr *)
   | FullFun of name * effs * hds * (name * ty) list * ty * effs * expr
-  | Apply of expr * expr 	
+  | FullApply of expr * effs * hd list * expr list
+  (* | EApply of expr * eff
+  | HApply of expr * hd *)
   | Seq of expr * expr  		(* Sequence [e1; e2] *)
 
 (* Toplevel commands *)
 type command =
   | Expr of expr       (* Expression *)
-  | Decl_eff of string * ty
+  | Decl_eff of fname * ty
