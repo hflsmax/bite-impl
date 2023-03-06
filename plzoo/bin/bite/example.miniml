@@ -1,23 +1,23 @@
-eff Fget : ∀[].∀{}.(Unit) -> int_[];;
+eff Fget : ∀[].∀{}.() -> int_[];;
 eff Fset : ∀[].∀{}.(int) -> int_[];;
 
-eff ex : ∀[e].∀{f : Fget}.(int) -> int_[e, ~f];;
+eff ex : ∀[e].∀{f : Fget}.(int, bool) -> int_[e, ~f];;
 
 let counter =
   fun f [] {lget : Fget, lset : Fset} (n : int) : int_[] is
-    let i = lget unit in
+    let i = raise lget () in
       if i = 0 then 
         n 
       else 
-        lset (i - 1) ; f (n+1)
+        raise lset (i - 1) ; f {lget lset} (n+1)
     end
   end
 in 
   let main =
     fun g [] {} (n : int) : int_[] is
       dcl s := n in
-        handle lget : Fget = (fun h [] {} (n : int) : int_[] is s := n end) in
-          handle lset : Fset = (fun h [] {} (n : int) : int_[] is s end) in
+        handle lget : Fget = (fun h [] {} () : int_[] is !s end) in
+          handle lset : Fset = (fun h [] {} (n : int) : int_[] is s := n end) in
             counter {lget lset} n
           end
         end

@@ -1,10 +1,22 @@
 (* This file contains all the common code used by the languages implemented in the PL Zoo. *)
 
+open Sexplib.Std
+
+type lexing_position = Lexing.position =
+  { pos_fname : string
+  ; pos_lnum : int
+  ; pos_bol : int
+  ; pos_cnum : int
+  }
+[@@deriving sexp]
+
 type location =
-  | Location of Lexing.position * Lexing.position (** delimited location *)
+  | Location of lexing_position * lexing_position (** delimited location *)
   | Nowhere (** no location *)
+[@@deriving sexp]
 
 type 'a located = { data : 'a ; loc : location }
+[@@deriving sexp]
 
 let make_location loc1 loc2 = Location (loc1, loc2)
 

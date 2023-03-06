@@ -3,6 +3,7 @@ type location
 
 (** A datum tagged with a source code location *)
 type 'a located = private { data : 'a ; loc : location }
+[@@deriving sexp]
 
 (** Tag a datum with an (optional) location. *)
 val locate : ?loc:location -> 'a -> 'a located

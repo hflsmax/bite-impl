@@ -11,10 +11,8 @@ rule token = parse
   | ['0'-'9']+      { INT (int_of_string(Lexing.lexeme lexbuf)) }
   | "int"           { TINT }
   | "bool"          { TBOOL }
-  | "Unit"          { TUNIT }
   | "true"          { TRUE }
   | "false"         { FALSE }
-  | "unit"          { UNIT }
   | "fun"           { FUN }
   | "eff"           { EFF }
   | "∀"             { FORALL }
@@ -22,6 +20,7 @@ rule token = parse
   | ","             { COMMA }
   | "_"             { UNDERSCORE }
   | "~"             { TILDE }
+  | "!"             { BANG }
   | "is"            { IS }
   | "if"            { IF }
   | "then"          { THEN }
@@ -31,6 +30,7 @@ rule token = parse
   | "handle"        { HANDLE }
   | "in"            { IN }
   | "end"           { END }
+  | "raise"         { RAISE }
   | ":="            { ASSIGN }
   | ";;"            { SEMISEMI }
   | ";"             { SEMI }
@@ -40,6 +40,7 @@ rule token = parse
   | ':'             { COLON }
   | '('             { LPAREN }
   | ')'             { RPAREN }
+  | "()"            { UNIT }
   | '['             { LBRACKET }
   | ']'             { RBRACKET }
   | '{'             { LBRACE }
