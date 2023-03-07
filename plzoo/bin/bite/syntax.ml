@@ -81,3 +81,7 @@ type locals = (name * ty) list
 [@@deriving sexp]
 type static_link = locals list
 [@@deriving sexp]
+
+(* the name of the function, the name of the enclosing function, args and locals *)
+type env_struct = name * name option * (name * ty) list
+[@@deriving sexp]
