@@ -76,12 +76,14 @@ let rec type_of (eff_defs : f_ENV) (e_env : e_ENV) (h_env : h_ENV) (t_env : t_EN
           | TMut ty_x -> (ty_x, [])
           | _ -> typing_error ~loc "Operand to deref must be of mutable type";
        with Not_found -> typing_error ~loc "unknown variable %s" x)
-    | Let (x, exp1, exp2) ->
+    | Let (x, ty, exp1, exp2) ->
       let ty1, es1 = type_of eff_defs e_env h_env t_env exp1 in
+      if ty <> ty1 then typing_error ~loc "Let expression expected type %t but got %t" (Print.ty ty) (Print.ty ty1);
       let ty2, es2 = type_of eff_defs e_env h_env ((x, ty1) :: t_env) exp2 in
       (ty2, es1 @ es2)
-    | Decl (x, exp1, exp2) ->
+    | Decl (x, ty, exp1, exp2) ->
       let ty1, es1 = type_of eff_defs e_env h_env t_env exp1 in
+      if ty <> ty1 then typing_error ~loc "Decl expression expected type %t but got %t" (Print.ty ty) (Print.ty ty1);
       let ty2, es2 = type_of eff_defs e_env h_env ((x, TMut ty1) :: t_env) exp2 in
       (ty2, es1 @ es2)
     | Handle (x, fname, exp_catch, exp_handle) ->

@@ -62,8 +62,8 @@ and expr' =
   | Assign of name * expr 	
   | Deref of name 			 
   | If of expr * expr * expr 		
-  | Let of name * expr * expr 		
-  | Decl of name * expr * expr 		  
+  | Let of name * ty * expr * expr 		
+  | Decl of name * ty * expr * expr 		  
   | Handle of name * fname * expr * expr 
   | FullFun of name * effs * hds * (name * ty) list * ty * effs * expr
   | FullApply of expr * effs * hvar list * expr list
