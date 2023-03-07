@@ -17,8 +17,6 @@
 
 (documentation https://url/to/documentation)
 
-(wrapped_executables false)
-
 (package
  (name plzoo)
  (synopsis "A short synopsis")

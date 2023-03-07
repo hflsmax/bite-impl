@@ -34,3 +34,24 @@ let rec get_env_struct (eff_defs : f_ENV) (exp : expr) : env_struct list =
     | Int _  | Bool _  -> []
   in
     get_env_struct' eff_defs exp (gather_locals eff_defs exp :: []) None
+
+let rec ty_to_clang_ty (ty : ty) : Clang.Type.t =
+  match ty with
+  | TInt -> Clangml_helper.int
+  | TBool -> Clangml_helper.bool
+  | TMut ty' -> ty_to_clang_ty ty'
+  | TAbs (es, hs, ty_args, ty, es2) -> Clangml_helper.bool
+
+let env_struct_to_ast (env_struct : env_struct) : Clang.Ast.decl =
+  let (name, p_fun, locals) = env_struct in
+  let locals_ast = List.map (fun (x, ty) -> Clangml_helper.field x (ty_to_clang_ty ty)) locals in
+    match p_fun with
+      | None -> Clangml_helper.record_decl name locals_ast
+      | Some p_fun_name -> 
+          Clangml_helper.record_decl name 
+            ((Clangml_helper.field p_fun_name (Clangml_helper.record (Clang.Ast.ident_ref (Clang.Ast.IdentifierName "ABC")))) :: locals_ast)
+
+         
+
+let env_structs_to_ast (env_structs : env_struct list) : Clang.Ast.translation_unit =
+  Clangml_helper.translation_unit (List.map env_struct_to_ast env_structs)
