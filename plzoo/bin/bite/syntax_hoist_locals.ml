@@ -50,7 +50,7 @@ type t_ENV = (name * ty) list
 
 (* Expressions *)
 type expr =
-  | Var of name 		
+  | Var of int * name
   | Int of int  		
   | Bool of bool		
   | Times of expr * expr 		

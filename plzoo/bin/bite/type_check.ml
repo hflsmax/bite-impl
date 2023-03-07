@@ -31,7 +31,7 @@ let rec ty_ok (eff_defs : f_ENV) (e_env : e_ENV) (h_env : h_ENV) ty =
 
 let rec type_of (eff_defs : f_ENV) (e_env : e_ENV) (h_env : h_ENV) (t_env : t_ENV) {Zoo.data=e; loc} : (ty * effs) =
   match e with
-    | Var x ->
+    | Var (_, x) ->
       (try (List.assoc x t_env, []) 
        with Not_found -> typing_error ~loc "unknown variable %s" x)
     | Int _ -> (TInt, [])
@@ -59,23 +59,31 @@ let rec type_of (eff_defs : f_ENV) (e_env : e_ENV) (h_env : h_ENV) (t_env : t_EN
       ty_ok eff_defs (es1 @ e_env) (hs @ h_env) ty ;
       List.iter (eff_ok (es1 @ e_env) (hs @ h_env)) es2 ;
       let ty_e, es_e = type_of eff_defs (es1 @ e_env) (hs @ h_env) ((x, TAbs (es1, hs, ty_args, ty, es2)) :: tm_args @ t_env) exp in
-      if ty_e <> ty then typing_error ~loc "The function body has the wrong type, expected %t but got %t" (Print.ty ty) (Print.ty ty_e);
-      if (List.exists (fun e -> not (List.mem e es2)) es_e) then typing_error ~loc "The function body has more effects than allowed by the function type";
+        if ty_e <> ty then typing_error ~loc "The function body has the wrong type, expected %t but got %t" (Print.ty ty) (Print.ty ty_e);
+        if (List.exists (fun e -> not (List.mem e es2)) es_e) then typing_error ~loc "The function body has more effects than allowed by the function type";
       (TAbs (es1, hs, ty_args, ty, es2), [])
-    | Assign (x, exp) -> 
-      let ty_e, es_e = type_of eff_defs e_env h_env t_env exp in
-      (try 
-        match List.assoc x t_env with
-          | TMut ty_x -> if ty_x <> ty_e then typing_error ~loc "This expression can't be type checked";
-            (ty_e, es_e)
-          | _ -> typing_error ~loc "LHS of assignment must be of mutable type";
-       with Not_found -> typing_error ~loc "unknown variable %s" x)
-    | Deref x ->
-      (try 
-        match List.assoc x t_env with
-          | TMut ty_x -> (ty_x, [])
-          | _ -> typing_error ~loc "Operand to deref must be of mutable type";
-       with Not_found -> typing_error ~loc "unknown variable %s" x)
+    | Assign (v, exp) -> 
+      begin match v.data with
+        | Var (_, x) ->
+          let ty_e, es_e = type_of eff_defs e_env h_env t_env exp in
+          (try 
+            match List.assoc x t_env with
+              | TMut ty_x -> if ty_x <> ty_e then typing_error ~loc "This expression can't be type checked";
+                (ty_e, es_e)
+              | _ -> typing_error ~loc "LHS of assignment must be of mutable type";
+          with Not_found -> typing_error ~loc "unknown variable %s" x)
+        | _ -> typing_error ~loc "LHS of assignment must be a variable"
+      end
+    | Deref v ->
+      begin match v.data with
+        | Var (_, x) ->
+          (try 
+            match List.assoc x t_env with
+              | TMut ty_x -> (ty_x, [])
+              | _ -> typing_error ~loc "Operand to deref must be of mutable type";
+          with Not_found -> typing_error ~loc "unknown variable %s" x)
+        | _ -> typing_error ~loc "Operand to deref must be a variable"
+      end
     | Let (x, ty, exp1, exp2) ->
       let ty1, es1 = type_of eff_defs e_env h_env t_env exp1 in
       if ty <> ty1 then typing_error ~loc "Let expression expected type %t but got %t" (Print.ty ty) (Print.ty ty1);

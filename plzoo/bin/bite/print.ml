@@ -1,25 +1,28 @@
 open Core
 
 let effs es ppf =
-  Zoo.print_parens ppf "%s" (Sexp.to_string (Syntax.sexp_of_effs es))
+  Zoo.print_parens ppf "%s" (Sexp.to_string_hum (Syntax.sexp_of_effs es))
 
 let hds hds ppf =
-  Zoo.print_parens ppf "%s" (Sexp.to_string (Syntax.sexp_of_hds hds))
+  Zoo.print_parens ppf "%s" (Sexp.to_string_hum (Syntax.sexp_of_hds hds))
 
 let t_ENV t_env ppf =
-  Zoo.print_parens ppf "%s" (Sexp.to_string (Syntax.sexp_of_t_ENV t_env))
+  Zoo.print_parens ppf "%s" (Sexp.to_string_hum (Syntax.sexp_of_t_ENV t_env))
 
 let h_ENV h_env ppf =
-  Zoo.print_parens ppf "%s" (Sexp.to_string (Syntax.sexp_of_h_ENV h_env))
+  Zoo.print_parens ppf "%s" (Sexp.to_string_hum (Syntax.sexp_of_h_ENV h_env))
 
 let expr e ppf =
-  Zoo.print_parens ppf "%s" (Sexp.to_string (Syntax.sexp_of_expr' e))
+  Zoo.print_parens ppf "%s" (Sexp.to_string_hum (Syntax.sexp_of_expr' e))
 
 let ty t ppf =
-  Zoo.print_parens ppf "%s" (Sexp.to_string (Syntax.sexp_of_ty t))
+  Zoo.print_parens ppf "%s" (Sexp.to_string_hum (Syntax.sexp_of_ty t))
+
+let static_link sl ppf =
+  Zoo.print_parens ppf "%s" (Sexp.to_string_hum (Syntax.sexp_of_static_link sl))
 
 let tys ts ppf =
-  Zoo.print_parens ppf "%s" (Sexp.to_string (Syntax.sexp_of_tys ts))
+  Zoo.print_parens ppf "%s" (Sexp.to_string_hum (Syntax.sexp_of_tys ts))
 
 (* 
 let ty t ppf =

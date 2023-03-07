@@ -41,6 +41,7 @@
 %left PLUS MINUS
 %left TIMES
 %nonassoc ASSIGN
+%nonassoc BANG
 %left SEMI
 
 %%
@@ -88,10 +89,15 @@ eff_name:
   | COMMA? TILDE x = VAR
     { Handler (x) }
 
+var: mark_position(plain_var) { $1 }
+plain_var:
+  | x = VAR
+    { Var (0, x) }
+
 lhs: mark_position(plain_lhs) { $1 }
 plain_lhs:
-  | x = VAR
-    { Var x }
+  | x = plain_var
+    { x }
   | FUN x = VAR LBRACKET es1 = eff_name* RBRACKET 
                 LBRACE hs = hd_param* RBRACE 
                 tm_params = tm_params
@@ -108,15 +114,15 @@ handler_args:
 
 term_arg: mark_position(plain_term_arg) { $1 }
 plain_term_arg:
-  | x = VAR
-    { Var x }
+  | x = plain_var
+    { x }
   | TRUE    
     { Bool true }
   | FALSE
     { Bool false }
   | n = INT
     { Int n }
-  | BANG x = VAR
+  | BANG x = var 
     { Deref x }
   | LPAREN e = plain_expr RPAREN	
     { e }
@@ -145,7 +151,7 @@ plain_expr:
     { Int n }
   | MINUS n = INT
     { Int (-n) }
-  | BANG x = VAR
+  | BANG x = expr
     { Deref x }
   | e1 = expr PLUS e2 = expr	
     { Plus (e1, e2) }
@@ -157,7 +163,7 @@ plain_expr:
     { Equal (e1, e2) }
   | e1 = expr LESS e2 = expr
     { Less (e1, e2) }
-  | x = VAR ASSIGN e = expr
+  | x = var ASSIGN e = expr
     { Assign (x, e) }
   | IF e1 = expr THEN e2 = expr ELSE e3 = expr 
     { If (e1, e2, e3) }

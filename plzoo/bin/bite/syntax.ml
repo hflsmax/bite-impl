@@ -30,7 +30,6 @@ type ty =
   | TBool (* Booleans *)
   | TAbs of effs * hds * tys * ty * effs
   | TMut of ty
-  (* | TArrow of ty * ty  *)
 [@@deriving sexp]
 and tys = ty list
 [@@deriving sexp]
@@ -51,7 +50,7 @@ type t_ENV = (name * ty) list
 (* Expressions *)
 type expr = expr' Zoo.located
 and expr' =
-  | Var of name 		
+  | Var of int * name (* int indicates the depth of var within the static link. It is not used in the source language *)
   | Int of int  		
   | Bool of bool		
   | Times of expr * expr 		
@@ -59,8 +58,10 @@ and expr' =
   | Minus of expr * expr 		
   | Equal of expr * expr 		
   | Less of expr * expr  		
-  | Assign of name * expr 	
-  | Deref of name 			 
+  (* NOTE: the first component of Assign and Deref must be a Var. We choose to use the type "expr" instead of "name"
+    because we want to annotate them with depth, like a Var *)
+  | Assign of expr * expr 	
+  | Deref of expr 			 
   | If of expr * expr * expr 		
   | Let of name * ty * expr * expr 		
   | Decl of name * ty * expr * expr 		  
@@ -75,3 +76,8 @@ and expr' =
 type command =
   | Expr of expr (* Expression *)
   | Decl_eff of fname * ty
+
+type locals = (name * ty) list
+[@@deriving sexp]
+type static_link = locals list
+[@@deriving sexp]
