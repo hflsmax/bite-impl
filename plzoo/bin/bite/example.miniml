@@ -13,7 +13,7 @@ let counter : ∀[].∀{lget : Fget, lset : Fset}.(int) -> int_[~lget, ~lset] =
     end
   end
 in 
-  let main : ∀[].∀{}.(int) -> int_[] =
+  let run : ∀[].∀{}.(int) -> int_[] =
     fun g [] {} (n : int) : int_[] is
       dcl s : int := n in
         handle lget : Fget = (fun fget [] {} () : int_[] is !s end) in
@@ -24,7 +24,7 @@ in
       end
     end
   in 
-    main 10
+    run 10
   end
 end
 ;;

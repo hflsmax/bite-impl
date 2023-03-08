@@ -54,3 +54,6 @@ let get_fullfun_name (exp : expr') : string =
   match exp with
   | FullFun (x, es1, hs, tm_args, ty, es2, exp) -> x
   | _ -> failwith "get_fullfun_name: can only be called on FullFun"
+
+let wrap_in_main (exp : expr) : expr =
+  Zoo.locate (FullFun ("main", [], [], [], TInt, [], exp))
