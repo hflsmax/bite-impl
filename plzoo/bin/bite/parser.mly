@@ -77,7 +77,7 @@ tm_params:
 
 hd_param:
   | COMMA? x = VAR COLON t = VAR
-    { (x, t) }
+    { (x, (t, TInt)) } (* TInt is a dummy and will be replaced during type checking. *)
 
 hd_arg:
   | x = VAR
@@ -172,7 +172,7 @@ plain_expr:
   | DECL x = VAR COLON ty = ty ASSIGN e1 = expr IN e2 = expr END
     { Decl (x, ty, e1, e2) }
   | HANDLE x = VAR COLON fname = VAR EQUAL e1 = expr IN e2 = expr END
-    { Handle (x, fname, e1, e2) }
+    { Handle (x, (fname, TInt), e1, e2) }
   | e1 = expr SEMI e2 = expr
     { Seq (e1, e2) }
 

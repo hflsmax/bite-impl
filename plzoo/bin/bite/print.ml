@@ -3,9 +3,6 @@ open Core
 let effs es ppf =
   Zoo.print_parens ppf "%s" (Sexp.to_string_hum (Syntax.sexp_of_effs es))
 
-let hds hds ppf =
-  Zoo.print_parens ppf "%s" (Sexp.to_string_hum (Syntax.sexp_of_hds hds))
-
 let t_ENV t_env ppf =
   Zoo.print_parens ppf "%s" (Sexp.to_string_hum (Syntax.sexp_of_t_ENV t_env))
 

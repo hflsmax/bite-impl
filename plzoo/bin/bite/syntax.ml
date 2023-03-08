@@ -13,9 +13,6 @@ type fname = string
 type hvar = string
 [@@deriving sexp]
 
-type hds = (hvar * fname) list
-[@@deriving sexp]
-
 type eff =
   | EVar of string
   | Handler of hvar
@@ -28,7 +25,7 @@ type effs = eff list
 type ty =
   | TInt  (* Integers *)
   | TBool (* Booleans *)
-  | TAbs of effs * hds * tys * ty * effs
+  | TAbs of effs * (hvar * (fname * ty)) list * tys * ty * effs
   | TMut of ty
 [@@deriving sexp]
 and tys = ty list
@@ -40,7 +37,7 @@ type f_ENV = (fname * ty) list
 type e_ENV = effs
 [@@deriving sexp]
 
-type h_ENV = hds
+type h_ENV = (hvar * fname) list
 [@@deriving sexp]
 
 type t_ENV = (name * ty) list
@@ -65,8 +62,8 @@ and expr' =
   | If of expr * expr * expr 		
   | Let of name * ty * expr * expr 		
   | Decl of name * ty * expr * expr 		  
-  | Handle of name * fname * expr * expr 
-  | FullFun of name * effs * hds * (name * ty) list * ty * effs * expr
+  | Handle of name * (fname * ty) * expr * expr 
+  | FullFun of name * effs * (hvar * (fname * ty)) list * (name * ty) list * ty * effs * expr
   | FullApply of expr * effs * hvar list * expr list
   | Raise of hvar * effs * hvar list * expr list
   | Seq of expr * expr  		

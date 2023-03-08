@@ -22,10 +22,12 @@ let eff_ok (e_env : e_ENV) (h_env : h_ENV) (e : eff) =
 let rec ty_ok (eff_defs : f_ENV) (e_env : e_ENV) (h_env : h_ENV) ty =
   match ty with
     | TAbs (es1, hs, ts, t, es2) ->
-        List.iter (ty_ok eff_defs (es1 @ e_env) (hs @ h_env)) ts ;
-        List.iter (fname_ok eff_defs) (snd (List.split hs)) ;
-        ty_ok eff_defs (es1 @ e_env) (hs @ h_env) t ;
-        List.iter (eff_ok (es1 @ e_env) (hs @ h_env)) es2
+        let new_e_env = es1 @ e_env in
+        let new_h_env = List.map (fun (x, (fname, _)) -> (x, fname)) hs @ h_env in
+        List.iter (ty_ok eff_defs new_e_env new_h_env) ts ;
+        List.iter (fname_ok eff_defs) (fst (List.split (snd (List.split hs))));
+        ty_ok eff_defs new_e_env new_h_env t ;
+        List.iter (eff_ok new_e_env new_h_env) es2
     | _ -> ()
 
 
@@ -54,11 +56,13 @@ let rec type_of (eff_defs : f_ENV) (e_env : e_ENV) (h_env : h_ENV) (t_env : t_EN
       (ty2, es1 @ es2 @ es3)
     | FullFun (x, es1, hs, tm_args, ty, es2, exp) ->
       let ty_args = List.map snd tm_args in
-      List.iter (ty_ok eff_defs (es1 @ e_env) (hs @ h_env)) ty_args ;
-      List.iter (fname_ok eff_defs) (snd (List.split hs)) ;
-      ty_ok eff_defs (es1 @ e_env) (hs @ h_env) ty ;
-      List.iter (eff_ok (es1 @ e_env) (hs @ h_env)) es2 ;
-      let ty_e, es_e = type_of eff_defs (es1 @ e_env) (hs @ h_env) ((x, TAbs (es1, hs, ty_args, ty, es2)) :: tm_args @ t_env) exp in
+      let new_e_env = es1 @ e_env in
+      let new_h_env = List.map (fun (x, (fname, _)) -> (x, fname)) hs @ h_env in
+      List.iter (ty_ok eff_defs new_e_env new_h_env) ty_args ;
+      List.iter (fname_ok eff_defs) (fst (List.split (snd (List.split hs)))) ;
+      ty_ok eff_defs new_e_env new_h_env ty ;
+      List.iter (eff_ok new_e_env new_h_env) es2 ;
+      let ty_e, es_e = type_of eff_defs new_e_env new_h_env ((x, TAbs (es1, hs, ty_args, ty, es2)) :: tm_args @ t_env) exp in
         if ty_e <> ty then typing_error ~loc "The function body has the wrong type, expected %t but got %t" (Print.ty ty) (Print.ty ty_e);
         if (List.exists (fun e -> not (List.mem e es2)) es_e) then typing_error ~loc "The function body has more effects than allowed by the function type";
       (TAbs (es1, hs, ty_args, ty, es2), [])
@@ -94,7 +98,7 @@ let rec type_of (eff_defs : f_ENV) (e_env : e_ENV) (h_env : h_ENV) (t_env : t_EN
       if ty <> ty1 then typing_error ~loc "Decl expression expected type %t but got %t" (Print.ty ty) (Print.ty ty1);
       let ty2, es2 = type_of eff_defs e_env h_env ((x, TMut ty1) :: t_env) exp2 in
       (ty2, es1 @ es2)
-    | Handle (x, fname, exp_catch, exp_handle) ->
+    | Handle (x, (fname, _), exp_catch, exp_handle) ->
       let ty_handle, es_handle = type_of eff_defs e_env ((x, fname) :: h_env) t_env exp_handle in
       let ty_catch, es_catch = type_of eff_defs e_env h_env t_env exp_catch in
       (try 
@@ -114,7 +118,7 @@ let rec type_of (eff_defs : f_ENV) (e_env : e_ENV) (h_env : h_ENV) (t_env : t_EN
         let tys, ess = List.split (List.map (type_of eff_defs e_env h_env t_env) exps) in
         if List.length es <> List.length es1' then typing_error ~loc "Wrong number of effect arguments.";
         let actual_fnames = List.map (fun h -> List.assoc h h_env) hs in
-          let expected_fnames = snd (List.split hs') in
+          let expected_fnames = fst (List.split (snd (List.split hs'))) in
           if actual_fnames <> expected_fnames then typing_error ~loc "Wrong handlers types, expected %s, got %s" (String.concat ", " expected_fnames) (String.concat ", " actual_fnames);
         if tys <> ts' then typing_error ~loc "Wrong types of term arguments.";
         (t', es2' @ es1 @ List.concat ess)
@@ -129,7 +133,7 @@ let rec type_of (eff_defs : f_ENV) (e_env : e_ENV) (h_env : h_ENV) (t_env : t_EN
                 List.iter (hd_ok loc h_env) hs;
                 let tys, ess = List.split (List.map (type_of eff_defs e_env h_env t_env) exps) in
                 if List.length es <> List.length es1' then typing_error ~loc "Wrong number of effect arguments.";
-                if (List.map (fun h -> List.assoc h h_env) hs) <> snd (List.split hs') then typing_error ~loc "Wrong types of handler arguments.";
+                if (List.map (fun h -> List.assoc h h_env) hs) <> fst (List.split (snd (List.split hs'))) then typing_error ~loc "Wrong types of handler arguments.";
                 if tys <> ts' then typing_error ~loc "Wrong types of term arguments.";
                 (t', Handler hvar :: es2' @ List.concat ess)
               | _ -> typing_error ~loc "effect definition must be of type TAbs";
