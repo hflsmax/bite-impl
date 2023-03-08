@@ -36,11 +36,10 @@ let rec ty_to_string ty : string =
     let clean_format = fun s -> Str.global_replace (Str.regexp "PLACEHOLDER") "" s in
     (* The first parameter is the env pointer. *)
     let ty_args = "void*" :: List.map (fun ty_arg -> ty_to_string ty_arg |> clean_format) ty_args in
-    let handler_ty_args = []
-      (* List.map (fun (h, fname) -> 
-      [Str.global_replace (Str.regexp "PLACEHOLDER") "" (ty_to_string (List.assoc fname eff_defs));
-      "void* "]) hs 
-      |> List.flatten *)
+    let handler_ty_args = List.map (fun (h, (_, fname_ty)) -> 
+      [Str.global_replace (Str.regexp "PLACEHOLDER") "" (ty_to_string fname_ty);
+      "void*"]) hs 
+      |> List.flatten
     in
     Printf.sprintf "%s (*PLACEHOLDER)(%s)" (ty_to_string ty) (String.concat ", " (ty_args @ handler_ty_args))
 

@@ -76,7 +76,7 @@ let rec compile {Zoo.data=e'; _} : string * string list =
         "void* " ^ h ^ "_env"]) hs 
         |> List.flatten
       in
-      let this_fun = spf "%s %s(%s)\n{\n%sreturn ({\n%s\n});}\n" (ty_to_string ty) x (String.concat ", " (code_tm_args @ code_hs)) code_init code_body in
+      let this_fun = spf "%s %s(%s)\n{\n%sreturn ({\n%s\n;});}\n" (ty_to_string ty) x (String.concat ", " (code_tm_args @ code_hs)) code_init code_body in
       "&" ^ x , this_fun :: f1
     | FullApply (lhs, es, hs, exps) ->
       let lhs', f1 = compile lhs in
@@ -85,7 +85,7 @@ let rec compile {Zoo.data=e'; _} : string * string list =
       (* The pointer arithmetic gets the environment for the corresponding function pointer.
          We assume all function pointers are accompanied by an environment in the memory layout.
          This is true inside the "locals" struct. *)
-      let args_code = spf "*((char*)&%s+sizeof(%s))" lhs' lhs' :: exps' @ handler_args in
+      let args_code = spf "*((void**)((char*)&%s+sizeof(%s)))" lhs' lhs' :: exps' @ handler_args in
       spf "(%s)(%s)" lhs' (String.concat ", " args_code), f1 @ List.concat f2
     | Raise (h, es, hs, exps) ->
       let exps', f2 = List.split (List.map compile exps) in
@@ -95,4 +95,15 @@ let rec compile {Zoo.data=e'; _} : string * string list =
     | Seq (e1, e2) ->
       let e1', f1 = compile e1 in
       let e2', f2 = compile e2 in
-      spf "\n%s;\n%s;" e1' e2', f1 @ f2
+      spf "\n%s;\n%s" e1' e2', f1 @ f2
+
+(* Top level can only be function definition and application *)
+let rec compile_toplevel {Zoo.data=e'; _} : string =
+  match e' with
+  | Let (x, ty, e1, e2) ->
+    let e1', f1 = compile e1 in
+    let e2' = compile_toplevel e2 in
+    spf "locals.%s = %s;\n%s" x e1' e2'
+  | FullApply (lhs, es, hs, exps) ->
+    ""
+  | _ -> Zoo.error "Toplevel expression must be a let binding of function or application.\n"

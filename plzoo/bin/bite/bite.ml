@@ -25,7 +25,7 @@ module Bite = Zoo.Main (struct
       let ty, es = Type_check.type_of eff_defs [] [] [] exp in
       let exp = Enrich_type.record_depth exp in
       let exp = Enrich_type.record_fname_ty eff_defs exp in
-      let env_structs = Env_struct.get_env_struct eff_defs exp None in
+      let env_structs = Env_struct.get_env_struct exp None in
       let env_structs_string = List.map (fun es -> Env_struct.env_struct_to_string es) env_structs in
       let top_level_code, codes = Compile.compile exp in
       Zoo.print_info "env_structs:@.%s@." (String.concat "\n" env_structs_string);

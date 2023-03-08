@@ -66,7 +66,7 @@ let rec record_fname_ty (eff_defs : f_ENV) ({Zoo.data=exp; loc} : expr) : expr =
       (Handle (x, (fname, List.assoc fname eff_defs), record_fname_ty eff_defs exp_catch, record_fname_ty eff_defs exp_handle))
    | FullFun (x, es1, hs, tm_args, ty, es2, exp) ->
       let hs' = List.map (fun (x, (fname, _)) -> (x, (fname, List.assoc fname eff_defs))) hs in
-      FullFun (x, es1, hs', tm_args, ty, es2, exp)
+      FullFun (x, es1, hs', tm_args, ty, es2, record_fname_ty eff_defs exp)
    | FullApply (exp, es, hs, exps) ->
       (FullApply (record_fname_ty eff_defs exp, es, hs, List.map (fun exp_iter -> record_fname_ty eff_defs exp_iter) exps))
    | Raise (h, es, hs, exps) ->
