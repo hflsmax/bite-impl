@@ -24,13 +24,13 @@ module Bite = Zoo.Main (struct
       (* check the type of [exp], compile it, and run it. *)
       let ty, es = Type_check.type_of eff_defs [] [] [] exp in
       let record_depth_exp = Record_depth.record_depth eff_defs exp in
-      let env_structs = Env_struct.get_env_struct eff_defs exp in
-      let env_structs_ast = Env_struct.env_structs_to_ast env_structs in
-      Format.printf "%a@." Clang.Printer.translation_unit env_structs_ast;
-      (* let frm = Compile.compile e in *)
-      (* let v = Machine.run frm env in *)
+      let env_structs = Env_struct.get_env_struct eff_defs exp None in
+      let env_structs_string = List.map (fun es -> Env_struct.env_struct_to_string es) env_structs in
+      let top_level_code, codes = Compile.compile eff_defs record_depth_exp in
+      Zoo.print_info "env_structs:@.%s@." (String.concat "\n" env_structs_string);
       Zoo.print_info "- : %t_%t=@.%t@." (Print.ty ty) (Print.effs es) (Print.expr record_depth_exp.data);
-      List.iter (fun es -> Zoo.print_info "env_structs:@.%t@." (Print.env_struct es)) env_structs;
+      Zoo.print_info "top_level_code:@.%s@." top_level_code;
+      List.iter (fun code -> Zoo.print_info "code:@.%s@." code) codes;
       eff_defs
     | Syntax.Decl_eff (x, ty) ->
       Type_check.ty_ok eff_defs [] [] ty ;
