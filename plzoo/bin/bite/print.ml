@@ -12,6 +12,9 @@ let h_ENV h_env ppf =
 let expr e ppf =
   Zoo.print_parens ppf "%s" (Sexp.to_string_hum (Syntax.sexp_of_expr' e))
 
+let rexpr e ppf =
+  Zoo.print_parens ppf "%s" (Sexp.to_string_hum (Syntax.R.sexp_of_expr e))
+
 let ty t ppf =
   Zoo.print_parens ppf "%s" (Sexp.to_string_hum (Syntax.sexp_of_ty t))
 

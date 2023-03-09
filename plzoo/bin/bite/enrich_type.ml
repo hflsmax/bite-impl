@@ -1,21 +1,22 @@
 
 open Syntax
+open Syntax.R
 open Common
-let get_var_depth ~loc (x : name) (slink : static_link) : int =
+let get_var_depth (x : name) (slink : static_link) : int =
   let rec get_var_depth' (x : name) (slink : static_link) (depth : int) : int =
     match slink with
-    | [] -> Zoo.error ~loc "Variable \"%s\" not found in static link: %t@." x (Print.static_link slink)
+    | [] -> Zoo.error "Variable \"%s\" not found in static link: %t@." x (Print.static_link slink)
     | locals :: slink' ->
         if List.mem_assoc x locals then depth
         else get_var_depth' x slink' (depth + 1)
   in
     get_var_depth' x slink 0
 
-let rec record_depth (exp : expr) : expr =
-  let rec record_depth' ({Zoo.data=exp; loc} : expr) (slink : static_link) : expr =
-    Zoo.locate ~loc @@
+let rec record_depth (exp : R.expr) : R.expr =
+  let rec record_depth' ((exp, ty, effs): R.expr) (slink : static_link) : R.expr =
+   begin
     match exp with
-    | Var (_, x) -> (Var ((get_var_depth ~loc x slink), x))
+    | Var (_, x) -> (Var ((get_var_depth x slink), x))
     | Times (e1, e2) -> (Times (record_depth' e1 slink, record_depth' e2 slink))
     | Plus (e1, e2) -> (Plus (record_depth' e1 slink, record_depth' e2 slink))
     | Minus (e1, e2) -> (Minus (record_depth' e1 slink, record_depth' e2 slink))
@@ -32,21 +33,22 @@ let rec record_depth (exp : expr) : expr =
     | Handle (x, fname, exp_catch, exp_handle) ->
        (Handle (x, fname, record_depth' exp_catch slink, record_depth' exp_handle slink))
     | FullFun (x, es1, hs, tm_args, ty, es2, exp_body) ->
-      let hd_args = List.map (fun (name, (_, ty)) -> (name, ty)) hs in
+      let hd_args = List.map (fun (name, _, ty) -> (name, ty)) hs in
         let locals = (x, full_fun_to_tabs exp) :: tm_args @ hd_args @ gather_locals exp_body in
          (FullFun (x, es1, hs, tm_args, ty, es2, record_depth' exp_body (locals :: slink)))
-    | FullApply ((exp, ty), es, hs, exps) ->
-       (FullApply ((record_depth' exp slink, ty), es, hs, List.map (fun exp_iter -> record_depth' exp_iter slink) exps))
+    | FullApply (exp, es, hs, exps) ->
+       (FullApply (record_depth' exp slink, es, hs, List.map (fun exp_iter -> record_depth' exp_iter slink) exps))
     | Raise (h, es, hs, exps) ->
        (Raise (h, es, hs, List.map (fun exp_iter -> record_depth' exp_iter slink) exps))
     | Seq (e1, e2) ->
        (Seq (record_depth' e1 slink, record_depth' e2 slink))
     | Int _  | Bool _  as e -> e
+   end, ty, effs
   in
     record_depth' exp (gather_locals exp :: [])
 
-let rec record_fname_ty (eff_defs : f_ENV) ({Zoo.data=exp; loc} : expr) : expr =
-   Zoo.locate ~loc @@
+let rec record_fname_ty (eff_defs : f_ENV) ((exp, ty, eff) : expr) : expr =
+   begin
    match exp with
    | Var _  | Int _  | Bool _  as e -> e
    | Times (e1, e2) -> (Times (record_fname_ty eff_defs e1, record_fname_ty eff_defs e2))
@@ -65,11 +67,12 @@ let rec record_fname_ty (eff_defs : f_ENV) ({Zoo.data=exp; loc} : expr) : expr =
    | Handle (x, (fname, _), exp_catch, exp_handle) ->
       (Handle (x, (fname, List.assoc fname eff_defs), record_fname_ty eff_defs exp_catch, record_fname_ty eff_defs exp_handle))
    | FullFun (x, es1, hs, tm_args, ty, es2, exp) ->
-      let hs' = List.map (fun (x, (fname, _)) -> (x, (fname, List.assoc fname eff_defs))) hs in
+      let hs' = List.map (fun (x, fname, _) -> (x, fname, List.assoc fname eff_defs)) hs in
       FullFun (x, es1, hs', tm_args, ty, es2, record_fname_ty eff_defs exp)
-   | FullApply ((exp, lhs_ty), es, hs, exps) ->
-      (FullApply ((record_fname_ty eff_defs exp, lhs_ty), es, hs, List.map (fun exp_iter -> record_fname_ty eff_defs exp_iter) exps))
+   | FullApply (exp, es, hs, exps) ->
+      (FullApply (record_fname_ty eff_defs exp, es, hs, List.map (fun exp_iter -> record_fname_ty eff_defs exp_iter) exps))
    | Raise (h, es, hs, exps) ->
       (Raise (h, es, hs, List.map (fun exp_iter -> record_fname_ty eff_defs exp_iter) exps))
    | Seq (e1, e2) ->
       (Seq (record_fname_ty eff_defs e1, record_fname_ty eff_defs e2))
+   end, ty, eff

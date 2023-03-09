@@ -77,7 +77,7 @@ tm_params:
 
 hd_param:
   | COMMA? x = VAR COLON t = VAR
-    { (x, (t, TInt)) } (* TInt is a dummy and will be replaced during type checking. *)
+    { (x, t) }
 
 hd_arg:
   | x = VAR
@@ -92,7 +92,7 @@ eff_name:
 var: mark_position(plain_var) { $1 }
 plain_var:
   | x = VAR
-    { Var (0, x) }
+    { Var x }
 
 lhs: mark_position(plain_lhs) { $1 }
 plain_lhs:
@@ -138,7 +138,7 @@ plain_expr:
   | LPAREN e = plain_expr RPAREN	
     { e }
   | lhs = lhs es = effect_args? hs = handler_args? exps = term_args
-    { FullApply ((lhs, TInt), (Option.value es ~default:[]), (Option.value hs ~default:[]), exps) }
+    { FullApply (lhs, (Option.value es ~default:[]), (Option.value hs ~default:[]), exps) }
   | RAISE hvar = VAR es = effect_args? hs = handler_args? exps = term_args
     { Raise (hvar, (Option.value es ~default:[]), (Option.value hs ~default:[]), exps) }
   | x = plain_lhs
@@ -172,7 +172,7 @@ plain_expr:
   | DECL x = VAR COLON ty = ty ASSIGN e1 = expr IN e2 = expr END
     { Decl (x, ty, e1, e2) }
   | HANDLE x = VAR COLON fname = VAR EQUAL e1 = expr IN e2 = expr END
-    { Handle (x, (fname, TInt), e1, e2) }
+    { Handle (x, fname, e1, e2) }
   | e1 = expr SEMI e2 = expr
     { Seq (e1, e2) }
 
