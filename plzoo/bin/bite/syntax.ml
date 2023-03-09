@@ -27,6 +27,8 @@ type ty =
   | TBool (* Booleans *)
   | TAbs of effs * (hvar * (fname * ty)) list * tys * ty * effs
   | TMut of ty
+  | TStackClosure of ty
+  (* TODO: add THeapClosure *)
 [@@deriving sexp]
 and tys = ty list
 [@@deriving sexp]
@@ -62,9 +64,11 @@ and expr' =
   | If of expr * expr * expr 		
   | Let of name * ty * expr * expr 		
   | Decl of name * ty * expr * expr 		  
+  (* NOTE: ty of effect name is redundant, it's used to simplify future passes *)
   | Handle of name * (fname * ty) * expr * expr 
   | FullFun of name * effs * (hvar * (fname * ty)) list * (name * ty) list * ty * effs * expr
-  | FullApply of expr * effs * hvar list * expr list
+  (* NOTE: ty of lhs is added. It's used to cast a C function pointer to the appropriate C type *)
+  | FullApply of (expr * ty) * effs * hvar list * expr list
   | Raise of hvar * effs * hvar list * expr list
   | Seq of expr * expr  		
 [@@deriving sexp]
@@ -77,8 +81,4 @@ type command =
 type locals = (name * ty) list
 [@@deriving sexp]
 type static_link = locals list
-[@@deriving sexp]
-
-(* the name of the function, the name of the enclosing function, args and locals *)
-type env_struct = name * name * (name * ty) list
 [@@deriving sexp]

@@ -138,7 +138,7 @@ plain_expr:
   | LPAREN e = plain_expr RPAREN	
     { e }
   | lhs = lhs es = effect_args? hs = handler_args? exps = term_args
-    { FullApply (lhs, (Option.value es ~default:[]), (Option.value hs ~default:[]), exps) }
+    { FullApply ((lhs, TInt), (Option.value es ~default:[]), (Option.value hs ~default:[]), exps) }
   | RAISE hvar = VAR es = effect_args? hs = handler_args? exps = term_args
     { Raise (hvar, (Option.value es ~default:[]), (Option.value hs ~default:[]), exps) }
   | x = plain_lhs

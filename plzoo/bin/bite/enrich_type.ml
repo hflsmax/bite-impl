@@ -31,12 +31,12 @@ let rec record_depth (exp : expr) : expr =
        (Decl (x, ty, record_depth' e1 slink, record_depth' e2 slink))
     | Handle (x, fname, exp_catch, exp_handle) ->
        (Handle (x, fname, record_depth' exp_catch slink, record_depth' exp_handle slink))
-    | FullFun (x, es1, hs, tm_args, ty, es2, exp) ->
-      let ty_args = List.map snd tm_args in
-        let locals = (x, TAbs (es1, hs, ty_args, ty, es2)) :: tm_args @ gather_locals exp in
-         (FullFun (x, es1, hs, tm_args, ty, es2, record_depth' exp (locals :: slink)))
-    | FullApply (exp, es, hs, exps) ->
-       (FullApply (record_depth' exp slink, es, hs, List.map (fun exp_iter -> record_depth' exp_iter slink) exps))
+    | FullFun (x, es1, hs, tm_args, ty, es2, exp_body) ->
+      let hd_args = List.map (fun (name, (_, ty)) -> (name, ty)) hs in
+        let locals = (x, full_fun_to_tabs exp) :: tm_args @ hd_args @ gather_locals exp_body in
+         (FullFun (x, es1, hs, tm_args, ty, es2, record_depth' exp_body (locals :: slink)))
+    | FullApply ((exp, ty), es, hs, exps) ->
+       (FullApply ((record_depth' exp slink, ty), es, hs, List.map (fun exp_iter -> record_depth' exp_iter slink) exps))
     | Raise (h, es, hs, exps) ->
        (Raise (h, es, hs, List.map (fun exp_iter -> record_depth' exp_iter slink) exps))
     | Seq (e1, e2) ->
@@ -67,8 +67,8 @@ let rec record_fname_ty (eff_defs : f_ENV) ({Zoo.data=exp; loc} : expr) : expr =
    | FullFun (x, es1, hs, tm_args, ty, es2, exp) ->
       let hs' = List.map (fun (x, (fname, _)) -> (x, (fname, List.assoc fname eff_defs))) hs in
       FullFun (x, es1, hs', tm_args, ty, es2, record_fname_ty eff_defs exp)
-   | FullApply (exp, es, hs, exps) ->
-      (FullApply (record_fname_ty eff_defs exp, es, hs, List.map (fun exp_iter -> record_fname_ty eff_defs exp_iter) exps))
+   | FullApply ((exp, lhs_ty), es, hs, exps) ->
+      (FullApply ((record_fname_ty eff_defs exp, lhs_ty), es, hs, List.map (fun exp_iter -> record_fname_ty eff_defs exp_iter) exps))
    | Raise (h, es, hs, exps) ->
       (Raise (h, es, hs, List.map (fun exp_iter -> record_fname_ty eff_defs exp_iter) exps))
    | Seq (e1, e2) ->

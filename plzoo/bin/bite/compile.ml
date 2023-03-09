@@ -3,6 +3,8 @@
 open Syntax
 open Common
 
+let compile_hvar hvar = "locals." ^ hvar
+
 (* Compile an expression to a top-level and a list of functions *)
 let rec compile {Zoo.data=e'; _} : string * string list =
   match e' with
@@ -56,37 +58,34 @@ let rec compile {Zoo.data=e'; _} : string * string list =
       | FullFun _ ->
         let exp_catch_code, f1 = compile exp_catch in
         let exp_handle_code, f2 = compile exp_handle in
-        let handler_decl_code = Str.global_replace (Str.regexp "PLACEHOLDER") handler_var_name (ty_to_string fname_ty) in
-        spf "%s = %s;\n" handler_decl_code exp_catch_code ^
-        spf "%s_env_t* %s_env = &locals;\n" (get_fullfun_name exp_catch') handler_var_name ^
+        spf "locals.%s = %s;\n" handler_var_name exp_catch_code ^
         exp_handle_code, f1 @ f2
       | _ -> Zoo.error "Handler must be of function type.\n"
       end
     | FullFun (x, es1, hs, tm_args, ty, es2, exp) ->
-      let code_body, f1 = compile exp in
+      let code_tm_args = 
+        "void* env" :: List.map (fun (arg_name, ty_arg) -> ty_to_string ty_arg ^ " " ^ arg_name) tm_args in
+      let code_hs = List.map (fun (h, _) -> "closure_t* " ^ h) hs
+      in
       let code_init = 
         spf "%s_locals_t locals;\n" x ^
-        "locals.env = env;\n" ^
-        spf "locals.%s = %s;\n" x x ^
-        spf "locals.%s_env = env;\n" x ^
-        String.concat "" (List.map (fun (arg_name, _) -> spf "locals.%s = %s;\n" arg_name arg_name) tm_args) in
-      let code_tm_args = "void* env" :: List.map (fun (arg_name, ty_arg) -> ty_to_string ty_arg ^ " " ^ arg_name) tm_args in
-      let code_hs = List.map (fun (h, (fname, fty)) -> 
-        [Str.global_replace (Str.regexp "PLACEHOLDER") h (ty_to_string fty);
-        "void* " ^ h ^ "_env"]) hs 
-        |> List.flatten
-      in
+        spf "locals.%s.f_ptr = %s;\n" x x ^
+        spf "locals.%s.env = env;\n" x ^
+        ("env" :: fst (List.split tm_args) @ fst (List.split hs) 
+        |> (List.map (fun arg_name -> spf "locals.%s = %s;\n" arg_name arg_name)) 
+        |> String.concat "") in
+      let code_body, f1 = compile exp in
       let this_fun = spf "%s %s(%s)\n{\n%sreturn ({\n%s\n;});}\n" (ty_to_string ty) x (String.concat ", " (code_tm_args @ code_hs)) code_init code_body in
-      "&" ^ x , this_fun :: f1
-    | FullApply (lhs, es, hs, exps) ->
+      spf "({locals.%s.f_ptr = %s;\n" x x ^
+      spf "locals.%s.env = &locals;\n" x ^
+      spf "&locals.%s;})" x,
+      this_fun :: f1
+    | FullApply ((lhs, lhs_ty), es, hs, exps) ->
       let lhs', f1 = compile lhs in
       let exps', f2 = List.split (List.map compile exps) in
-      let handler_args = List.map (fun h -> [h; h ^ "_env"]) hs |> List.concat in
-      (* The pointer arithmetic gets the environment for the corresponding function pointer.
-         We assume all function pointers are accompanied by an environment in the memory layout.
-         This is true inside the "locals" struct. *)
-      let args_code = spf "*((void**)((char*)&%s+sizeof(%s)))" lhs' lhs' :: exps' @ handler_args in
-      spf "(%s)(%s)" lhs' (String.concat ", " args_code), f1 @ List.concat f2
+      let handler_args = List.map compile_hvar hs in
+      let args_code = (lhs' ^ ".env") :: exps' @ handler_args in
+      spf "(%s.f_ptr)(%s)" lhs' (String.concat ", " args_code), f1 @ List.concat f2
     | Raise (h, es, hs, exps) ->
       let exps', f2 = List.split (List.map compile exps) in
       let handler_args = List.map (fun h -> [h; h ^ "_env"]) hs |> List.concat in

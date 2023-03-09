@@ -109,7 +109,7 @@ let rec type_of (eff_defs : f_ENV) (e_env : e_ENV) (h_env : h_ENV) (t_env : t_EN
             (ty_handle, List.filter (fun e -> e <> Handler x) es_handle)
           | _ -> typing_error ~loc "effect definition must be of type TAbs";
        with Not_found -> typing_error ~loc "unknown effect name %s" fname)
-    | FullApply (exp1, es, hs, exps) ->
+    | FullApply ((exp1, _), es, hs, exps) ->
       let ty1, es1 = type_of eff_defs e_env h_env t_env exp1 in
       (match ty1 with
       | TAbs (es1', hs', ts', t', es2') -> 
