@@ -41,7 +41,7 @@ let rec ty_to_string ty : string =
   | TInt -> "int"
   | TBool -> "bool"
   | TMut ty -> ty_to_string ty
-  | TAbs _ -> "closure_t*"
+  | TAbs _ -> "closure_t"
   | TStackClosure _ -> "closure_t"
 
 let tabs_to_string ty : string =
@@ -49,7 +49,7 @@ let tabs_to_string ty : string =
   | TAbs (es1, hs, ty_args, ty, es2) ->
     (* The first parameter is the env pointer. *)
     let ty_args = "void*" :: List.map (fun ty_arg -> ty_to_string ty_arg) ty_args in
-    let handler_ty_args = List.init (List.length hs) (fun _ -> "closure_t*") in
+    let handler_ty_args = List.init (List.length hs) (fun _ -> "closure_t") in
     Printf.sprintf "%s(*)(%s)" (ty_to_string ty) (String.concat ", " (ty_args @ handler_ty_args))
   | _ -> failwith "tabs_to_string: can only be called on TAbs"
 
@@ -83,6 +83,9 @@ typedef struct closture_t {
     void *env;
 } closure_t;
 typedef struct main_env_t {} main_env_t;
+closure_t copy_closure(closure_t from) {
+    return from;
+}
 |}
 
 let fst3 (x, _, _) = x

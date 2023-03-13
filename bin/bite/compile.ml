@@ -63,7 +63,7 @@ let rec compile ((exp, ty, effs): R.expr) : string * string list =
       let code_tm_args = 
         List.map (fun (arg_name, ty_arg) -> ty_to_string ty_arg ^ " " ^ arg_name) tm_args in
       let code_tm_args = if x <> "main" then "void* env" :: code_tm_args else code_tm_args in
-      let code_hs = List.map (fun (h, _, _) -> "closure_t* " ^ h) hs
+      let code_hs = List.map (fun (h, _, _) -> "closure_t " ^ h) hs
       in
       let code_init = 
         spf "%s_locals_t locals;\n" x ^
@@ -72,23 +72,23 @@ let rec compile ((exp, ty, effs): R.expr) : string * string list =
         |> List.map (fun arg_name -> spf "locals.%s = %s;\n" arg_name arg_name)
         |> String.concat "") in
       let code_body, f1 = compile exp in
-      let this_fun = spf "%s %s(%s)\n{\n%sreturn ({\n%s\n;});}\n" (ty_to_string ty) x (String.concat ", " (code_tm_args @ code_hs)) code_init code_body in
+      let this_fun = spf "%s %s(%s)\n{\n%sreturn ({\n%s\n;\n});\n}\n" (ty_to_string ty) x (String.concat ", " (code_tm_args @ code_hs)) code_init code_body in
       spf "({locals.%s.f_ptr = %s;\n" x x ^
       spf "locals.%s.env = &locals;\n" x ^
-      spf "&locals.%s;})" x,
+      spf "copy_closure(locals.%s);})" x,
       f1 @ [this_fun]
     | FullApply ((_, lhs_ty, _) as lhs, es, hs, exps) ->
       let lhs', f1 = compile lhs in
       let exps', f2 = List.split (List.map compile exps) in
       let handler_args = List.map (fun x -> compile_hvar @@ fst3 @@ x) hs in
-      let args_code = (lhs' ^ "->env") :: exps' @ handler_args in
-      spf "((%s)%s->f_ptr)(%s);" (tabs_to_string lhs_ty) lhs' (String.concat ", " args_code), f1 @ List.concat f2
+      let args_code = (lhs' ^ ".env") :: exps' @ handler_args in
+      spf "((%s)%s.f_ptr)(%s);" (tabs_to_string lhs_ty) lhs' (String.concat ", " args_code), f1 @ List.concat f2
     | Raise ((_, _, hty) as h, es, hs, exps) ->
       let exps', f2 = List.split (List.map compile exps) in
       let handler_code = compile_hvar @@ fst3 @@ h in
       let handler_args = List.map (fun x -> compile_hvar @@ fst3 @@ x) hs in
-      let args_code = (handler_code ^ "->env") :: exps' @ handler_args in
-      spf "((%s)%s->f_ptr)(%s)" (tabs_to_string hty) handler_code (String.concat ", " args_code), List.concat f2
+      let args_code = (handler_code ^ ".env") :: exps' @ handler_args in
+      spf "((%s)%s.f_ptr)(%s)" (tabs_to_string hty) handler_code (String.concat ", " args_code), List.concat f2
     | Seq (e1, e2) ->
       let e1', f1 = compile e1 in
       let e2', f2 = compile e2 in
