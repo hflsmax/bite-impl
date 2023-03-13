@@ -63,7 +63,7 @@ module type LANGUAGE =
 
     (** Execute a toplevel command in the given environment and
         return the new environment. *)
-    val exec : environment -> command -> environment
+    val compile : environment -> command -> environment * string
   end
 
 (** Create a language from its definition. *)

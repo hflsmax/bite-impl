@@ -1,11 +1,5 @@
-Entering directory '/Users/c24ma/Documents/yizhou/bite-impl'
-eff Fget = (TAbs () () () TInt ())
-eff Fset = (TAbs () () (TInt) TInt ())
-eff ex = (TAbs ((EVar e)) ((f Fget)) (TInt TBool) TInt ((EVar e) (Handler f)))
-exp_catch_code: ((FullFun fset () () ((n TInt)) TInt ()
-  ((Assign ((Var 1 s) (TMut TInt) ()) ((Var 0 n) TInt ())) TInt ()))
- (TAbs () () (TInt) TInt ()) ())exp_catch_code: ((FullFun fget () () () TInt () ((Deref ((Var 1 s) (TMut TInt) ())) TInt ()))
- (TAbs () () () TInt ()) ())
+#include <stdio.h>
+
 
 typedef struct closture_t {
     void *f_ptr;
@@ -27,8 +21,8 @@ typedef struct f_locals_t {
 f_env_t* env;
 closure_t f;
 int n;
-closure_t* lget;
-closure_t* lset;
+closure_t lget;
+closure_t lset;
 int i;
 } f_locals_t;
 
@@ -38,9 +32,9 @@ g_env_t* env;
 closure_t g;
 int n;
 int s;
-closure_t* lget;
+closure_t lget;
 closure_t fget;
-closure_t* lset;
+closure_t lset;
 closure_t fset;
 } g_locals_t;
 
@@ -58,7 +52,7 @@ int n;
 } fset_locals_t;
 
 
-int f(void* env, int n, closure_t* lget, closure_t* lset)
+static int f(void* env, int n, closure_t lget, closure_t lset)
 {
 f_locals_t locals;
 locals.f = (closure_t){f, env};
@@ -67,10 +61,10 @@ locals.n = n;
 locals.lget = lget;
 locals.lset = lset;
 return ({
-locals.i = ((int(*)(void*))locals.lget->f_ptr)(locals.lget->env);
+locals.i = ((int(*)(void*))locals.lget.f_ptr)(locals.lget.env);
 (({locals.i == 0;}) ? ({locals.n;}) : ({
-((int(*)(void*, int))locals.lset->f_ptr)(locals.lset->env, ({locals.i - 1;}));
-((int(*)(void*, int, closure_t*, closure_t*))locals.f->f_ptr)(locals.f->env, ({locals.n + 1;}), locals.lget, locals.lset);}));});}
+((int(*)(void*, int))locals.lset.f_ptr)(locals.lset.env, ({locals.i - 1;}));
+((int(*)(void*, int, closure_t, closure_t))locals.f.f_ptr)(locals.f.env, ({locals.n + 1;}), locals.lget, locals.lset);}));});}
 
 
 int fget(void* env)
@@ -92,6 +86,14 @@ locals.n = n;
 return ({
 locals.env->s = locals.n;});}
 
+void copy_closure(closure_t* to, closure_t* from) {
+    to->f_ptr = from->f_ptr;
+    to->env = from->env;
+}
+
+closure_t return_closure(closure_t from) {
+    return from;
+}
 
 int g(void* env, int n)
 {
@@ -101,28 +103,34 @@ locals.env = env;
 locals.n = n;
 return ({
 locals.s = locals.n;
+
 locals.lget = ({locals.fget.f_ptr = fget;
 locals.fget.env = &locals;
-&locals.fget;});
+return_closure(locals.fget);});
+
 locals.lset = ({locals.fset.f_ptr = fset;
 locals.fset.env = &locals;
-&locals.fset;});
-((int(*)(void*, int, closure_t*, closure_t*))locals.env->counter->f_ptr)(locals.env->counter->env, 0, locals.lget, locals.lset);});}
+return_closure(locals.fset);});
 
+((int(*)(void*, int, closure_t, closure_t))
+locals.env->counter->f_ptr)
+(locals.env->counter->env, 0, 
+locals.lget, 
+locals.lset);});}
 
-int main()
-{
-main_locals_t locals;
-return ({
-locals.counter = ({locals.f.f_ptr = f;
-locals.f.env = &locals;
-&locals.f;});
-locals.run = ({locals.g.f_ptr = g;
-locals.g.env = &locals;
-&locals.g;});
-((int(*)(void*, int))locals.run->f_ptr)(locals.run->env, 10);});}
+int main() {
+    main_locals_t locals;
+    locals.f.f_ptr = (void*)f;
+    locals.f.env = & locals;
 
-Bite -- programming languages zoo
-Type Ctrl-D to exit.
-Bite> Interrupted.
-Bite> 
+    locals.g.f_ptr = (void*)g;
+    locals.g.env = & locals;
+
+    locals.counter = &locals.f;
+    locals.run = &locals.g;
+
+    int n = 100;
+    // scanf(“%d”, &n);
+    int out = ((int( * )(void* , int)) locals.run -> f_ptr)(locals.run -> env, n);
+    // printf("%d\n", out);
+}

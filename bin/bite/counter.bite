@@ -18,7 +18,7 @@ in
       dcl s : int := n in
         handle lget : Fget = (fun fget [] {} () : int_[] is !s end) in
           handle lset : Fset = (fun fset [] {} (n : int) : int_[] is s := n end) in
-            counter {lget lset} n
+            counter {lget lset} 0
           end
         end
       end

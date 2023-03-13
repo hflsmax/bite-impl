@@ -89,7 +89,7 @@ sig
   val initial_environment : environment
   val file_parser : (Lexing.lexbuf -> command list) option
   val toplevel_parser : (Lexing.lexbuf -> command) option
-  val exec : environment -> command -> environment
+  val compile : environment -> command -> environment * string
 end
 
 module Main (L : LANGUAGE) =
@@ -98,17 +98,15 @@ struct
   (** The command-line wrappers that we look for. *)
   let wrapper = ref (Some ["rlwrap"; "ledit"])
 
+  let out_file = ref None
+
   (** The usage message. *)
   let usage =
     match L.file_parser with
     | Some _ -> "Usage: " ^ L.name ^ " [option] ... [file] ..."
     | None   -> "Usage:" ^ L.name ^ " [option] ..."
 
-  (** A list of files to be loaded and run. *)
-  let files = ref []
-
-  (** Add a file to the list of files to be loaded *)
-  let add_file filename = (files := filename :: !files)
+  let file = ref None
 
   (** Command-line options *)
   let options = Arg.align ([
@@ -124,14 +122,19 @@ struct
        exit 0),
      " Print language information and exit");
     ("-l",
-     Arg.String (fun str -> add_file str),
-     "<file> Load <file> into the initial environment")
+     Arg.String (fun str -> file := Some str),
+     "<file> Load <file> into the initial environment");
+    ("-o",
+    Arg.String (fun str -> out_file := Some str),
+    "<file> Load <file> into the initial environment")
   ] @
   L.options)
 
   (** Treat anonymous arguments as files to be run. *)
   let anonymous str =
-    add_file str
+    match !file with
+    | None -> file := Some str
+    | Some _ -> raise (Arg.Bad "too many files")
 
   (** Parse the contents from a file, using a given [parser]. *)
   let read_file parser fn =
@@ -177,7 +180,7 @@ struct
     match L.file_parser with
     | Some f ->
        let cmds = read_file (wrap_syntax_errors f) filename in
-        List.fold_left L.exec ctx cmds
+        List.fold_left (fun (ctx, s) cmd -> begin let ctx', s' = L.compile ctx cmd in (ctx', s^s') end) (ctx, "") cmds
         (* ctx *)
         (* TODO *)
     | None ->
@@ -217,32 +220,16 @@ struct
     Sys.catch_break true;
     (* Parse the arguments. *)
     Arg.parse options anonymous usage;
-    (* Attempt to wrap yourself with a line-editing wrapper. *)
-    (* if !interactive_shell then
-      begin match !wrapper with
-        | None -> ()
-        | Some lst ->
-          let n = Array.length Sys.argv + 2 in
-          let args = Array.make n "" in
-            Array.blit Sys.argv 0 args 1 (n - 2);
-            args.(n - 1) <- "--no-wrapper";
-            List.iter
-              (fun wrapper ->
-                try
-                  args.(0) <- wrapper;
-                  Unix.execvp wrapper args
-                with Unix.Unix_error _ -> ())
-              lst
-      end; *)
-    (* Files were listed in the wrong order, so we reverse them *)
-    files := List.rev !files;
-    (* Set the maximum depth of pretty-printing, after which it prints ellipsis. *)
     Format.set_max_boxes 42 ;
     Format.set_ellipsis_text "..." ;
-    try
-      (* Run and load all the specified files. *)
-      let ctx = List.fold_left use_file L.initial_environment !files in
-        toplevel ctx
-    with
-        Error err -> print_error err; exit 1
+    match !file with
+    | None -> raise (Arg.Bad "no file specified")
+    | Some file -> 
+      let ctx, out = use_file L.initial_environment file in
+      match !out_file with
+      | None -> Format.printf "%s" out
+      | Some file -> 
+        let oc = open_out file in
+        Printf.fprintf oc "%s" out;
+        close_out oc
 end

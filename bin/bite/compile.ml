@@ -62,12 +62,12 @@ let rec compile ((exp, ty, effs): R.expr) : string * string list =
     | FullFun (x, es1, hs, tm_args, ty, es2, exp) ->
       let code_tm_args = 
         List.map (fun (arg_name, ty_arg) -> ty_to_string ty_arg ^ " " ^ arg_name) tm_args in
-      let code_tm_args = if x <> "main" then "closure_t* closure" :: code_tm_args else code_tm_args in
+      let code_tm_args = if x <> "main" then "void* env" :: code_tm_args else code_tm_args in
       let code_hs = List.map (fun (h, _, _) -> "closure_t* " ^ h) hs
       in
       let code_init = 
         spf "%s_locals_t locals;\n" x ^
-        (if x <> "main" then spf "locals.%s = closure;\n" x ^ "locals.env = closure->env;\n" else "") ^
+        (if x <> "main" then spf "locals.%s = (closure_t){%s, env};\n" x x ^ "locals.env = env;\n" else "") ^
         (fst (List.split tm_args) @ List.map fst3 hs
         |> List.map (fun arg_name -> spf "locals.%s = %s;\n" arg_name arg_name)
         |> String.concat "") in
@@ -81,13 +81,13 @@ let rec compile ((exp, ty, effs): R.expr) : string * string list =
       let lhs', f1 = compile lhs in
       let exps', f2 = List.split (List.map compile exps) in
       let handler_args = List.map (fun x -> compile_hvar @@ fst3 @@ x) hs in
-      let args_code = lhs' :: exps' @ handler_args in
+      let args_code = (lhs' ^ "->env") :: exps' @ handler_args in
       spf "((%s)%s->f_ptr)(%s);" (tabs_to_string lhs_ty) lhs' (String.concat ", " args_code), f1 @ List.concat f2
     | Raise ((_, _, hty) as h, es, hs, exps) ->
       let exps', f2 = List.split (List.map compile exps) in
       let handler_code = compile_hvar @@ fst3 @@ h in
       let handler_args = List.map (fun x -> compile_hvar @@ fst3 @@ x) hs in
-      let args_code = handler_code :: exps' @ handler_args in
+      let args_code = (handler_code ^ "->env") :: exps' @ handler_args in
       spf "((%s)%s->f_ptr)(%s)" (tabs_to_string hty) handler_code (String.concat ", " args_code), List.concat f2
     | Seq (e1, e2) ->
       let e1', f1 = compile e1 in
