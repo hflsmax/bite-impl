@@ -40,7 +40,7 @@ let rec get_fun_info ((exp, ty, effs): R.expr) (p_fun : string option) : fun_inf
   | Resume e -> get_fun_info e p_fun
   | Seq (e1, e2) ->
       get_fun_info e1 p_fun @ get_fun_info e2 p_fun
-  | Int _  | Bool _  -> []
+  | Int _  | Bool _ | Abort  -> []
 
 let get_env_struct (name, p_fun, locals) : string =
   let env_struct_decl = 

@@ -7,7 +7,7 @@ open Common
 let compile_hvar hvar = "locals." ^ hvar
 
 (* Compile an expression to a top-level and a list of functions *)
-let rec compile ((exp, ty, effs): R.expr) : string * string list =
+let rec compile ((exp, ty, effs) as exp': R.expr) : string * string list =
   match exp with
     | Var (depth, x) -> 
       spf "locals.%s%s" (String.concat "" (List.init depth (fun _ -> "env->"))) x, []
@@ -58,7 +58,7 @@ let rec compile ((exp, ty, effs): R.expr) : string * string list =
         let exp_handle_code, f2 = compile exp_handle in
         spf "locals.%s = %s;\n" handler_var_name exp_catch_code ^
         exp_handle_code, f1 @ f2
-    | FullFun (x, es1, hs, tm_args, ty, es2, exp) ->
+    | FullFun (x, es1, hs, tm_args, ty, es2, body_exp) ->
       let code_tm_args = 
         List.map (fun (arg_name, ty_arg) -> ty_to_string ty_arg ^ " " ^ arg_name) tm_args in
       let code_tm_args = if x <> "main" then "void* env" :: code_tm_args else code_tm_args in
@@ -70,10 +70,10 @@ let rec compile ((exp, ty, effs): R.expr) : string * string list =
         (fst (List.split tm_args) @ List.map fst3 hs
         |> List.map (fun arg_name -> spf "locals.%s = %s;\n" arg_name arg_name)
         |> String.concat "") in
-      let code_body, f1 = compile exp in
+      let code_body, f1 = compile body_exp in
       let this_fun = spf "%s %s(%s)\n{\n%sreturn ({\n%s\n;\n});\n}\n" (ty_to_string ty) x (String.concat ", " (code_tm_args @ code_hs)) code_init code_body in
       spf "({locals.%s.f_ptr = %s;\n" x x ^
-      spf "locals.%s.env = &locals;\n" x ^
+      (if List.length (gather_free_vars exp') = 0 then "" else spf "locals.%s.env = &locals;\n" x) ^
       spf "copy_closure(locals.%s);})" x,
       f1 @ [this_fun]
     | Handler (k, f) ->
@@ -94,6 +94,7 @@ let rec compile ((exp, ty, effs): R.expr) : string * string list =
     | Resume e ->
       let e', f1 = compile e in
       "", f1
+    | Abort -> "", []
     | Seq (e1, e2) ->
       let e1', f1 = compile e1 in
       let e2', f2 = compile e2 in

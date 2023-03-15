@@ -21,7 +21,9 @@ module Bite = Zoo.Main (struct
       (* check the type of [exp], compile it, and run it. *)
       let exp = Type_check.type_of eff_defs [] [] [] exp in
       let exp = Common.wrap_in_main exp in
-      let exp = Enrich_type.enrich_type eff_defs exp in
+      let exp = Passes.enrich_type eff_defs exp in
+      let exp = Passes.transform_exp exp in
+      Zoo.print_info "%t@." (Print.rexpr exp) ;
       let fun_infos = Env_struct.get_fun_info exp None in
       let env_structs_string = Common.extra_defs :: List.map (fun es -> Env_struct.get_env_struct es) fun_infos in
       let _, codes = Compile.compile exp in

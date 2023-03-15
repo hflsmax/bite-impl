@@ -12,7 +12,9 @@ let full_fun_to_tabs (exp : R.expr') : ty =
     TAbs (es1, hs', tm_args_ty, ty, es2)
   | _ -> failwith "full_fun_to_tabs: can only be called on FullFun"
 
-
+(* Gather all local variables introduced within the scope of a function (excluding arguments) 
+  This is to create a list of local variables that represent the stacks.
+*)
 let rec gather_locals ((exp, _, _) : R.expr) : locals =
   match exp with
   | Times (e1, e2) | Plus (e1, e2) | Minus (e1, e2)
@@ -36,7 +38,40 @@ let rec gather_locals ((exp, _, _) : R.expr) : locals =
       List.fold_left (fun acc exp_iter -> acc @ (gather_locals exp_iter)) [] e
   | Resume e -> gather_locals e
   | Seq (e1, e2) -> gather_locals e1 @ gather_locals e2
-  | Var _ | Int _ | Bool _ | Deref _  -> []
+  | Var _ | Int _ | Bool _ | Deref _  | Abort -> []
+
+(* Gather all free variables in an expression. It's computed by finding all used variables that are not bound *)
+let rec gather_free_vars ((exp, _, _) : R.expr) : locals =
+  let exclude name locals = List.filter (fun (name', _) -> name <> name') locals in
+  let exclude_all names locals = List.filter (fun (name', _) -> not (List.mem name' names)) locals in
+  match exp with
+  | Times (e1, e2) | Plus (e1, e2) | Minus (e1, e2)
+  | Equal (e1, e2) | Less (e1, e2) ->
+      gather_free_vars e1 @ gather_free_vars e2
+  | Assign (x, e) -> 
+    let [@warning "-partial-match"] (Var (_, name), ty, _) = x in (name, ty) :: gather_free_vars e
+  | If (e1, e2, e3) ->
+    gather_free_vars e1 @ gather_free_vars e2 @ gather_free_vars e3
+  | Let (x, ty, e1, e2) ->
+    gather_free_vars e1 @ (exclude x (gather_free_vars e2))
+  | Decl (x, ty, e1, e2) ->
+    gather_free_vars e1 @ (exclude x (gather_free_vars e2))
+  | Handle (x, (_, ty), catch_exp, handle_exp) ->
+      gather_free_vars catch_exp @ (exclude x (gather_free_vars handle_exp))
+  | FullFun (x, _, hparams, tparams, _, _, body) ->
+      let hparams' = List.map (fun (name, _, _) -> name) hparams in
+      let tparams' = List.map (fun (name, _) -> name) tparams in
+      gather_free_vars body @ (exclude_all (x :: hparams' @ tparams') (gather_locals body))
+  | Handler (_, e) -> gather_free_vars e
+  | FullApply (lhs, _, hargs, targs) -> 
+      let hvars = List.map (fun (name, _, ty) -> (name, ty)) hargs in
+      gather_free_vars lhs @ hvars @ List.fold_left (fun acc exp_iter -> acc @ (gather_free_vars exp_iter)) [] targs
+  | Raise ((name, _, ty), _, hargs, targs) ->
+      let hvars = List.map (fun (name, _, ty) -> (name, ty)) hargs in
+      (name, ty) :: hvars @ List.fold_left (fun acc exp_iter -> acc @ (gather_free_vars exp_iter)) [] targs
+  | Resume e -> gather_free_vars e
+  | Seq (e1, e2) -> gather_free_vars e1 @ gather_free_vars e2
+  | Var _ | Int _ | Bool _ | Deref _  | Abort -> []
 
 let rec ty_to_string ty : string =
   match ty with

@@ -75,7 +75,7 @@ and expr' =
   | FullApply of expr * effs * hvar list * expr list
   | Raise of hvar * effs * hvar list * expr list
   | Resume of expr
-  | Seq of expr * expr  		
+  | Seq of expr * expr
 [@@deriving sexp]
 
 
@@ -110,7 +110,8 @@ and expr' =
   | FullApply of expr * effs * hvar list * expr list
   | Raise of hvar * effs * hvar list * expr list
   | Resume of expr
-  | Seq of expr * expr  	
+  | Seq of expr * expr  
+  | Abort	
 [@@deriving sexp]
 end
 
