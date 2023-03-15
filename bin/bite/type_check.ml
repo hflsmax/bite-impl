@@ -16,7 +16,7 @@ let eff_ok (e_env : e_ENV) (h_env : h_ENV) (e : eff) =
     match e with
       EVar s -> if not (List.mem e e_env) then
         Zoo.error ~kind:"Type error" "unknown effect var %s" s
-    | Handler s -> if not (List.mem_assoc s h_env) then
+    | HVar s -> if not (List.mem_assoc s h_env) then
         Zoo.error ~kind:"Type error" "unknown handler var %s" s
     
 let rec ty_ok (eff_defs : f_ENV) (e_env : e_ENV) (h_env : h_ENV) ty =
@@ -122,9 +122,15 @@ let rec type_of (eff_defs : f_ENV) (e_env : e_ENV) (h_env : h_ENV) (t_env : t_EN
           | TAbs (es1, hs, ts, t, es2) as ty_fname -> 
             if ty_handle <> t then typing_error ~loc "The type of handle expression and catch body must be the same.";
             if ty_catch <> ty_fname then typing_error ~loc "The handler's type must match the type of effect definition, expected %t but got %t" (Print.ty ty_fname) (Print.ty ty_catch);
-            Handle (x, (fname, ty_fname), (exp_catch', ty_catch, es_catch), (exp_handle', ty_handle, es_handle)), ty_handle, List.filter (fun e -> e <> Handler x) es_handle
+            Handle (x, (fname, ty_fname), (exp_catch', ty_catch, es_catch), (exp_handle', ty_handle, es_handle)), ty_handle, List.filter (fun e -> e <> HVar x) es_handle
           | _ -> typing_error ~loc "effect definition must be of type TAbs";
        with Not_found -> typing_error ~loc "unknown effect name %s" fname)
+    | Handler (k, f) ->
+      let f', ty_f, es_f = type_of eff_defs e_env h_env t_env f in
+      (match ty_f with
+        | TAbs _ -> 
+          Handler (k, (f', ty_f, es_f)), ty_f, es_f
+        | _ -> typing_error ~loc "handler expression must be of type TAbs")
     | FullApply (exp1, es, hs, exps) ->
       let exp1', ty1, es1 = type_of eff_defs e_env h_env t_env exp1 in
       (match ty1 with
@@ -156,10 +162,13 @@ let rec type_of (eff_defs : f_ENV) (e_env : e_ENV) (h_env : h_ENV) (t_env : t_EN
                 if tys <> ts' then typing_error ~loc "Wrong types of term arguments.";
                 let hvar' = hvar_to_rich_hvar eff_defs h_env hvar in
                 let hs'' = List.map (hvar_to_rich_hvar eff_defs h_env) hs in
-                R.Raise (hvar', es, hs'', exps_list), t', Handler hvar :: es2' @ List.concat ess
+                R.Raise (hvar', es, hs'', exps_list), t', HVar hvar :: es2' @ List.concat ess
               | _ -> typing_error ~loc "effect definition must be of type TAbs";
            with Not_found -> typing_error ~loc "unknown effect name %s" fname)
         | None -> typing_error ~loc "unknown handler %s" hvar)
+    | Resume e ->
+      let e', ty_e, es_e = type_of eff_defs e_env h_env t_env e in
+        Resume (e', ty_e, es_e), ty_e, es_e
     | Seq (exp1, exp2) ->
       let exp1', ty1, es1 = type_of eff_defs e_env h_env t_env exp1 in
       let exp2', ty2, es2 = type_of eff_defs e_env h_env t_env exp2 in

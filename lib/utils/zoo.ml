@@ -225,11 +225,14 @@ struct
     match !file with
     | None -> raise (Arg.Bad "no file specified")
     | Some file -> 
-      let ctx, out = use_file L.initial_environment file in
-      match !out_file with
-      | None -> Format.printf "%s" out
-      | Some file -> 
-        let oc = open_out file in
-        Printf.fprintf oc "%s" out;
-        close_out oc
+      try
+        let ctx, out = use_file L.initial_environment file in
+        match !out_file with
+        | None -> Format.printf "%s" out
+        | Some file -> 
+          let oc = open_out file in
+          Printf.fprintf oc "%s" out;
+          close_out oc
+      with
+        Error err -> print_error err; exit 1
 end

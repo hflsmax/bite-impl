@@ -31,6 +31,7 @@ rule token = parse
   | "in"            { IN }
   | "end"           { END }
   | "raise"         { RAISE }
+  | "resume"        { RESUME }
   | ":="            { ASSIGN }
   | ";;"            { SEMISEMI }
   | ";"             { SEMI }

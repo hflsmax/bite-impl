@@ -15,7 +15,7 @@
 %token EQUAL LESS
 %token IF THEN ELSE
 %token FUN IS
-%token RAISE
+%token RAISE RESUME
 %token FORALL DOT COMMA UNDERSCORE TILDE
 %token COLON
 %token LPAREN RPAREN LBRACKET RBRACKET LBRACE RBRACE
@@ -36,12 +36,13 @@
 %type <Syntax.command> toplevel
 
 // %nonassoc IS
+%nonassoc BANG
+%nonassoc RESUME
 %nonassoc ELSE
 %nonassoc EQUAL LESS
 %left PLUS MINUS
 %left TIMES
 %nonassoc ASSIGN
-%nonassoc BANG
 %left SEMI
 
 %%
@@ -87,22 +88,32 @@ eff_name:
   | COMMA? x = VAR
     { EVar x }
   | COMMA? TILDE x = VAR
-    { Handler (x) }
+    { HVar (x) }
 
 var: mark_position(plain_var) { $1 }
 plain_var:
   | x = VAR
     { Var x }
 
-lhs: mark_position(plain_lhs) { $1 }
-plain_lhs:
-  | x = plain_var
-    { x }
+lambda: mark_position(plain_lambda) { $1 }
+plain_lambda:
   | FUN x = VAR LBRACKET es1 = eff_name* RBRACKET 
                 LBRACE hs = hd_param* RBRACE 
                 tm_params = tm_params
                 COLON t = ty UNDERSCORE LBRACKET es2 = eff_name* RBRACKET IS e = expr END
     { FullFun (x, es1, hs, tm_params, t, es2, e) }
+
+handler: mark_position(plain_handler) { $1 }
+plain_handler:
+  | f = lambda
+    { Handler(Other, f) }
+
+lhs: mark_position(plain_lhs) { $1 }
+plain_lhs:
+  | x = plain_var
+    { x }
+  | f = plain_lambda
+    { f }
 
 effect_args:
   | LBRACKET es = eff_name* RBRACKET
@@ -141,6 +152,8 @@ plain_expr:
     { FullApply (lhs, (Option.value es ~default:[]), (Option.value hs ~default:[]), exps) }
   | RAISE hvar = VAR es = effect_args? hs = handler_args? exps = term_args
     { Raise (hvar, (Option.value es ~default:[]), (Option.value hs ~default:[]), exps) }
+  | RESUME expr = expr
+    { Resume expr }
   | x = plain_lhs
     { x }
   | TRUE    
@@ -171,7 +184,7 @@ plain_expr:
     { Let (x, ty, e1, e2) }
   | DECL x = VAR COLON ty = ty ASSIGN e1 = expr IN e2 = expr END
     { Decl (x, ty, e1, e2) }
-  | HANDLE x = VAR COLON fname = VAR EQUAL e1 = expr IN e2 = expr END
+  | HANDLE x = VAR COLON fname = VAR EQUAL e1 = handler IN e2 = expr END
     { Handle (x, fname, e1, e2) }
   | e1 = expr SEMI e2 = expr
     { Seq (e1, e2) }

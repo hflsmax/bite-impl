@@ -77,6 +77,9 @@ let rec compile ((exp, ty, effs): R.expr) : string * string list =
       spf "locals.%s.env = &locals;\n" x ^
       spf "copy_closure(locals.%s);})" x,
       f1 @ [this_fun]
+    | Handler (k, f) ->
+      let f_code, f1 = compile f in
+      f_code, f1
     | FullApply ((_, lhs_ty, _) as lhs, es, hs, exps) ->
       let lhs', f1 = compile lhs in
       let exps', f2 = List.split (List.map compile exps) in
@@ -89,6 +92,9 @@ let rec compile ((exp, ty, effs): R.expr) : string * string list =
       let handler_args = List.map (fun x -> compile_hvar @@ fst3 @@ x) hs in
       let args_code = (handler_code ^ ".env") :: exps' @ handler_args in
       spf "((%s)%s.f_ptr)(%s)" (tabs_to_string hty) handler_code (String.concat ", " args_code), List.concat f2
+    | Resume e ->
+      let e', f1 = compile e in
+      "", f1
     | Seq (e1, e2) ->
       let e1', f1 = compile e1 in
       let e2', f2 = compile e2 in

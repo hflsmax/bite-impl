@@ -29,10 +29,12 @@ let rec gather_locals ((exp, _, _) : R.expr) : locals =
       (x, ty) :: gather_locals catch_exp @ gather_locals handle_exp
   | FullFun (x, _, _, _, _, _, _) ->
       (x, TStackClosure (full_fun_to_tabs exp)) :: []
+  | Handler (_, e) -> gather_locals e
   | FullApply (e1, _, _, e2) -> 
       gather_locals e1 @ List.fold_left (fun acc exp_iter -> acc @ (gather_locals exp_iter)) [] e2
   | Raise (_, _, _, e) ->
       List.fold_left (fun acc exp_iter -> acc @ (gather_locals exp_iter)) [] e
+  | Resume e -> gather_locals e
   | Seq (e1, e2) -> gather_locals e1 @ gather_locals e2
   | Var _ | Int _ | Bool _ | Deref _  -> []
 

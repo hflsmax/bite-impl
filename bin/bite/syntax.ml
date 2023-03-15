@@ -15,7 +15,7 @@ type hvar = string
 
 type eff =
   | EVar of string
-  | Handler of hvar
+  | HVar of hvar
 [@@deriving sexp]
 
 type effs = eff list
@@ -45,6 +45,11 @@ type h_ENV = (hvar * fname) list
 type t_ENV = (name * ty) list
 [@@deriving sexp]
 
+type handler_kind = 
+  | TailResumptive
+  | Abortive
+  | Other
+[@@deriving sexp]
 
 (* Expressions *)
 type expr = expr' Zoo.located
@@ -66,8 +71,10 @@ and expr' =
   | Decl of name * ty * expr * expr 		  
   | Handle of name * fname * expr * expr 
   | FullFun of name * effs * (hvar * fname) list * (name * ty) list * ty * effs * expr
+  | Handler of handler_kind * expr
   | FullApply of expr * effs * hvar list * expr list
   | Raise of hvar * effs * hvar list * expr list
+  | Resume of expr
   | Seq of expr * expr  		
 [@@deriving sexp]
 
@@ -99,8 +106,10 @@ and expr' =
   (* NOTE: ty of effect name is redundant, it's used to simplify future passes *)
   | Handle of name * (fname * ty) * expr * expr 
   | FullFun of name * effs * hvar list * (name * ty) list * ty * effs * expr
+  | Handler of handler_kind * expr
   | FullApply of expr * effs * hvar list * expr list
   | Raise of hvar * effs * hvar list * expr list
+  | Resume of expr
   | Seq of expr * expr  	
 [@@deriving sexp]
 end
