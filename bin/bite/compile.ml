@@ -56,7 +56,6 @@ let rec compile ((exp, ty, effs): R.expr) : string * string list =
     | Handle (handler_var_name, (fname, fname_ty), exp_catch, exp_handle) ->
         let exp_catch_code, f1 = compile exp_catch in
         let exp_handle_code, f2 = compile exp_handle in
-        Zoo.print_info "exp_catch_code: %t" (Print.rexpr exp_catch);
         spf "locals.%s = %s;\n" handler_var_name exp_catch_code ^
         exp_handle_code, f1 @ f2
     | FullFun (x, es1, hs, tm_args, ty, es2, exp) ->
