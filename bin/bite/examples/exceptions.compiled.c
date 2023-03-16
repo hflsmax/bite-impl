@@ -43,7 +43,7 @@ exch_locals_t locals;
 locals.exch = (closure_t){exch, env};
 locals.env = env;
 
-jmpret = 42;
+jmpret = 0;
 longjmp(jb, 1);
 
 }
@@ -61,7 +61,7 @@ if (setjmp(locals.lexc.jb) == 0) {
 if (({locals.n == 0;})) {
 return ((int(*)(void*, jmp_buf))locals.lexc.f_ptr)(locals.lexc.env, locals.lexc.jb);
 } else {
-return ((int(*)(void*, int))locals.g.f_ptr)(locals.g.env, ({locals.n - 1;}));
+__attribute__((musttail))return ((int(*)(void*, int))locals.g.f_ptr)(locals.g.env, ({locals.n - 1;}));
 };
 } else {
 return jmpret;
@@ -75,5 +75,5 @@ main_locals_t locals;
 locals.run = ({locals.g.f_ptr = g;
 locals.g.env = &locals;
 copy_closure(locals.g);});
-return ((int(*)(void*, int))locals.run.f_ptr)(locals.run.env, 10);
+return ((int(*)(void*, int))locals.run.f_ptr)(locals.run.env, 42);
 }

@@ -95,7 +95,7 @@ let rec compile (cf_dest : cf_dest) ((exp, ty, effs, attrs) as exp': R.expr) : s
       in
       let code_init = 
         spf "%s_locals_t locals;\n" x ^
-        (if x <> "main" then spf "locals.%s = (closure_t){%s, env};\n" x x ^ "locals.env = env;\n" else "") ^
+        (if x <> "main" then spf "locals.%s.f_ptr = (void*)%s; locals.%s.env = env;\n" x x x ^ spf "locals.env = (%s_env_t*)env;\n" x else "") ^
         (fst (List.split tm_args) @ List.map fst3 hs
         |> List.map (fun arg_name -> spf "locals.%s = %s;\n" arg_name arg_name)
         |> String.concat "") in
@@ -105,7 +105,7 @@ let rec compile (cf_dest : cf_dest) ((exp, ty, effs, attrs) as exp': R.expr) : s
         | GeneralHandler -> Zoo.error "General handlers not supported" in
       let code_body, f1 = compile cf_dest body_exp in
       let this_fun = spf "%s %s(%s)\n{\n%s\n%s\n}\n" (ty_to_string ty) x (String.concat ", " (code_tm_args @ code_hs)) code_init code_body in
-      spf "({locals.%s.f_ptr = %s;\n" x x ^
+      spf "({locals.%s.f_ptr = (void*)%s;\n" x x ^
       (if List.length (gather_free_vars exp') = 0 then "" else spf "locals.%s.env = &locals;\n" x) ^
       spf "copy_closure(locals.%s);})" x,
       f1 @ [this_fun]
