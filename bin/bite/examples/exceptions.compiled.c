@@ -34,10 +34,9 @@ int exch(void* env)
 exch_locals_t locals;
 locals.exch = (closure_t){exch, env};
 locals.env = env;
-return ({
+
 
 0;
-});
 }
 
 int g(void* env, int n)
@@ -46,21 +45,22 @@ g_locals_t locals;
 locals.g = (closure_t){g, env};
 locals.env = env;
 locals.n = n;
-return ({
+
 locals.lexc = ({locals.exch.f_ptr = exch;
 copy_closure(locals.exch);});
-(({locals.n == 0;}) ? ({((int(*)(void*))locals.lexc.f_ptr)(locals.lexc.env);}) : ({((int(*)(void*, int))locals.g.f_ptr)(locals.g.env, ({locals.n - 1;}));}))
-;
-});
+if (({locals.n == 0;})) {
+return ((int(*)(void*))locals.lexc.f_ptr)(locals.lexc.env);
+} else {
+return ((int(*)(void*, int))locals.g.f_ptr)(locals.g.env, ({locals.n - 1;}));
+}
 }
 
 int main()
 {
 main_locals_t locals;
-return ({
+
 locals.run = ({locals.g.f_ptr = g;
 locals.g.env = &locals;
 copy_closure(locals.g);});
-((int(*)(void*, int))locals.run.f_ptr)(locals.run.env, 10);
-});
+return ((int(*)(void*, int))locals.run.f_ptr)(locals.run.env, 10);
 }

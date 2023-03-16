@@ -12,12 +12,12 @@ let get_var_depth (x : name) (slink : static_link) : int =
   in
     get_var_depth' x slink 0
 
-let analyze_handler_kind ((f', _, _) as f : R.expr) : handler_kind =
+let analyze_handler_kind ((f', _, _, _) as f : R.expr) : handler_kind =
    match f' with
    | FullFun (_, _, _, _, _, _, body) ->
       begin
       match body with
-      | Resume _, _, _ -> TailResumptive
+      | Resume _, _, _, _ -> TailResumptive
       | _ -> Abortive
       end
    | _ -> Zoo.error "Handler is not a full function: %t@." (Print.rexpr f)
@@ -28,7 +28,7 @@ let analyze_handler_kind ((f', _, _) as f : R.expr) : handler_kind =
    3. add handler kind to handler 
 *)
 let enrich_type (eff_defs : f_ENV) (exp : R.expr) : R.expr =
-  let rec enrich_type' ((exp, ty, effs): R.expr) (slink : static_link) : R.expr =
+  let rec enrich_type' ((exp, ty, effs, attrs): R.expr) (slink : static_link) : R.expr =
    begin
     match exp with
     | Var (_, x) -> (Var ((get_var_depth x slink), x))
@@ -61,7 +61,7 @@ let enrich_type (eff_defs : f_ENV) (exp : R.expr) : R.expr =
     | Seq (e1, e2) ->
        (Seq (enrich_type' e1 slink, enrich_type' e2 slink))
     | Int _  | Bool _  | Abort as e -> e
-   end, ty, effs
+   end, ty, effs, attrs
   in
     enrich_type' exp (gather_locals exp :: [])
 
@@ -69,52 +69,73 @@ let enrich_type (eff_defs : f_ENV) (exp : R.expr) : R.expr =
    If abortive, remove resume and insert abort at the end *)
 let transform_handler (exp : R.expr') : R.expr' =
    match exp with
-   | Handler (k, (f, _, _)) ->
-      let[@warning "-partial-match"] FullFun (x, es1, hs, tm_args, ty, es2, (exp_body, exp_body_ty, exp_body_es)) = f in
+   | Handler (k, (f, _, _, _)) ->
+      let[@warning "-partial-match"] FullFun (x, es1, hs, tm_args, ty, es2, (exp_body, exp_body_ty, exp_body_es, exp_body_attrs)) = f in
       begin
       match k with
       | TailResumptive ->
          let[@warning "-partial-match"] Resume exp_body' = exp_body in
          FullFun (x, es1, hs, tm_args, ty, es2, exp_body')
       | Abortive ->
-         FullFun (x, es1, hs, tm_args, ty, es2, (R.Seq ((exp_body, exp_body_ty, exp_body_es), (Abort, TInt, [])), exp_body_ty, exp_body_es))
+         FullFun (x, es1, hs, tm_args, ty, es2, (R.Seq ((exp_body, exp_body_ty, exp_body_es, exp_body_attrs), (Abort, TInt, [], default_attrs)), exp_body_ty, exp_body_es, exp_body_attrs))
       | Other -> 
          Zoo.error "Other handler kind not supported"
       end
    | _ -> exp
 
+let mark_tail_call fun_name ((exp, ty, effs, attrs) : R.expr) : R.expr =
+   match exp with
+   | FullApply ((Var (_, x), _, _, _), _, _, _) ->
+      if x = fun_name then
+         (exp, ty, effs, {attrs with isTailCall = true})
+      else
+         (exp, ty, effs, attrs)
+   | _ -> (exp, ty, effs, attrs)
+
 (* Bottom-up AST walker *)
 let transform_exp (exp : R.expr) : R.expr =
-  let rec transform_exp' ((exp, ty, effs): R.expr) : R.expr =
-  let exp' = 
-   match exp with
-   | Times (e1, e2) -> (Times (transform_exp' e1, transform_exp' e2))
-   | Plus (e1, e2) -> (Plus (transform_exp' e1, transform_exp' e2))
-   | Minus (e1, e2) -> (Minus (transform_exp' e1, transform_exp' e2))
-   | Equal (e1, e2) -> (Equal (transform_exp' e1, transform_exp' e2))
-   | Less (e1, e2) -> (Less (transform_exp' e1, transform_exp' e2))
-   | Assign (e1, e2) -> (Assign (transform_exp' e1, transform_exp' e2))
-   | Deref e -> (Deref (transform_exp' e))
-   | If (e1, e2, e3) ->
-      (If (transform_exp' e1, transform_exp' e2, transform_exp' e3))
-   | Let (x, ty, e1, e2) ->
-      (Let (x, ty, transform_exp' e1, transform_exp' e2))
-   | Decl (x, ty, e1, e2) ->
-      (Decl (x, ty, transform_exp' e1, transform_exp' e2))
-   | Handle (x, h, exp_catch, exp_handle) ->
-      (Handle (x, h, transform_exp' exp_catch, transform_exp' exp_handle))
-   | FullFun (x, es1, hs, tm_args, ty, es2, exp_body) ->
-      (FullFun (x, es1, hs, tm_args, ty, es2, transform_exp' exp_body))
-   | Handler (k, f) -> (Handler (k, transform_exp' f))
-   | FullApply (exp, es, hs, exps) ->
-      (FullApply (transform_exp' exp, es, hs, List.map (fun exp_iter -> transform_exp' exp_iter) exps))
-   | Raise (h, es, hs, exps) ->
-      (Raise (h, es, hs, List.map (fun exp_iter -> transform_exp' exp_iter) exps))
-   | Resume e -> (Resume (transform_exp' e))
-   | Seq (e1, e2) ->
-      (Seq (transform_exp' e1, transform_exp' e2))
-   | Int _  | Bool _ | Var _ | Abort as e -> e
+ let curr_func_name = ref "" in
+  let rec transform_exp' ((exp, ty, effs, attrs) as rexp: R.expr) : R.expr =
+  (* Add pre-metadata-updater here. *)
+  begin
+  match exp with
+  | FullFun (x, _, _, _, _, _, _) -> curr_func_name := x
+  | _ -> ()
+  end;
+  (* Add pre-transformer here. This corresponds to a top-dowm transformation *)
+  let (exp_pre, ty_pre, effs_pre, attrs_pre) as rexp_pre = 
+    (mark_tail_call !curr_func_name) rexp 
   in
-  transform_handler exp', ty, effs
+      let exp_walked = 
+         match exp_pre with
+         | Times (e1, e2) -> (Times (transform_exp' e1, transform_exp' e2))
+         | Plus (e1, e2) -> (Plus (transform_exp' e1, transform_exp' e2))
+         | Minus (e1, e2) -> (Minus (transform_exp' e1, transform_exp' e2))
+         | Equal (e1, e2) -> (Equal (transform_exp' e1, transform_exp' e2))
+         | Less (e1, e2) -> (Less (transform_exp' e1, transform_exp' e2))
+         | Assign (e1, e2) -> (Assign (transform_exp' e1, transform_exp' e2))
+         | Deref e -> (Deref (transform_exp' e))
+         | If (e1, e2, e3) ->
+            (If (transform_exp' e1, transform_exp' e2, transform_exp' e3))
+         | Let (x, ty, e1, e2) ->
+            (Let (x, ty, transform_exp' e1, transform_exp' e2))
+         | Decl (x, ty, e1, e2) ->
+            (Decl (x, ty, transform_exp' e1, transform_exp' e2))
+         | Handle (x, h, exp_catch, exp_handle) ->
+            (Handle (x, h, transform_exp' exp_catch, transform_exp' exp_handle))
+         | FullFun (x, es1, hs, tm_args, ty, es2, exp_body) ->
+            (FullFun (x, es1, hs, tm_args, ty, es2, transform_exp' exp_body))
+         | Handler (k, f) -> (Handler (k, transform_exp' f))
+         | FullApply (exp, es, hs, exps) ->
+            (FullApply (transform_exp' exp, es, hs, List.map (fun exp_iter -> transform_exp' exp_iter) exps))
+         | Raise (h, es, hs, exps) ->
+            (Raise (h, es, hs, List.map (fun exp_iter -> transform_exp' exp_iter) exps))
+         | Resume e -> (Resume (transform_exp' e))
+         | Seq (e1, e2) ->
+            (Seq (transform_exp' e1, transform_exp' e2))
+         | Int _  | Bool _ | Var _ | Abort as e -> e
+      in
+      (* Add post-transformer here. This corresponds to a bottom-up transformation *)
+      transform_handler exp_walked, ty_pre, effs_pre, attrs_pre
   in
   transform_exp' exp

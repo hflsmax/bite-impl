@@ -15,7 +15,7 @@ let full_fun_to_tabs (exp : R.expr') : ty =
 (* Gather all local variables introduced within the scope of a function (excluding arguments) 
   This is to create a list of local variables that represent the stacks.
 *)
-let rec gather_locals ((exp, _, _) : R.expr) : locals =
+let rec gather_locals ((exp, _, _, attrs) : R.expr) : locals =
   match exp with
   | Times (e1, e2) | Plus (e1, e2) | Minus (e1, e2)
   | Equal (e1, e2) | Less (e1, e2) ->
@@ -41,7 +41,7 @@ let rec gather_locals ((exp, _, _) : R.expr) : locals =
   | Var _ | Int _ | Bool _ | Deref _  | Abort -> []
 
 (* Gather all free variables in an expression. It's computed by finding all used variables that are not bound *)
-let rec gather_free_vars ((exp, _, _) : R.expr) : locals =
+let rec gather_free_vars ((exp, _, _, attrs) : R.expr) : locals =
   let exclude name locals = List.filter (fun (name', _) -> name <> name') locals in
   let exclude_all names locals = List.filter (fun (name', _) -> not (List.mem name' names)) locals in
   match exp with
@@ -49,7 +49,7 @@ let rec gather_free_vars ((exp, _, _) : R.expr) : locals =
   | Equal (e1, e2) | Less (e1, e2) ->
       gather_free_vars e1 @ gather_free_vars e2
   | Assign (x, e) -> 
-    let [@warning "-partial-match"] (Var (_, name), ty, _) = x in (name, ty) :: gather_free_vars e
+    let [@warning "-partial-match"] (Var (_, name), ty, _, _) = x in (name, ty) :: gather_free_vars e
   | If (e1, e2, e3) ->
     gather_free_vars e1 @ gather_free_vars e2 @ gather_free_vars e3
   | Let (x, ty, e1, e2) ->
@@ -112,7 +112,7 @@ let get_fullfun_name (exp : expr') : string =
 
 let wrap_in_main (exp : expr) : expr = 
   let fun_def = FullFun ("main", [], [], [], TInt, [], exp) in
-  fun_def, full_fun_to_tabs fun_def, []
+  fun_def, full_fun_to_tabs fun_def, [], {isTailCall = false}
 
 let extra_defs = {|
 typedef struct closture_t {

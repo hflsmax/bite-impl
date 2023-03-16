@@ -86,7 +86,14 @@ module R = struct
 type hvar = string * fname * ty
 [@@deriving sexp]
 
-type expr = expr' * ty * effs
+type attrs = { 
+  isTailCall: bool;
+}
+[@@deriving sexp]
+
+let default_attrs = { isTailCall = false; }
+
+type expr = expr' * ty * effs * attrs
 and expr' =
   | Var of int * name (* int indicates the depth of var within the static link. It is not used in the source language *)
   | Int of int  		

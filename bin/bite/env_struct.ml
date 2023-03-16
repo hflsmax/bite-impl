@@ -11,7 +11,7 @@ type env_struct = name * name * (name * ty) list
 type fun_info = name * name option * (name * ty) list
 [@@deriving sexp]
 
-let rec get_fun_info ((exp, ty, effs): R.expr) (p_fun : string option) : fun_info list  =
+let rec get_fun_info ((exp, ty, effs, attrs): R.expr) (p_fun : string option) : fun_info list  =
   match exp with
   | Var (_, x) -> []
   | Times (e1, e2) -> get_fun_info e1 p_fun @ get_fun_info e2 p_fun
