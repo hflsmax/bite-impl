@@ -45,10 +45,11 @@ type h_ENV = (hvar * fname) list
 type t_ENV = (name * ty) list
 [@@deriving sexp]
 
-type handler_kind = 
+type lambda_kind = 
   | TailResumptive
   | Abortive
-  | Other
+  | GeneralHandler
+  | Lambda
 [@@deriving sexp]
 
 (* Expressions *)
@@ -70,8 +71,7 @@ and expr' =
   | Let of name * ty * expr * expr 		
   | Decl of name * ty * expr * expr 		  
   | Handle of name * fname * expr * expr 
-  | FullFun of name * effs * (hvar * fname) list * (name * ty) list * ty * effs * expr
-  | Handler of handler_kind * expr
+  | FullFun of lambda_kind * name * effs * (hvar * fname) list * (name * ty) list * ty * effs * expr
   | FullApply of expr * effs * hvar list * expr list
   | Raise of hvar * effs * hvar list * expr list
   | Resume of expr
@@ -112,8 +112,7 @@ and expr' =
   | Decl of name * ty * expr * expr 		  
   (* NOTE: ty of effect name is redundant, it's used to simplify future passes *)
   | Handle of name * (fname * ty) * expr * expr 
-  | FullFun of name * effs * hvar list * (name * ty) list * ty * effs * expr
-  | Handler of handler_kind * expr
+  | FullFun of lambda_kind * name * effs * hvar list * (name * ty) list * ty * effs * expr
   | FullApply of expr * effs * hvar list * expr list
   | Raise of hvar * effs * hvar list * expr list
   | Resume of expr

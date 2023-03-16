@@ -13,7 +13,7 @@ let expr e ppf =
   Zoo.print_parens ppf "%s" (Sexp.to_string_hum (Syntax.sexp_of_expr' e))
 
 let rexpr e ppf =
-  Zoo.print_parens ppf "%s" (Sexp.to_string_hum (Syntax.R.sexp_of_expr e))
+  Zoo.print_parens ppf "%s" (Sexp.to_string_hum (Syntax.R.sexp_of_expr' e))
 
 let ty t ppf =
   Zoo.print_parens ppf "%s" (Sexp.to_string_hum (Syntax.sexp_of_ty t))
@@ -27,6 +27,9 @@ let fun_info es ppf =
 let tys ts ppf =
   Zoo.print_parens ppf "%s" (Sexp.to_string_hum (Syntax.sexp_of_tys ts))
 
+let lambda_kind k ppf =
+  Zoo.print_parens ppf "%s" (Sexp.to_string_hum (Syntax.sexp_of_lambda_kind k))
+  
 (* 
 let ty t ppf =
   let rec ty ?max_level t ppf =

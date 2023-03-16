@@ -29,10 +29,9 @@ let rec get_fun_info ((exp, ty, effs, attrs): R.expr) (p_fun : string option) : 
       get_fun_info e1 p_fun @ get_fun_info e2 p_fun
   | Handle (x, fname, exp_catch, exp_handle) ->
       get_fun_info exp_catch p_fun @ get_fun_info exp_handle p_fun
-  | FullFun (x, es1, hs, tm_args, ty, es2, exp_body) ->
+  | FullFun (_, x, es1, hs, tm_args, ty, es2, exp_body) ->
     let hd_args = List.map (fun (name, _, ty) -> (name, ty)) hs in
     (x, p_fun, (x, TStackClosure (full_fun_to_tabs exp)) :: tm_args @ hd_args @ gather_locals exp_body) :: get_fun_info exp_body (Some x)
-  | Handler (_, e) -> get_fun_info e p_fun
   | FullApply (exp, es, hs, exps) ->
       get_fun_info exp p_fun @ List.fold_left (fun acc exp_iter -> get_fun_info exp_iter p_fun @ acc) [] exps
   | Raise (h, es, hs, exps) ->

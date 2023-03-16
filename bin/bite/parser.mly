@@ -101,12 +101,7 @@ plain_lambda:
                 LBRACE hs = hd_param* RBRACE 
                 tm_params = tm_params
                 COLON t = ty UNDERSCORE LBRACKET es2 = eff_name* RBRACKET IS e = expr END
-    { FullFun (x, es1, hs, tm_params, t, es2, e) }
-
-handler: mark_position(plain_handler) { $1 }
-plain_handler:
-  | f = lambda
-    { Handler(Other, f) }
+    { FullFun (Lambda, x, es1, hs, tm_params, t, es2, e) }
 
 lhs: mark_position(plain_lhs) { $1 }
 plain_lhs:
@@ -184,8 +179,9 @@ plain_expr:
     { Let (x, ty, e1, e2) }
   | DECL x = VAR COLON ty = ty ASSIGN e1 = expr IN e2 = expr END
     { Decl (x, ty, e1, e2) }
-  | HANDLE x = VAR COLON fname = VAR EQUAL e1 = handler IN e2 = expr END
-    { Handle (x, fname, e1, e2) }
+  | HANDLE x = VAR COLON fname = VAR EQUAL e1 = lambda IN e2 = expr END
+    { let [@warning "-partial-match"] {Zoo.data=(FullFun (_, name, es1, hs, tm_params, t, es2, exp_body)); Zoo.loc=loc} = e1 in
+      Handle (x, fname, Zoo.locate ~loc:loc (FullFun (GeneralHandler, name, es1, hs, tm_params, t, es2, exp_body)), e2) }
   | e1 = expr SEMI e2 = expr
     { Seq (e1, e2) }
 

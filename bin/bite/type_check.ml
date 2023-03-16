@@ -68,7 +68,7 @@ let rec type_of (eff_defs : f_ENV) (e_env : e_ENV) (h_env : h_ENV) (t_env : t_EN
       let exp3', ty3, es3, attrs3 = type_of eff_defs e_env h_env t_env exp3 in
       if (ty1 <> TBool || ty2 <> ty3) then typing_error ~loc "%t can't be type checked" (Print.expr e);
       If ((exp1', ty1, es1, attrs1), (exp2', ty2, es2, attrs2), (exp3', ty3, es3, attrs3)), ty2, es1 @ es2 @ es3, default_attrs
-    | FullFun (x, es1, hs, tm_args, ty, es2, exp_body) ->
+    | FullFun (kind, x, es1, hs, tm_args, ty, es2, exp_body) ->
       let ty_args = List.map snd tm_args in
       let new_e_env = es1 @ e_env in
       let new_h_env = hs @ h_env in
@@ -80,7 +80,7 @@ let rec type_of (eff_defs : f_ENV) (e_env : e_ENV) (h_env : h_ENV) (t_env : t_EN
         if ty_e <> ty then typing_error ~loc "The function body has the wrong type, expected %t but got %t" (Print.ty ty) (Print.ty ty_e);
         if (List.exists (fun e -> not (List.mem e es2)) es_e) then typing_error ~loc "The function body has more effects than allowed by the function type";
       let hs' = List.map (fun (name, fname) -> (name, fname, List.assoc fname eff_defs)) hs in
-      FullFun (x, es1, hs', tm_args, ty, es2, (exp_body', ty_e, es_e, attrs_e)), TAbs (es1, hs, ty_args, ty, es2), [], default_attrs
+      FullFun (kind, x, es1, hs', tm_args, ty, es2, (exp_body', ty_e, es_e, attrs_e)), TAbs (es1, hs, ty_args, ty, es2), [], default_attrs
     | Assign (v_exp, exp) -> 
       begin match v_exp.data with
         | Var x ->
@@ -127,12 +127,6 @@ let rec type_of (eff_defs : f_ENV) (e_env : e_ENV) (h_env : h_ENV) (t_env : t_EN
             Handle (x, (fname, ty_fname), (exp_catch', ty_catch, es_catch, attrs_catch), (exp_handle', ty_handle, es_handle, attrs_handle)), ty_handle, List.filter (fun e -> e <> HVar x) es_handle, default_attrs
           | _ -> typing_error ~loc "effect definition must be of type TAbs";
        with Not_found -> typing_error ~loc "unknown effect name %s" fname)
-    | Handler (k, f) ->
-      let f', ty_f, es_f, attrs_f = type_of eff_defs e_env h_env t_env f in
-      (match ty_f with
-        | TAbs _ -> 
-          Handler (k, (f', ty_f, es_f, attrs_f)), ty_f, es_f, default_attrs
-        | _ -> typing_error ~loc "handler expression must be of type TAbs")
     | FullApply (exp1, es, hs, exps) ->
       let exp1', ty1, es1, attrs1 = type_of eff_defs e_env h_env t_env exp1 in
       (match ty1 with

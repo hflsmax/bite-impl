@@ -6,7 +6,7 @@ let spf = Printf.sprintf
 
 let full_fun_to_tabs (exp : R.expr') : ty =
   match exp with
-  | FullFun (x, es1, hs, tm_args, ty, es2, exp) ->
+  | FullFun (_, x, es1, hs, tm_args, ty, es2, exp) ->
     let tm_args_ty = List.split tm_args |> snd in
     let hs' = List.map (fun (name, fname, _) -> (name, fname)) hs in
     TAbs (es1, hs', tm_args_ty, ty, es2)
@@ -29,9 +29,8 @@ let rec gather_locals ((exp, _, _, attrs) : R.expr) : locals =
       (x, TMut ty) :: gather_locals e1 @ gather_locals e2
   | Handle (x, (_, ty), catch_exp, handle_exp) ->
       (x, ty) :: gather_locals catch_exp @ gather_locals handle_exp
-  | FullFun (x, _, _, _, _, _, _) ->
+  | FullFun (_, x, _, _, _, _, _, _) ->
       (x, TStackClosure (full_fun_to_tabs exp)) :: []
-  | Handler (_, e) -> gather_locals e
   | FullApply (e1, _, _, e2) -> 
       gather_locals e1 @ List.fold_left (fun acc exp_iter -> acc @ (gather_locals exp_iter)) [] e2
   | Raise (_, _, _, e) ->
@@ -58,11 +57,10 @@ let rec gather_free_vars ((exp, _, _, attrs) : R.expr) : locals =
     gather_free_vars e1 @ (exclude x (gather_free_vars e2))
   | Handle (x, (_, ty), catch_exp, handle_exp) ->
       gather_free_vars catch_exp @ (exclude x (gather_free_vars handle_exp))
-  | FullFun (x, _, hparams, tparams, _, _, body) ->
+  | FullFun (_, x, _, hparams, tparams, _, _, body) ->
       let hparams' = List.map (fun (name, _, _) -> name) hparams in
       let tparams' = List.map (fun (name, _) -> name) tparams in
       gather_free_vars body @ (exclude_all (x :: hparams' @ tparams') (gather_locals body))
-  | Handler (_, e) -> gather_free_vars e
   | FullApply (lhs, _, hargs, targs) -> 
       let hvars = List.map (fun (name, _, ty) -> (name, ty)) hargs in
       gather_free_vars lhs @ hvars @ List.fold_left (fun acc exp_iter -> acc @ (gather_free_vars exp_iter)) [] targs
@@ -81,11 +79,13 @@ let rec ty_to_string ty : string =
   | TAbs _ -> "closure_t"
   | TStackClosure _ -> "closure_t"
 
-let tabs_to_string ty : string =
+let tabs_to_string ty is_handler : string =
   match ty with
   | TAbs (es1, hs, ty_args, ty, es2) ->
     (* The first parameter is the env pointer. *)
-    let ty_args = "void*" :: List.map (fun ty_arg -> ty_to_string ty_arg) ty_args in
+    let ty_args = "void*" :: 
+      (if is_handler then ["jmp_buf"] else []) @
+      List.map (fun ty_arg -> ty_to_string ty_arg) ty_args in
     let handler_ty_args = List.init (List.length hs) (fun _ -> "closure_t") in
     Printf.sprintf "%s(*)(%s)" (ty_to_string ty) (String.concat ", " (ty_args @ handler_ty_args))
   | _ -> failwith "tabs_to_string: can only be called on TAbs"
@@ -107,22 +107,30 @@ let tabs_to_string ty : string =
 
 let get_fullfun_name (exp : expr') : string =
   match exp with
-  | FullFun (x, es1, hs, tm_args, ty, es2, exp) -> x
+  | FullFun (_, x, _, _, _, _, _, _) -> x
   | _ -> failwith "get_fullfun_name: can only be called on FullFun"
 
 let wrap_in_main (exp : expr) : expr = 
-  let fun_def = FullFun ("main", [], [], [], TInt, [], exp) in
+  let fun_def = FullFun (Lambda, "main", [], [], [], TInt, [], exp) in
   fun_def, full_fun_to_tabs fun_def, [], {isTailCall = false}
 
 let extra_defs = {|
+#include <setjmp.h>
+
 typedef struct closture_t {
     void *f_ptr;
     void *env;
+    jmp_buf jb;
 } closure_t;
-typedef struct main_env_t {} main_env_t;
+
 closure_t copy_closure(closure_t from) {
     return from;
 }
+
+volatile int jmpret;
+
+typedef struct main_env_t {} main_env_t;
+
 |}
 
 let fst3 (x, _, _) = x
