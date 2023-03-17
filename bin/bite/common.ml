@@ -40,7 +40,7 @@ let rec gather_locals ((exp, _, _, attrs) : R.expr) : locals =
   | Var _ | Int _ | Bool _ | Deref _  | Abort -> []
 
 (* Gather all free variables in an expression. It's computed by finding all used variables that are not bound *)
-let rec gather_free_vars ((exp, _, _, attrs) : R.expr) : locals =
+let rec gather_free_vars ((exp, ty, _, attrs) : R.expr) : locals =
   let exclude name locals = List.filter (fun (name', _) -> name <> name') locals in
   let exclude_all names locals = List.filter (fun (name', _) -> not (List.mem name' names)) locals in
   match exp with
@@ -60,7 +60,7 @@ let rec gather_free_vars ((exp, _, _, attrs) : R.expr) : locals =
   | FullFun (_, x, _, hparams, tparams, _, _, body) ->
       let hparams' = List.map (fun (name, _, _) -> name) hparams in
       let tparams' = List.map (fun (name, _) -> name) tparams in
-      gather_free_vars body @ (exclude_all (x :: hparams' @ tparams') (gather_locals body))
+      exclude_all (x :: hparams' @ tparams') (gather_free_vars body)
   | FullApply (lhs, _, hargs, targs) -> 
       let hvars = List.map (fun (name, _, ty) -> (name, ty)) hargs in
       gather_free_vars lhs @ hvars @ List.fold_left (fun acc exp_iter -> acc @ (gather_free_vars exp_iter)) [] targs
@@ -69,7 +69,10 @@ let rec gather_free_vars ((exp, _, _, attrs) : R.expr) : locals =
       (name, ty) :: hvars @ List.fold_left (fun acc exp_iter -> acc @ (gather_free_vars exp_iter)) [] targs
   | Resume e -> gather_free_vars e
   | Seq (e1, e2) -> gather_free_vars e1 @ gather_free_vars e2
-  | Var _ | Int _ | Bool _ | Deref _  | Abort -> []
+  | Deref x -> gather_free_vars x
+  | Var (_, x) -> [(x, ty)]
+  | Int _ | Bool _ | Abort -> [] 
+  |> List.sort_uniq compare
 
 let rec ty_to_string ty : string =
   match ty with
@@ -112,7 +115,7 @@ let get_fullfun_name (exp : expr') : string =
 
 let wrap_in_main (exp : expr) : expr = 
   let fun_def = FullFun (Lambda, "main", [], [], [], TInt, [], exp) in
-  fun_def, full_fun_to_tabs fun_def, [], {isTailCall = false}
+  fun_def, full_fun_to_tabs fun_def, [], {isRecursiveCall = false}
 
 let extra_defs = {|
 #include <setjmp.h>

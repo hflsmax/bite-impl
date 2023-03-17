@@ -77,11 +77,11 @@ let transform_handler (exp : R.expr') : R.expr' =
          Zoo.error "Other handler kind not supported"
    | _ -> exp
 
-let mark_tail_call fun_name ((exp, ty, effs, attrs) : R.expr) : R.expr =
+let mark_recursive_call fun_name ((exp, ty, effs, attrs) : R.expr) : R.expr =
    match exp with
    | FullApply ((Var (_, x), _, _, _), _, _, _) ->
       if x = fun_name then
-         (exp, ty, effs, {attrs with isTailCall = true})
+         (exp, ty, effs, {attrs with isRecursiveCall = true})
       else
          (exp, ty, effs, attrs)
    | _ -> (exp, ty, effs, attrs)
@@ -98,7 +98,7 @@ let transform_exp (exp : R.expr) : R.expr =
   end;
   (* Add pre-transformer here. This corresponds to a top-dowm transformation *)
   let (exp_pre, ty_pre, effs_pre, attrs_pre) as rexp_pre = 
-    (mark_tail_call !curr_func_name) rexp 
+    (mark_recursive_call !curr_func_name) rexp 
   in
       let exp_walked = 
          match exp_pre with

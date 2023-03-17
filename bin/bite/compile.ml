@@ -105,6 +105,7 @@ let rec compile (cf_dest : cf_dest) ((exp, ty, effs, attrs) as exp': R.expr) : s
         | GeneralHandler -> Zoo.error "General handlers not supported" in
       let code_body, f1 = compile cf_dest body_exp in
       let this_fun = spf "%s %s(%s)\n{\n%s\n%s\n}\n" (ty_to_string ty) x (String.concat ", " (code_tm_args @ code_hs)) code_init code_body in
+      Zoo.print_info "Compiling function %s and locals are %s\n" x (String.concat ", " (List.map fst (gather_free_vars exp')));
       spf "({locals.%s.f_ptr = (void*)%s;\n" x x ^
       (if List.length (gather_free_vars exp') = 0 then "" else spf "locals.%s.env = &locals;\n" x) ^
       spf "copy_closure(locals.%s);})" x,
@@ -136,7 +137,7 @@ let rec compile (cf_dest : cf_dest) ((exp, ty, effs, attrs) as exp': R.expr) : s
   |> fun (code, fs) -> (if can_be_returned exp then 
     begin
     match cf_dest with
-    | Return -> "return " ^ code ^ ";"
+    | Return -> (if (attrs.isRecursiveCall) then "__attribute__((musttail))" else "") ^ "return " ^ code ^ ";"
     | Abort -> spf "jmpret = %s;\nlongjmp(jb, 1);\n" code
     | Continue -> code
     end else code), fs

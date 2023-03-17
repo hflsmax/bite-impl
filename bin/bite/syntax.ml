@@ -87,11 +87,11 @@ type hvar = string * fname * ty
 [@@deriving sexp]
 
 type attrs = { 
-  isTailCall: bool;
+  isRecursiveCall: bool;
 }
 [@@deriving sexp]
 
-let default_attrs = { isTailCall = false; }
+let default_attrs = { isRecursiveCall = false; }
 
 type expr = expr' * ty * effs * attrs
 and expr' =
