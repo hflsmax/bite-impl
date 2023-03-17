@@ -23,6 +23,10 @@ let analyze_lambda_kind (f : R.expr') : lambda_kind =
    | FullFun (Lambda, _, _, _, _, _, _, body) -> Lambda
    | _ -> Zoo.error "Handler is not a full function: %t@." (Print.rexpr f)
 
+let wrap_in_main (exp : expr) : expr = 
+  let fun_def = FullFun (Lambda, "main", [], [], [], TInt, [], exp) in
+  fun_def, full_fun_to_tabs fun_def, [], {default_attrs with isRecursiveCall = false}
+
 (* 
    1. record variable depth
    2. record type of fnames
@@ -86,9 +90,17 @@ let mark_recursive_call fun_name ((exp, ty, effs, attrs) : R.expr) : R.expr =
          (exp, ty, effs, attrs)
    | _ -> (exp, ty, effs, attrs)
 
+let mark_function_constant value_store ((exp, ty, effs, attrs) : R.expr) : R.expr =
+   match exp with
+   | FullApply ((Var (_, x), x_ty, x_effs, x_attrs), app_eargs, app_hargs, app_targs) ->
+      let[@warning "-partial-match"] Some fun_name = List.assoc_opt x value_store in
+      (exp, ty, effs, {attrs with topLevelFunctionName = Some fun_name})
+   | _ -> (exp, ty, effs, attrs)
+
 (* Bottom-up AST walker *)
 let transform_exp (exp : R.expr) : R.expr =
  let curr_func_name = ref "" in
+ let value_store = ref [] in
   let rec transform_exp' ((exp, ty, effs, attrs) as rexp: R.expr) : R.expr =
   (* Add pre-metadata-updater here. *)
   begin
@@ -96,9 +108,19 @@ let transform_exp (exp : R.expr) : R.expr =
   | FullFun (_, x, _, _, _, _, _, _) -> curr_func_name := x
   | _ -> ()
   end;
+  begin
+   match exp with
+   (* NOTE: it's ok to use the associate list and never pop, as the program is already type checked
+   and all variabels are bound before use *)
+   | FullFun (kind, fun_name, es1, hs, tm_args, ty, es2, exp_body) ->
+      value_store := (fun_name, fun_name) :: !value_store;
+   | Let (x, _, (FullFun (kind, fun_name, es1, hs, tm_args, ty, es2, exp_body), _, _, _), _) ->
+      value_store := (x, fun_name) :: !value_store;
+   | _ -> ()
+  end;
   (* Add pre-transformer here. This corresponds to a top-dowm transformation *)
   let (exp_pre, ty_pre, effs_pre, attrs_pre) as rexp_pre = 
-    (mark_recursive_call !curr_func_name) rexp 
+    (mark_recursive_call !curr_func_name) @@ (mark_function_constant !value_store) rexp 
   in
       let exp_walked = 
          match exp_pre with
@@ -112,7 +134,11 @@ let transform_exp (exp : R.expr) : R.expr =
          | If (e1, e2, e3) ->
             (If (transform_exp' e1, transform_exp' e2, transform_exp' e3))
          | Let (x, ty, e1, e2) ->
-            (Let (x, ty, transform_exp' e1, transform_exp' e2))
+            (* NOTE: run e2 first because our constant propogation doesn't pop, 
+               so this prevents polution of x inside e1 *)
+            let e2' = transform_exp' e2 in
+            let e1' = transform_exp' e1 in
+            (Let (x, ty, e1', e2'))
          | Decl (x, ty, e1, e2) ->
             (Decl (x, ty, transform_exp' e1, transform_exp' e2))
          | Handle (x, h, exp_catch, exp_handle) ->

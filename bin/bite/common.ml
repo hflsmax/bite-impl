@@ -113,10 +113,6 @@ let get_fullfun_name (exp : expr') : string =
   | FullFun (_, x, _, _, _, _, _, _) -> x
   | _ -> failwith "get_fullfun_name: can only be called on FullFun"
 
-let wrap_in_main (exp : expr) : expr = 
-  let fun_def = FullFun (Lambda, "main", [], [], [], TInt, [], exp) in
-  fun_def, full_fun_to_tabs fun_def, [], {isRecursiveCall = false}
-
 let extra_defs = {|
 #include <setjmp.h>
 

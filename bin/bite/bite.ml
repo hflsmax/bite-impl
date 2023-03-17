@@ -20,7 +20,7 @@ module Bite = Zoo.Main (struct
     | Syntax.Expr ({data=exp'; _} as exp) ->
       (* check the type of [exp], compile it, and run it. *)
       let (exp', _, _, _) as exp = Type_check.type_of eff_defs [] [] [] exp in
-      let (exp', _, _, _) as exp = Common.wrap_in_main exp in
+      let (exp', _, _, _) as exp = Passes.wrap_in_main exp in
       let (exp', _, _, _) as exp = Passes.enrich_type eff_defs exp in
       let (exp', _, _, _) as exp = Passes.transform_exp exp in
       Zoo.print_info "%t@." (Print.rexpr exp') ;

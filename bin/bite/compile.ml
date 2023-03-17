@@ -21,7 +21,7 @@ type cf_dest =
 let rec compile (cf_dest : cf_dest) ((exp, ty, effs, attrs) as exp': R.expr) : string * string list =
   begin match exp with
     | Var (depth, x) -> 
-      spf "locals.%s%s" (String.concat "" (List.init depth (fun _ -> "env->"))) x, []
+        spf "locals.%s%s" (String.concat "" (List.init depth (fun _ -> "env->"))) x, []
     | Int k -> string_of_int k, []
     | Bool b -> string_of_bool b, []
     | Times (e1, e2) ->
@@ -115,7 +115,8 @@ let rec compile (cf_dest : cf_dest) ((exp, ty, effs, attrs) as exp': R.expr) : s
       let exps', f2 = List.split (List.map (compile Continue) exps) in
       let handler_args = List.map (fun x -> compile_hvar @@ fst3 @@ x) hs in
       let args_code = (lhs' ^ ".env") :: exps' @ handler_args in
-      spf "((%s)%s.f_ptr)(%s);" (tabs_to_string lhs_ty false) lhs' (String.concat ", " args_code), f1 @ List.concat f2
+      let lhs_code = if Option.is_some attrs.topLevelFunctionName then Option.get(attrs.topLevelFunctionName) else spf "((%s)%s.f_ptr);" (tabs_to_string lhs_ty false) lhs' in
+      spf "%s(%s);" lhs_code (String.concat ", " args_code), f1 @ List.concat f2
     | Raise ((_, _, hty) as h, es, hs, exps) ->
       let exps', f2 = List.split (List.map (compile Continue) exps) in
       let handler_code = compile_hvar @@ fst3 @@ h in
@@ -124,7 +125,8 @@ let rec compile (cf_dest : cf_dest) ((exp, ty, effs, attrs) as exp': R.expr) : s
         (handler_code ^ ".env") :: 
         (handler_code ^ ".jb") :: 
         exps' @ handler_args in
-      spf "((%s)%s.f_ptr)(%s)" (tabs_to_string hty true) handler_code (String.concat ", " args_code), List.concat f2
+      let lhs_code = if Option.is_some attrs.topLevelFunctionName then Option.get(attrs.topLevelFunctionName) else spf "((%s)%s.f_ptr)" (tabs_to_string hty true) handler_code in
+      spf "%s(%s)" lhs_code (String.concat ", " args_code), List.concat f2
     | Resume e ->
       let e', f1 = compile Continue e in
       "", f1

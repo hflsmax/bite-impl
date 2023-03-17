@@ -88,10 +88,11 @@ type hvar = string * fname * ty
 
 type attrs = { 
   isRecursiveCall: bool;
+  topLevelFunctionName: string option;
 }
 [@@deriving sexp]
 
-let default_attrs = { isRecursiveCall = false; }
+let default_attrs = { isRecursiveCall = false; topLevelFunctionName = None; }
 
 type expr = expr' * ty * effs * attrs
 and expr' =
