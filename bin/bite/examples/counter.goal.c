@@ -1,16 +1,6 @@
 
 #include <setjmp.h>
 
-typedef struct closture_t {
-    void *f_ptr;
-    void *env;
-    jmp_buf jb;
-} closure_t;
-
-closure_t copy_closure(closure_t from) {
-    return from;
-}
-
 volatile int jmpret;
 
 typedef struct main_env_t {} main_env_t;
@@ -18,11 +8,10 @@ typedef struct main_env_t {} main_env_t;
 
 typedef struct main_locals_t {
 main_env_t* env;
-closure_t main;
-closure_t counter;
-closure_t f;
-closure_t run;
-closure_t g;
+void *counter_fptr;
+void *counter_env;
+void *run_fptr;
+void *run_env;
 } main_locals_t;
 
 typedef main_locals_t f_env_t;
@@ -44,17 +33,19 @@ int i;
 typedef main_locals_t g_env_t;
 typedef struct g_locals_t {
 g_env_t* env;
+jmp_buf fget_jb;
+jmp_buf fset_jb;
 
 int n;
 int s;
 
 void *lget_fptr;
 void *lget_env;
-jmp_buf lget_jb;
+jmp_buf *lget_jb;
 
 void *lset_fptr;
 void *lset_env;
-jmp_buf lset_jb;
+jmp_buf *lset_jb;
 } g_locals_t;
 
 typedef g_locals_t fget_env_t;
@@ -121,17 +112,18 @@ locals.lget_env = &locals;
 locals.lset_fptr = (void*)fset;
 locals.lset_env = &locals;
 
-return f(locals.env->counter.env, 0, locals.lget_fptr, locals.lget_env, &locals.lget_jb, locals.lset_fptr, locals.lset_env, &locals.lset_jb);
+return f(locals.env->counter_env, 0, locals.lget_fptr, locals.lget_env, locals.lget_jb, locals.lset_fptr, locals.lset_env, locals.lset_jb);
 }
 
 int main()
 {
 main_locals_t locals;
 
-locals.counter = ({locals.f.f_ptr = (void*)f;
-copy_closure(locals.f);});
-locals.run = ({locals.g.f_ptr = (void*)g;
-locals.g.env = &locals;
-copy_closure(locals.g);});
-return g(locals.run.env, 10);
+locals.counter_fptr = (void*)f;
+locals.counter_env = &locals;
+
+locals.run_fptr = (void*)g;
+locals.run_env = &locals;
+;
+return g(locals.run_env, 10);
 }

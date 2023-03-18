@@ -30,7 +30,7 @@ let rec gather_locals ((exp, _, _, attrs) : R.expr) : locals =
   | Handle (x, (_, ty), catch_exp, handle_exp) ->
       (x, ty) :: gather_locals catch_exp @ gather_locals handle_exp
   | FullFun (_, x, _, _, _, _, _, _) ->
-      (x, TStackClosure (full_fun_to_tabs exp)) :: []
+      []
   | FullApply (e1, _, _, e2) -> 
       gather_locals e1 @ List.fold_left (fun acc exp_iter -> acc @ (gather_locals exp_iter)) [] e2
   | Raise (_, _, _, e) ->
@@ -80,14 +80,13 @@ let rec ty_to_string ty : string =
   | TBool -> "bool"
   | TMut ty -> ty_to_string ty
   | TAbs _ -> "closure_t"
-  | TStackClosure _ -> "closure_t"
 
 let tabs_to_string ty is_handler : string =
   match ty with
   | TAbs (es1, hs, ty_args, ty, es2) ->
     (* The first parameter is the env pointer. *)
     let ty_args = "void*" :: 
-      (if is_handler then ["jmp_buf"] else []) @
+      (if is_handler then ["jmp_buf*"] else []) @
       List.map (fun ty_arg -> ty_to_string ty_arg) ty_args in
     let handler_ty_args = List.init (List.length hs) (fun _ -> "closure_t") in
     Printf.sprintf "%s(*)(%s)" (ty_to_string ty) (String.concat ", " (ty_args @ handler_ty_args))
@@ -121,10 +120,6 @@ typedef struct closture_t {
     void *env;
     jmp_buf jb;
 } closure_t;
-
-closure_t copy_closure(closure_t from) {
-    return from;
-}
 
 volatile int jmpret;
 

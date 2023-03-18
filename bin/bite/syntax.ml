@@ -27,8 +27,6 @@ type ty =
   | TBool (* Booleans *)
   | TAbs of effs * (hvar * fname) list * tys * ty * effs
   | TMut of ty
-  | TStackClosure of ty
-  (* TODO: add THeapClosure *)
 [@@deriving sexp]
 and tys = ty list
 [@@deriving sexp]

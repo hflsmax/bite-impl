@@ -86,11 +86,6 @@ locals.n = n;
 return ({
 locals.env->s = locals.n;});}
 
-void copy_closure(closure_t* to, closure_t* from) {
-    to->f_ptr = from->f_ptr;
-    to->env = from->env;
-}
-
 closure_t return_closure(closure_t from) {
     return from;
 }
