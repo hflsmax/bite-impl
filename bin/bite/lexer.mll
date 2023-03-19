@@ -14,6 +14,7 @@ rule token = parse
   | "true"          { TRUE }
   | "false"         { FALSE }
   | "fun"           { FUN }
+  | "fn"            { FN }
   | "eff"           { EFF }
   | "∀"             { FORALL }
   | "."             { DOT }

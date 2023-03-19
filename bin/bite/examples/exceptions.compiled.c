@@ -22,21 +22,21 @@ jmp_buf *run_jb;
 typedef main_locals_t g_env_t;
 typedef struct g_locals_t {
 g_env_t* env;
-jmp_buf exch_jb;
+jmp_buf fn1_jb;
 int n;
 void *lexc_fptr;
 void *lexc_env;
 jmp_buf *lexc_jb;
 } g_locals_t;
 
-typedef g_locals_t exch_env_t;
-typedef struct exch_locals_t {
-exch_env_t* env;
-} exch_locals_t;
-int exch(void* env, jmp_buf jb)
+typedef g_locals_t fn1_env_t;
+typedef struct fn1_locals_t {
+fn1_env_t* env;
+} fn1_locals_t;
+int fn1(void* env, jmp_buf jb)
 {
-exch_locals_t locals;
-locals.env = (exch_env_t*)env;
+fn1_locals_t locals;
+locals.env = (fn1_env_t*)env;
 
 jmpret = 0;
 longjmp(jb, 1);
@@ -49,7 +49,7 @@ g_locals_t locals;
 locals.env = (g_env_t*)env;
 locals.n = n;
 
-locals.lexc_fptr = (void*)exch;
+locals.lexc_fptr = (void*)fn1;
 locals.lexc_env = &locals;
 jmp_buf _lexc_jb;
 locals.lexc_jb = &_lexc_jb;

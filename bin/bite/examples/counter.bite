@@ -14,10 +14,10 @@ let counter =
   end
 in 
   let run =
-    fun g [] {} (n : int) : int_[] is
+    fn [] {} (n : int) : int_[] is
       dcl s := n in
-        handle lget : Fget = fun fget [] {} () : int_[] is resume (!s) end in
-          handle lset : Fset = fun fset [] {} (n : int) : int_[] is resume (s := n) end in
+        handle lget : Fget = fn [] {} () : int_[] is resume (!s) end in
+          handle lset : Fset = fn [] {} (n : int) : int_[] is resume (s := n) end in
             counter {lget lset} 0
           end
         end

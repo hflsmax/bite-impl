@@ -14,7 +14,7 @@
 %token TIMES
 %token EQUAL LESS
 %token IF THEN ELSE
-%token FUN IS
+%token FUN FN IS
 %token RAISE RESUME
 %token FORALL DOT COMMA UNDERSCORE TILDE
 %token COLON
@@ -101,7 +101,12 @@ plain_lambda:
                 LBRACE hs = hd_param* RBRACE 
                 tm_params = tm_params
                 COLON t = ty UNDERSCORE LBRACKET es2 = eff_name* RBRACKET IS e = expr END
-    { FullFun (Lambda, x, es1, hs, tm_params, t, es2, e) }
+    { FullFun (Lambda, Some x, es1, hs, tm_params, t, es2, e) }
+  | FN LBRACKET es1 = eff_name* RBRACKET 
+                LBRACE hs = hd_param* RBRACE 
+                tm_params = tm_params
+                COLON t = ty UNDERSCORE LBRACKET es2 = eff_name* RBRACKET IS e = expr END
+    { FullFun (Lambda, None, es1, hs, tm_params, t, es2, e) }
 
 lhs: mark_position(plain_lhs) { $1 }
 plain_lhs:

@@ -35,11 +35,11 @@ jmp_buf *lset_jb;
 int i;
 } f_locals_t;
 
-typedef main_locals_t g_env_t;
-typedef struct g_locals_t {
-g_env_t* env;
-jmp_buf fget_jb;
-jmp_buf fset_jb;
+typedef main_locals_t fn1_env_t;
+typedef struct fn1_locals_t {
+fn1_env_t* env;
+jmp_buf fn2_jb;
+jmp_buf fn3_jb;
 int n;
 int s;
 void *lget_fptr;
@@ -48,18 +48,18 @@ jmp_buf *lget_jb;
 void *lset_fptr;
 void *lset_env;
 jmp_buf *lset_jb;
-} g_locals_t;
+} fn1_locals_t;
 
-typedef g_locals_t fget_env_t;
-typedef struct fget_locals_t {
-fget_env_t* env;
-} fget_locals_t;
+typedef fn1_locals_t fn2_env_t;
+typedef struct fn2_locals_t {
+fn2_env_t* env;
+} fn2_locals_t;
 
-typedef g_locals_t fset_env_t;
-typedef struct fset_locals_t {
-fset_env_t* env;
+typedef fn1_locals_t fn3_env_t;
+typedef struct fn3_locals_t {
+fn3_env_t* env;
 int n;
-} fset_locals_t;
+} fn3_locals_t;
 int f(void* env, int n, void *lget_fptr, void *lget_env, jmp_buf *lget_jb, void *lset_fptr, void *lset_env, jmp_buf *lset_jb)
 {
 f_locals_t locals;
@@ -84,36 +84,36 @@ __attribute__((musttail))return f(locals.env, ({locals.n + 1;}), locals.lget_fpt
 };
 }
 
-int fget(void* env, jmp_buf jb)
+int fn2(void* env, jmp_buf jb)
 {
-fget_locals_t locals;
-locals.env = (fget_env_t*)env;
+fn2_locals_t locals;
+locals.env = (fn2_env_t*)env;
 
 return locals.env->s;
 }
 
-int fset(void* env, jmp_buf jb, int n)
+int fn3(void* env, jmp_buf jb, int n)
 {
-fset_locals_t locals;
-locals.env = (fset_env_t*)env;
+fn3_locals_t locals;
+locals.env = (fn3_env_t*)env;
 locals.n = n;
 
 locals.env->s = locals.n;
 
 }
 
-int g(void* env, int n)
+int fn1(void* env, int n)
 {
-g_locals_t locals;
-locals.env = (g_env_t*)env;
+fn1_locals_t locals;
+locals.env = (fn1_env_t*)env;
 locals.n = n;
 
 locals.s = locals.n;
-locals.lget_fptr = (void*)fget;
+locals.lget_fptr = (void*)fn2;
 locals.lget_env = &locals;
 jmp_buf _lget_jb;
 locals.lget_jb = &_lget_jb;
-locals.lset_fptr = (void*)fset;
+locals.lset_fptr = (void*)fn3;
 locals.lset_env = &locals;
 jmp_buf _lset_jb;
 locals.lset_jb = &_lset_jb;
@@ -126,9 +126,9 @@ main_locals_t locals;
 
 locals.counter_fptr = (void*)f;
 locals.counter_env = &locals;
-locals.run_fptr = (void*)g;
+locals.run_fptr = (void*)fn1;
 locals.run_env = &locals;
-return g(locals.run_env, 10);
+return fn1(locals.run_env, 10);
 
 
 }

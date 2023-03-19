@@ -32,9 +32,9 @@ let rec ty_ok (eff_defs : f_ENV) (e_env : e_ENV) (h_env : h_ENV) ty =
 
 let hvar_to_rich_hvar eff_defs h_env h = let fname = List.assoc h h_env in h, fname, List.assoc fname eff_defs
 
-
 let default_attrs = Syntax.R.default_attrs
 
+let fn_index = ref 0
 let rec type_of (eff_defs : f_ENV) (e_env : e_ENV) (h_env : h_ENV) (t_env : t_ENV) {Zoo.data=e; loc} : R.expr =
   match e with
     | Var x ->
@@ -69,6 +69,7 @@ let rec type_of (eff_defs : f_ENV) (e_env : e_ENV) (h_env : h_ENV) (t_env : t_EN
       if (ty1 <> TBool || ty2 <> ty3) then typing_error ~loc "%t can't be type checked" (Print.expr e);
       If ((exp1', ty1, es1, attrs1), (exp2', ty2, es2, attrs2), (exp3', ty3, es3, attrs3)), ty2, es1 @ es2 @ es3, default_attrs
     | FullFun (kind, x, es1, hs, tm_args, ty, es2, exp_body) ->
+      let x = if x = None then (fn_index := !fn_index + 1; "fn" ^ string_of_int !fn_index) else Option.get x in
       let ty_args = List.map snd tm_args in
       let new_e_env = es1 @ e_env in
       let new_h_env = hs @ h_env in

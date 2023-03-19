@@ -2,7 +2,7 @@ eff Exc : ∀[].∀{}.() -> int_[];;
 
 let run =
     fun g [] {} (n : int) : int_[] is
-        handle lexc : Exc = fun exch [] {} () : int_[] is 0 end in
+        handle lexc : Exc = fn [] {} () : int_[] is 0 end in
             if n = 0 then
                 raise lexc ()
             else

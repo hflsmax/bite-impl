@@ -69,7 +69,7 @@ and expr' =
   | Let of name * expr * expr 		
   | Decl of name * expr * expr 		  
   | Handle of name * fname * expr * expr 
-  | FullFun of lambda_kind * name * effs * (hvar * fname) list * (name * ty) list * ty * effs * expr
+  | FullFun of lambda_kind * name option * effs * (hvar * fname) list * (name * ty) list * ty * effs * expr
   | FullApply of expr * effs * hvar list * expr list
   | Raise of hvar * effs * hvar list * expr list
   | Resume of expr
