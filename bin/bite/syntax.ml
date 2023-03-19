@@ -66,8 +66,8 @@ and expr' =
   | Assign of expr * expr 	
   | Deref of expr 			 
   | If of expr * expr * expr 		
-  | Let of name * ty * expr * expr 		
-  | Decl of name * ty * expr * expr 		  
+  | Let of name * expr * expr 		
+  | Decl of name * expr * expr 		  
   | Handle of name * fname * expr * expr 
   | FullFun of lambda_kind * name * effs * (hvar * fname) list * (name * ty) list * ty * effs * expr
   | FullApply of expr * effs * hvar list * expr list

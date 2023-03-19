@@ -175,10 +175,10 @@ plain_expr:
     { Assign (x, e) }
   | IF e1 = expr THEN e2 = expr ELSE e3 = expr 
     { If (e1, e2, e3) }
-  | LET x = VAR COLON ty = ty EQUAL e1 = expr IN e2 = expr END
-    { Let (x, ty, e1, e2) }
-  | DECL x = VAR COLON ty = ty ASSIGN e1 = expr IN e2 = expr END
-    { Decl (x, ty, e1, e2) }
+  | LET x = VAR EQUAL e1 = expr IN e2 = expr END
+    { Let (x, e1, e2) }
+  | DECL x = VAR ASSIGN e1 = expr IN e2 = expr END
+    { Decl (x, e1, e2) }
   | HANDLE x = VAR COLON fname = VAR EQUAL e1 = lambda IN e2 = expr END
     { let [@warning "-partial-match"] {Zoo.data=(FullFun (_, name, es1, hs, tm_params, t, es2, exp_body)); Zoo.loc=loc} = e1 in
       Handle (x, fname, Zoo.locate ~loc:loc (FullFun (GeneralHandler, name, es1, hs, tm_params, t, es2, exp_body)), e2) }

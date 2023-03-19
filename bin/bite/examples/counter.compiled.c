@@ -7,10 +7,6 @@ typedef struct closture_t {
     jmp_buf jb;
 } closure_t;
 
-closure_t copy_closure(closure_t from) {
-    return from;
-}
-
 volatile int jmpret;
 
 typedef struct main_env_t {} main_env_t;
@@ -115,8 +111,12 @@ locals.n = n;
 locals.s = locals.n;
 locals.lget_fptr = (void*)fget;
 locals.lget_env = &locals;
+jmp_buf _lget_jb;
+locals.lget_jb = &_lget_jb;
 locals.lset_fptr = (void*)fset;
 locals.lset_env = &locals;
+jmp_buf _lset_jb;
+locals.lset_jb = &_lset_jb;
 return f(locals.env->counter_env, 0, locals.lget_fptr, locals.lget_env, locals.lget_jb, locals.lset_fptr, locals.lset_env, locals.lset_jb);
 }
 

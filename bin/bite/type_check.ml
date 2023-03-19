@@ -106,16 +106,14 @@ let rec type_of (eff_defs : f_ENV) (e_env : e_ENV) (h_env : h_ENV) (t_env : t_EN
           with Not_found -> typing_error ~loc "unknown variable %s" x)
         | _ -> typing_error ~loc "Operand to deref must be a variable"
       end
-    | Let (x, ty, exp1, exp2) ->
+    | Let (x, exp1, exp2) ->
       let exp1', ty1, es1, attrs1 = type_of eff_defs e_env h_env t_env exp1 in
-      if ty <> ty1 then typing_error ~loc "Let expression expected type %t but got %t" (Print.ty ty) (Print.ty ty1);
       let exp2', ty2, es2, attrs2 = type_of eff_defs e_env h_env ((x, ty1) :: t_env) exp2 in
-      Let (x, ty, (exp1', ty1, es1, attrs1), (exp2', ty2, es2, attrs2)), ty2, es1 @ es2, default_attrs
-    | Decl (x, ty, exp1, exp2) ->
+      Let (x, ty1, (exp1', ty1, es1, attrs1), (exp2', ty2, es2, attrs2)), ty2, es1 @ es2, default_attrs
+    | Decl (x, exp1, exp2) ->
       let exp1', ty1, es1, attrs1 = type_of eff_defs e_env h_env t_env exp1 in
-      if ty <> ty1 then typing_error ~loc "Decl expression expected type %t but got %t" (Print.ty ty) (Print.ty ty1);
       let exp2', ty2, es2, attrs2 = type_of eff_defs e_env h_env ((x, TMut ty1) :: t_env) exp2 in
-      Decl ((x, ty, (exp1', ty1, es1, attrs1), (exp2', ty2, es2, attrs2))), ty2, es1 @ es2, default_attrs
+      Decl ((x, ty1, (exp1', ty1, es1, attrs1), (exp2', ty2, es2, attrs2))), ty2, es1 @ es2, default_attrs
     | Handle (x, fname, exp_catch, exp_handle) ->
       let exp_catch', ty_catch, es_catch, attrs_catch = type_of eff_defs e_env h_env t_env exp_catch in
       let exp_handle', ty_handle, es_handle, attrs_handle = type_of eff_defs e_env ((x, fname) :: h_env) t_env exp_handle in
