@@ -76,6 +76,7 @@ let rec gather_free_vars ((exp, ty, _, attrs) : R.expr) : locals =
 
 let rec ty_to_string ty : string =
   match ty with
+  | TBuildIn -> "void*"
   | TInt -> "int"
   | TBool -> "bool"
   | TMut ty -> ty_to_string ty
@@ -92,21 +93,6 @@ let tabs_to_string ty is_handler : string =
     Printf.sprintf "%s(*)(%s)" (ty_to_string ty) (String.concat ", " (ty_args @ handler_ty_args))
   | _ -> failwith "tabs_to_string: can only be called on TAbs"
 
-  (* match ty' with
-  | TAbs (es1, hs, ty_args, ty, es2) ->
-    (* The string "PLACEHOLDER" takes the place of the variable name.
-       It is not needed when the type is not used in a declaration, so
-       we remove them.  *)
-    let clean_format = fun s -> Str.global_replace (Str.regexp "PLACEHOLDER") "" s in
-    (* The first parameter is the env pointer. *)
-    let ty_args = "void*" :: List.map (fun ty_arg -> ty_to_string name ty_arg |> clean_format) ty_args in
-    let handler_ty_args = List.map (fun (h, (_, fname_ty)) -> 
-      [Str.global_replace (Str.regexp "PLACEHOLDER") "" (ty_to_string name fname_ty);
-      "void*"]) hs 
-      |> List.flatten
-    in
-    Printf.sprintf "%s (*PLACEHOLDER)(%s)" (ty_to_string name ty) (String.concat ", " (ty_args @ handler_ty_args)) *)
-
 let get_fullfun_name (exp : expr') : string =
   match exp with
   | FullFun (_, x, _, _, _, _, _, _) -> x
@@ -114,6 +100,9 @@ let get_fullfun_name (exp : expr') : string =
 
 let extra_defs = {|
 #include <setjmp.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdbool.h>
 
 typedef struct closture_t {
     void *f_ptr;
@@ -124,6 +113,14 @@ typedef struct closture_t {
 volatile int jmpret;
 
 typedef struct main_env_t {} main_env_t;
+
+inline void* arrayMalloc(int size) {
+    return malloc(size * sizeof(int));
+}
+
+inline int arrayGet(void* arr, int index) {
+    return ((int*)arr)[index];
+}
 
 |}
 

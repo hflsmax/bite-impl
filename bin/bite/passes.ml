@@ -3,14 +3,14 @@ open Syntax
 open Syntax.R
 open Common
 let get_var_depth (x : name) (slink : static_link) : int =
-  let rec get_var_depth' (x : name) (slink : static_link) (depth : int) : int =
-    match slink with
-    | [] -> Zoo.error "Variable \"%s\" not found in static link: %t@." x (Print.static_link slink)
-    | locals :: slink' ->
-        if List.mem_assoc x locals then depth
-        else get_var_depth' x slink' (depth + 1)
-  in
-    get_var_depth' x slink 0
+   let rec get_var_depth' (x : name) (slink : static_link) (depth : int) : int =
+      match slink with
+      | [] -> Zoo.error "Variable \"%s\" not found in static link: %t@." x (Print.static_link slink)
+      | locals :: slink' ->
+         if List.mem_assoc x locals then depth
+         else get_var_depth' x slink' (depth + 1)
+   in
+      get_var_depth' x slink 0
 
 let analyze_lambda_kind (f : R.expr') : lambda_kind =
    match f with
@@ -36,7 +36,7 @@ let enrich_type (eff_defs : f_ENV) (exp : R.expr) : R.expr =
   let rec enrich_type' ((exp, ty, effs, attrs): R.expr) (slink : static_link) : R.expr =
    begin
     match exp with
-    | Var (_, x) -> (Var ((get_var_depth x slink), x))
+    | Var (_, x) -> if attrs.isBuildIn then exp else (Var ((get_var_depth x slink), x))
     | Times (e1, e2) -> (Times (enrich_type' e1 slink, enrich_type' e2 slink))
     | Plus (e1, e2) -> (Plus (enrich_type' e1 slink, enrich_type' e2 slink))
     | Minus (e1, e2) -> (Minus (enrich_type' e1 slink, enrich_type' e2 slink))
@@ -90,11 +90,23 @@ let mark_recursive_call fun_name ((exp, ty, effs, attrs) : R.expr) : R.expr =
          (exp, ty, effs, attrs)
    | _ -> (exp, ty, effs, attrs)
 
-let mark_function_constant value_store ((exp, ty, effs, attrs) : R.expr) : R.expr =
+let propogate_const_fun_to_callsite value_store ((exp, ty, effs, attrs) : R.expr) : R.expr =
    match exp with
    | FullApply ((Var (_, x), x_ty, x_effs, x_attrs), app_eargs, app_hargs, app_targs) ->
-      let[@warning "-partial-match"] Some fun_name = List.assoc_opt x value_store in
-      (exp, ty, effs, {attrs with topLevelFunctionName = Some fun_name})
+      begin
+      match List.assoc_opt x value_store with
+      | Some fun_name -> (exp, ty, effs, {attrs with topLevelFunctionName = Some fun_name})
+      | None -> (exp, ty, effs, attrs)
+      end
+   | _ -> (exp, ty, effs, attrs)
+
+let mark_buildin_call ((exp, ty, effs, attrs) : R.expr) : R.expr =
+   match exp with
+   | FullApply ((_, _, _, x_attrs), _, _, _) ->
+      if x_attrs.isBuildIn then
+         (exp, ty, effs, {attrs with isBuildIn = true})
+      else
+         (exp, ty, effs, attrs)
    | _ -> (exp, ty, effs, attrs)
 
 (* Bottom-up AST walker *)
@@ -120,7 +132,7 @@ let transform_exp (exp : R.expr) : R.expr =
   end;
   (* Add pre-transformer here. This corresponds to a top-dowm transformation *)
   let (exp_pre, ty_pre, effs_pre, attrs_pre) as rexp_pre = 
-    (mark_recursive_call !curr_func_name) @@ (mark_function_constant !value_store) rexp 
+    (mark_recursive_call !curr_func_name) @@ (propogate_const_fun_to_callsite !value_store) @@ mark_buildin_call rexp 
   in
       let exp_walked = 
          match exp_pre with

@@ -1,5 +1,8 @@
 
 #include <setjmp.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdbool.h>
 
 typedef struct closture_t {
     void *f_ptr;
@@ -10,6 +13,14 @@ typedef struct closture_t {
 volatile int jmpret;
 
 typedef struct main_env_t {} main_env_t;
+
+inline void* arrayMalloc(int size) {
+    return malloc(size * sizeof(int));
+}
+
+inline int arrayGet(void* arr, int index) {
+    return ((int*)arr)[index];
+}
 
 
 typedef struct main_locals_t {
@@ -66,11 +77,9 @@ f_locals_t locals;
 locals.env = (f_env_t*)env;
 locals.n = n;
 locals.lget_fptr = lget_fptr;
-
 locals.lget_env = lget_env;
 locals.lget_jb = lget_jb;
 locals.lset_fptr = lset_fptr;
-
 locals.lset_env = lset_env;
 locals.lset_jb = lset_jb;
 

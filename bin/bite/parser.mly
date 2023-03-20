@@ -36,14 +36,14 @@
 %type <Syntax.command> toplevel
 
 // %nonassoc IS
-%nonassoc BANG
 %nonassoc RESUME
 %nonassoc ELSE
+%left SEMI
+%nonassoc ASSIGN
 %nonassoc EQUAL LESS
 %left PLUS MINUS
 %left TIMES
-%nonassoc ASSIGN
-%left SEMI
+%nonassoc BANG
 
 %%
 

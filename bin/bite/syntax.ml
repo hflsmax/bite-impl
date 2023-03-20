@@ -23,6 +23,7 @@ type effs = eff list
 
 (* Types *)
 type ty =
+  | TBuildIn (* Types like array that are not fully supported *)
   | TInt  (* Integers *)
   | TBool (* Booleans *)
   | TAbs of effs * (hvar * fname) list * tys * ty * effs
@@ -49,6 +50,12 @@ type lambda_kind =
   | GeneralHandler
   | Lambda
 [@@deriving sexp]
+
+type buildin_fun = 
+  | ArrayMalloc
+  | ArrayGet
+[@@deriving sexp]
+let buildin_fun = [("arrayMalloc", ArrayMalloc); ("arrayGet", ArrayGet)]
 
 (* Expressions *)
 type expr = expr' Zoo.located
@@ -87,10 +94,11 @@ type hvar = string * fname * ty
 type attrs = { 
   isRecursiveCall: bool;
   topLevelFunctionName: string option;
+  isBuildIn: bool;
 }
 [@@deriving sexp]
 
-let default_attrs = { isRecursiveCall = false; topLevelFunctionName = None; }
+let default_attrs = { isRecursiveCall = false; topLevelFunctionName = None; isBuildIn = false; }
 
 type expr = expr' * ty * effs * attrs
 and expr' =
