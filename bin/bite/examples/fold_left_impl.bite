@@ -1,0 +1,36 @@
+eff NoSuchElement : ∀[].∀{}.() -> int_[];;
+
+let arrLen = 100100100 in
+let arr = arrayMalloc arrLen in
+
+dcl iterIdx := 0 in
+let iterNext = fn [] {exc : NoSuchElement} () : int_[~exc] is 
+    if !iterIdx < arrLen then
+        iterIdx := !iterIdx + 1;
+        arrayGet arr (!iterIdx - 1)
+    else
+        raise exc ()
+end in
+
+let add = fn [] {} (a : int, b : int) : int_[] is a + b end in
+
+let foldLeft =
+    fun foldLeftRec [] {} (op : ∀[].∀{}.(int, int) -> int_[], acc : int) : int_[] is
+        dcl next := 0 in
+            if (handle exc : NoSuchElement = fn [] {} () : int_[] is false end in
+                    next := iterNext {exc} ();
+                    true
+                end) then
+                foldLeftRec op (op acc !next)
+            else
+                acc
+        end
+    end 
+in
+    foldLeft add 0
+end
+end
+end
+end
+end
+end
