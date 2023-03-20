@@ -84,9 +84,9 @@ let rec compile (cf_dest : cf_dest) ((exp, ty, effs, attrs) as exp': R.expr) : s
         | TailResumptive -> exp_handle_code
         | Abortive -> 
           if cf_dest = Continue then
-            spf "(setjmp(*locals.%s_jb) == 0 ? ({%s;}) : ({%s;}))" handler_var_name exp_handle_code "jmpret"
+            spf "(_setjmp(*locals.%s_jb) == 0 ? ({%s;}) : ({%s;}))" handler_var_name exp_handle_code "jmpret"
           else
-            spf "if (setjmp(*locals.%s_jb) == 0) {\n%s;\n} else {\n%s;\n}" handler_var_name exp_handle_code "return jmpret;"
+            spf "if (_setjmp(*locals.%s_jb) == 0) {\n%s;\n} else {\n%s;\n}" handler_var_name exp_handle_code "return jmpret;"
         | _ -> Zoo.error "Other handler kind not supported"
         end in
         (if cf_dest = Continue then "({" else "") ^
@@ -152,10 +152,11 @@ let rec compile (cf_dest : cf_dest) ((exp, ty, effs, attrs) as exp': R.expr) : s
       let e2', f2 = compile cf_dest e2 in
       spf "\n%s;\n%s;" e1' e2', f1 @ f2
   end
-  |> fun (code, fs) -> (if can_be_returned exp then 
+  |> (fun (code, fs) -> (if can_be_returned exp then 
     begin
     match cf_dest with
     | Return -> (if (attrs.isRecursiveCall) then "__attribute__((musttail))" else "") ^ "return " ^ code ^ ";"
-    | Abort -> spf "jmpret = %s;\nlongjmp(jb, 1);\n" code
+    | Abort -> spf "jmpret = %s;\n" code
     | Continue -> code
-    end else code), fs
+    end else code), fs)
+  |> fun (code, fs) -> (if cf_dest = Abort then code ^ "_longjmp(jb, 1);\n" else code), fs

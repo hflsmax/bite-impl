@@ -79,7 +79,8 @@ let rec type_of (eff_defs : f_ENV) (e_env : e_ENV) (h_env : h_ENV) (t_env : t_EN
       let exp1', ty1, es1, attrs1 = type_of eff_defs e_env h_env t_env exp1 in
       let exp2', ty2, es2, attrs2 = type_of eff_defs e_env h_env t_env exp2 in
       let exp3', ty3, es3, attrs3 = type_of eff_defs e_env h_env t_env exp3 in
-      if (ty1 <> TBool || ty2 <> ty3) then typing_error ~loc "%t can't be type checked" (Print.expr e);
+      if (ty1 <> TBool) then typing_error ~loc "In an if exp: condition type is %t" (Print.ty ty1);
+      if (ty2 <> ty3) then typing_error ~loc "%t and %t are not the same type" (Print.ty ty2) (Print.ty ty3);
       If ((exp1', ty1, es1, attrs1), (exp2', ty2, es2, attrs2), (exp3', ty3, es3, attrs3)), ty2, es1 @ es2 @ es3, default_attrs
     | FullFun (kind, x, es1, hs, tm_args, ty, es2, exp_body) ->
       let x = if x = None then (fn_index := !fn_index + 1; "fn" ^ string_of_int !fn_index) else Option.get x in

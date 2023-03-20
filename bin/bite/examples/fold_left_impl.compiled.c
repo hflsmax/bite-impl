@@ -63,6 +63,7 @@ void *op_env;
 jmp_buf *op_jb;
 int acc;
 int next;
+bool toBreak;
 void *exc_fptr;
 void *exc_env;
 jmp_buf *exc_jb;
@@ -104,8 +105,8 @@ int fn3(void* env, jmp_buf jb)
 fn3_locals_t locals;
 locals.env = (fn3_env_t*)env;
 
-jmpret = false;
-longjmp(jb, 1);
+locals.env->toBreak = true;
+_longjmp(jb, 1);
 
 }
 
@@ -118,24 +119,25 @@ locals.op_env = op_env;
 locals.acc = acc;
 
 locals.next = 0;
-if (({locals.exc_fptr = (void*)fn3;
+locals.toBreak = false;
+
+({locals.exc_fptr = (void*)fn3;
 locals.exc_env = &locals;
 jmp_buf _exc_jb;
 locals.exc_jb = &_exc_jb;
-(setjmp(*locals.exc_jb) == 0 ? ({
-locals.next = fn1(locals.env->iterNext_env, locals.exc_fptr, locals.exc_env, locals.exc_jb);
-true;}) : ({jmpret;}));})) {
-__attribute__((musttail))return foldLeftRec(locals.env, locals.op_fptr, locals.op_env, ((int(*)(void*, int, int))locals.op_fptr)(locals.op_env, locals.acc, locals.next));
-} else {
+(_setjmp(*locals.exc_jb) == 0 ? ({locals.next = fn1(locals.env->iterNext_env, locals.exc_fptr, locals.exc_env, locals.exc_jb);}) : ({jmpret;}));});
+if (locals.toBreak) {
 return locals.acc;
-}
+} else {
+__attribute__((musttail))return foldLeftRec(locals.env, locals.op_fptr, locals.op_env, ((int(*)(void*, int, int))locals.op_fptr)(locals.op_env, locals.acc, locals.next));
+};
 }
 
 int main()
 {
 main_locals_t locals;
 
-locals.arrLen = 10010010;
+locals.arrLen = 100100100;
 locals.arr = arrayMalloc(locals.arrLen);
 locals.iterIdx = 0;
 locals.iterNext_fptr = (void*)fn1;

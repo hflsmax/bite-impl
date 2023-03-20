@@ -17,13 +17,15 @@ let add = fn [] {} (a : int, b : int) : int_[] is a + b end in
 let foldLeft =
     fun foldLeftRec [] {} (op : ∀[].∀{}.(int, int) -> int_[], acc : int) : int_[] is
         dcl next := 0 in
-            if (handle exc : NoSuchElement = fn [] {} () : int_[] is false end in
-                    next := iterNext {exc} ();
-                    true
-                end) then
-                foldLeftRec op (op acc !next)
-            else
+        dcl toBreak := false in
+            handle exc : NoSuchElement = fn [] {} () : int_[] is toBreak := true end in
+                next := iterNext {exc} ()
+            end;
+            if (!toBreak) then
                 acc
+            else
+                foldLeftRec op (op acc !next)
+        end
         end
     end 
 in
