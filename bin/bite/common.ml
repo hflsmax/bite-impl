@@ -99,7 +99,32 @@ let get_fullfun_name (exp : expr') : string =
   | _ -> failwith "get_fullfun_name: can only be called on FullFun"
 
 let extra_defs = {|
-#include <setjmp.h>
+
+typedef struct __jmp_buf_tag {
+    unsigned long __jb[2];
+} jmp_buf[1];
+int setjmp(jmp_buf) __attribute__((__returns_twice__));
+__attribute__((__noreturn__)) void longjmp(jmp_buf, int);
+__asm__(
+".global setjmp\n\t"
+".type setjmp, @function\n\t"
+"setjmp:\n\t"
+"lea 8(%rsp),%rdx\n\t"
+"mov %rdx,(%rdi)\n\t"
+"mov (%rsp),%rdx\n\t"
+"mov %rdx,8(%rdi)\n\t"
+"xor %eax,%eax\n\t"
+"ret\n\t"
+
+".global longjmp\n\t"
+".type longjmp,@function\n\t"
+"longjmp:\n\t"
+"xor %eax,%eax\n\t"
+"cmp $1,%esi\n\t"
+"adc %esi,%eax\n\t"
+"mov (%rdi),%rsp\n\t"
+"jmp *8(%rdi)\n\t");
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
