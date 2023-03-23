@@ -1,13 +1,13 @@
 eff NoSuchElement : ∀[].∀{}.() -> int_[];;
 
 let arrLen = 100100100 in
-let arr = arrayInit arrLen in
+let arr = ArrayInit arrLen in
 
 dcl iterIdx := 0 in
 let iterNext = fn [] {exc : NoSuchElement} () : int_[~exc] is 
     if !iterIdx < arrLen then
         iterIdx := !iterIdx + 1;
-        arrayGet arr (!iterIdx - 1)
+        ArrayGet arr (!iterIdx - 1)
     else
         raise exc ()
 end in

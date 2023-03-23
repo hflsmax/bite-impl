@@ -23,7 +23,7 @@ type effs = eff list
 
 (* Types *)
 type ty =
-  | TBuildIn (* Types like array that are not fully supported *)
+  | TBuiltin (* Types like array that are not fully supported *)
   | TInt  (* Integers *)
   | TBool (* Booleans *)
   | TAbs of effs * (hvar * fname) list * tys * ty * effs
@@ -51,11 +51,26 @@ type lambda_kind =
   | Lambda
 [@@deriving sexp]
 
-type buildin_fun = 
+type builtin_fun = 
   | ArrayInit
   | ArrayGet
+
+  | ListInit
+  | ListPush
+  | ListShift
+  | ListGetIter
+
+  | IterRemoveNext
+  | IterHasNext
+  | IterNext
+  | IterSet
+  | IterGet
 [@@deriving sexp]
-let buildin_fun = [("arrayInit", ArrayInit); ("arrayGet", ArrayGet)]
+let builtin_fun = [
+  "ArrayInit", ArrayInit; "ArrayGet", ArrayGet; 
+  "ListInit", ListInit; "ListPush", ListPush; "ListShift", ListShift; "ListGetIter", ListGetIter;
+  "IterRemoveNext", IterRemoveNext; "IterHasNext", IterHasNext; "IterNext", IterNext; "IterSet", IterSet; "IterGet", IterGet;
+]
 
 (* Expressions *)
 type expr = expr' Zoo.located
@@ -94,11 +109,11 @@ type hvar = string * fname * ty
 type attrs = { 
   isRecursiveCall: bool;
   topLevelFunctionName: string option;
-  isBuildIn: bool;
+  isBuiltin: bool;
 }
 [@@deriving sexp]
 
-let default_attrs = { isRecursiveCall = false; topLevelFunctionName = None; isBuildIn = false; }
+let default_attrs = { isRecursiveCall = false; topLevelFunctionName = None; isBuiltin = false; }
 
 type expr = expr' * ty * effs * attrs
 and expr' =

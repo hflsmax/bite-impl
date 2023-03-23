@@ -36,7 +36,7 @@ let enrich_type (eff_defs : f_ENV) (exp : R.expr) : R.expr =
   let rec enrich_type' ((exp, ty, effs, attrs): R.expr) (slink : static_link) : R.expr =
    begin
     match exp with
-    | Var (_, x) -> if attrs.isBuildIn then exp else (Var ((get_var_depth x slink), x))
+    | Var (_, x) -> if attrs.isBuiltin then exp else (Var ((get_var_depth x slink), x))
     | Times (e1, e2) -> (Times (enrich_type' e1 slink, enrich_type' e2 slink))
     | Plus (e1, e2) -> (Plus (enrich_type' e1 slink, enrich_type' e2 slink))
     | Minus (e1, e2) -> (Minus (enrich_type' e1 slink, enrich_type' e2 slink))
@@ -100,11 +100,11 @@ let propogate_const_fun_to_callsite value_store ((exp, ty, effs, attrs) : R.expr
       end
    | _ -> (exp, ty, effs, attrs)
 
-let mark_buildin_call ((exp, ty, effs, attrs) : R.expr) : R.expr =
+let mark_builtin_call ((exp, ty, effs, attrs) : R.expr) : R.expr =
    match exp with
    | FullApply ((_, _, _, x_attrs), _, _, _) ->
-      if x_attrs.isBuildIn then
-         (exp, ty, effs, {attrs with isBuildIn = true})
+      if x_attrs.isBuiltin then
+         (exp, ty, effs, {attrs with isBuiltin = true})
       else
          (exp, ty, effs, attrs)
    | _ -> (exp, ty, effs, attrs)
@@ -132,7 +132,7 @@ let transform_exp (exp : R.expr) : R.expr =
   end;
   (* Add pre-transformer here. This corresponds to a top-dowm transformation *)
   let (exp_pre, ty_pre, effs_pre, attrs_pre) as rexp_pre = 
-    (mark_recursive_call !curr_func_name) @@ (propogate_const_fun_to_callsite !value_store) @@ mark_buildin_call rexp 
+    (mark_recursive_call !curr_func_name) @@ (propogate_const_fun_to_callsite !value_store) @@ mark_builtin_call rexp 
   in
       let exp_walked = 
          match exp_pre with

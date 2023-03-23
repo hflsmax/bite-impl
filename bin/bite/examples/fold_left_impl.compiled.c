@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <stdbool.h>
 
+#include "klist.h"
+
 typedef struct closture_t {
     void *f_ptr;
     void *env;
@@ -13,12 +15,55 @@ volatile int jmpret;
 
 typedef struct main_env_t {} main_env_t;
 
-void* arrayInit(int size) {
+void* ArrayInit(int size) {
     return malloc(size * sizeof(int));
 }
 
-int arrayGet(void* arr, int index) {
+int ArrayGet(void* arr, int index) {
     return ((int*)arr)[index];
+}
+
+void noop(void* _) {}
+KLIST_INIT(int_list, int, noop)
+
+void* ListInit(int n) {
+  klist_t(int_list)* list = (void*)kl_init(int_list);
+  for (int i = 0; i < n; i++) {
+    *kl_pushp(int_list, list) = i;
+  }
+  return list;
+}
+
+void ListPush(void* list, int i) {
+  *kl_pushp(int_list, (klist_t(int_list)*)list) = i;
+}
+
+void ListShift(void* list) {
+  kl_shift(int_list, (klist_t(int_list)*)list);
+}
+
+void* ListGetIter(void* list) {
+  return kl_begin((klist_t(int_list)*)list);
+}
+
+void IterRemoveNext(void* iter) {
+  kl_remove_next(int_list, iter);
+}
+
+bool IterHasNext(void* iter) {
+  return ((kliter_t(int_list)*)iter)->next != NULL;
+}
+
+void* IterNext(void* iter) {
+  return ((kliter_t(int_list)*)iter)->next;
+}
+
+void IterSet(void* iter, int val) {
+  ((kliter_t(int_list)*)iter)->data = val;
+}
+
+int IterGet(void* iter) {
+  return ((kliter_t(int_list)*)iter)->data;
 }
 
 typedef struct main_locals_t {
@@ -82,7 +127,7 @@ locals.exc_jb = exc_jb;
 if (({locals.env->iterIdx < locals.env->arrLen;})) {
 
 locals.env->iterIdx = ({locals.env->iterIdx + 1;});
-return arrayGet(locals.env->arr, ({locals.env->iterIdx - 1;}));
+return ArrayGet(locals.env->arr, ({locals.env->iterIdx - 1;}));
 } else {
 return ((int(*)(void*, jmp_buf*))locals.exc_fptr)(locals.exc_env, locals.exc_jb);
 }
@@ -136,7 +181,7 @@ int main()
 main_locals_t locals;
 
 locals.arrLen = 100100100;
-locals.arr = arrayInit(locals.arrLen);
+locals.arr = ArrayInit(locals.arrLen);
 locals.iterIdx = 0;
 locals.iterNext_fptr = (void*)fn1;
 locals.iterNext_env = &locals;

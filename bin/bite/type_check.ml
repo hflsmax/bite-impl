@@ -34,19 +34,30 @@ let hvar_to_rich_hvar eff_defs h_env h = let fname = List.assoc h h_env in h, fn
 
 let default_attrs = Syntax.R.default_attrs
 
-let type_of_buildin = function
-  | ArrayInit -> TAbs ([], [], [TInt], TBuildIn, [])
-  | ArrayGet -> TAbs ([], [], [TBuildIn; TInt], TInt, [])
+let type_of_builtin = function
+  | ArrayInit -> TAbs ([], [], [TInt], TBuiltin, [])
+  | ArrayGet -> TAbs ([], [], [TBuiltin; TInt], TInt, [])
+
+  | ListInit -> TAbs ([], [], [TInt], TBuiltin, [])
+  | ListPush -> TAbs ([], [], [TBuiltin; TInt], TInt, [])
+  | ListShift -> TAbs ([], [], [TBuiltin], TInt, [])
+  | ListGetIter -> TAbs ([], [], [TBuiltin], TBuiltin, [])
+
+  | IterRemoveNext -> TAbs ([], [], [TBuiltin], TInt, [])
+  | IterHasNext -> TAbs ([], [], [TBuiltin], TBool, [])
+  | IterNext -> TAbs ([], [], [TBuiltin], TBuiltin, [])
+  | IterSet -> TAbs ([], [], [TBuiltin; TInt], TInt, [])
+  | IterGet -> TAbs ([], [], [TBuiltin], TInt, [])
 
 let fn_index = ref 0
 let rec type_of (eff_defs : f_ENV) (e_env : e_ENV) (h_env : h_ENV) (t_env : t_ENV) {Zoo.data=e; loc} : R.expr =
   match e with
     | Var x ->
       begin
-      match List.assoc_opt x buildin_fun with
+      match List.assoc_opt x builtin_fun with
       | None -> (try (R.Var(0, x), List.assoc x t_env, [], default_attrs) 
                 with Not_found -> typing_error ~loc "unknown variable %s" x)
-      | Some b -> (R.Var(0, x), type_of_buildin b, [], {default_attrs with isBuildIn = true})
+      | Some b -> (R.Var(0, x), type_of_builtin b, [], {default_attrs with isBuiltin = true})
       end
     | Int i -> (R.Int i, TInt, [], default_attrs)
     | Bool b -> (R.Bool b, TBool, [], default_attrs)

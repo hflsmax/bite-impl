@@ -76,7 +76,7 @@ let rec gather_free_vars ((exp, ty, _, attrs) : R.expr) : locals =
 
 let rec ty_to_string ty : string =
   match ty with
-  | TBuildIn -> "void*"
+  | TBuiltin -> "void*"
   | TInt -> "int"
   | TBool -> "bool"
   | TMut ty -> ty_to_string ty
@@ -89,7 +89,7 @@ let tabs_to_string ty is_handler : string =
     let ty_args = "void*" :: 
       (if is_handler then ["jmp_buf*"] else []) @
       List.map (fun ty_arg -> ty_to_string ty_arg) ty_args in
-    let handler_ty_args = List.init (List.length hs) (fun _ -> "closure_t") in
+    let handler_ty_args = List.init (List.length hs) (fun _ -> "void*, void*, jmp_buf*") in
     Printf.sprintf "%s(*)(%s)" (ty_to_string ty) (String.concat ", " (ty_args @ handler_ty_args))
   | _ -> failwith "tabs_to_string: can only be called on TAbs"
 
@@ -104,6 +104,8 @@ let extra_defs arch = Sjlj.sjlj_def arch ^
 #include <stdlib.h>
 #include <stdbool.h>
 
+#include "klist.h"
+
 typedef struct closture_t {
     void *f_ptr;
     void *env;
@@ -114,12 +116,55 @@ volatile int jmpret;
 
 typedef struct main_env_t {} main_env_t;
 
-void* arrayInit(int size) {
+void* ArrayInit(int size) {
     return malloc(size * sizeof(int));
 }
 
-int arrayGet(void* arr, int index) {
+int ArrayGet(void* arr, int index) {
     return ((int*)arr)[index];
+}
+
+void noop(void* _) {}
+KLIST_INIT(int_list, int, noop)
+
+void* ListInit(int n) {
+  klist_t(int_list)* list = (void*)kl_init(int_list);
+  for (int i = 0; i < n; i++) {
+    *kl_pushp(int_list, list) = i;
+  }
+  return list;
+}
+
+void ListPush(void* list, int i) {
+  *kl_pushp(int_list, (klist_t(int_list)*)list) = i;
+}
+
+void ListShift(void* list) {
+  kl_shift(int_list, (klist_t(int_list)*)list);
+}
+
+void* ListGetIter(void* list) {
+  return kl_begin((klist_t(int_list)*)list);
+}
+
+void IterRemoveNext(void* iter) {
+  kl_remove_next(int_list, iter);
+}
+
+bool IterHasNext(void* iter) {
+  return ((kliter_t(int_list)*)iter)->next != NULL;
+}
+
+void* IterNext(void* iter) {
+  return ((kliter_t(int_list)*)iter)->next;
+}
+
+void IterSet(void* iter, int val) {
+  ((kliter_t(int_list)*)iter)->data = val;
+}
+
+int IterGet(void* iter) {
+  return ((kliter_t(int_list)*)iter)->data;
 }
 |}
 

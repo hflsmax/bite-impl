@@ -14,11 +14,11 @@ volatile int jmpret;
 
 typedef struct main_env_t {} main_env_t;
 
-inline void* arrayInit(int size) {
+inline void* ArrayInit(int size) {
     return malloc(size * sizeof(int));
 }
 
-inline int arrayGet(void* arr, int index) {
+inline int ArrayGet(void* arr, int index) {
     return ((int*)arr)[index];
 }
 

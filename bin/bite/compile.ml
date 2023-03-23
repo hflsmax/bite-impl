@@ -131,8 +131,8 @@ let rec compile (cf_dest : cf_dest) ((exp, ty, effs, attrs) as exp': R.expr) : s
                                                                                                                           | TAbs _ -> spf "%s_fptr, %s_env" exp_code exp_code, fs
                                                                                                                           | _ -> exp_code, fs) exps) in
       let handler_args = List.map (fun x -> (fun y -> spf "locals.%s_fptr, locals.%s_env, locals.%s_jb" y y y) @@ fst3 @@ x) hs in
-      let args_code = if attrs.isBuildIn then exps' @ handler_args else if attrs.isRecursiveCall then ("locals.env") :: exps' @ handler_args else (lhs' ^ "_env") :: exps' @ handler_args in
-      let lhs_code = if attrs.isBuildIn then let[@warning "-partial-match"] Var (_, x) = lhs_name in x else if Option.is_some attrs.topLevelFunctionName then Option.get(attrs.topLevelFunctionName) else spf "((%s)%s_fptr)" (tabs_to_string lhs_ty false) lhs' in
+      let args_code = if attrs.isBuiltin then exps' @ handler_args else if attrs.isRecursiveCall then ("locals.env") :: exps' @ handler_args else (lhs' ^ "_env") :: exps' @ handler_args in
+      let lhs_code = if attrs.isBuiltin then let[@warning "-partial-match"] Var (_, x) = lhs_name in x else if Option.is_some attrs.topLevelFunctionName then Option.get(attrs.topLevelFunctionName) else spf "((%s)%s_fptr)" (tabs_to_string lhs_ty false) lhs' in
       spf "%s(%s)" lhs_code (String.concat ", " args_code), f1 @ List.concat f2
     | Raise ((_, _, hty) as h, es, hs, exps) ->
       let exps', f2 = List.split (List.map (fun ((exp, ty, _, _) as rexp) -> let exp_code, fs = compile Continue rexp in match ty with

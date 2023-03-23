@@ -11,6 +11,7 @@ rule token = parse
   | ['0'-'9']+      { INT (int_of_string(Lexing.lexeme lexbuf)) }
   | "int"           { TINT }
   | "bool"          { TBOOL }
+  | "builtin"       { TBUILTIN }
   | "true"          { TRUE }
   | "false"         { FALSE }
   | "fun"           { FUN }
@@ -38,7 +39,7 @@ rule token = parse
   | ";"             { SEMI }
   | '='             { EQUAL }
   | '<'             { LESS }
-  | "->"            { TARROW }
+  | "->"            { ARROW }
   | ':'             { COLON }
   | '('             { LPAREN }
   | ')'             { RPAREN }

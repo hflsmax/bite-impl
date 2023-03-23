@@ -4,7 +4,8 @@
 
 %token TINT
 %token TBOOL
-%token TARROW
+%token ARROW
+%token TBUILTIN
 %token <Syntax.name> VAR
 %token <int> INT
 %token UNIT
@@ -201,12 +202,14 @@ ty:
     { TBool }
   | COMMA? TINT
     { TInt }
+  | COMMA? TBUILTIN
+    { TBuiltin }
   | COMMA? LPAREN t = ty RPAREN
     { t }
   | COMMA? FORALL LBRACKET es1 = eff_name* RBRACKET DOT 
     FORALL LBRACE hs = hd_param* RBRACE DOT 
     ts = tys
-    TARROW t1 = ty UNDERSCORE LBRACKET es2 = eff_name* RBRACKET
+    ARROW t1 = ty UNDERSCORE LBRACKET es2 = eff_name* RBRACKET
     { TAbs (es1, hs, ts, t1, es2) }
 
 effect_declare:
