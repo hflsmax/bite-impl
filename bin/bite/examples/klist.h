@@ -84,7 +84,6 @@
 	typedef struct {													\
 		kl1_##name *head, *tail;										\
 		kmp_##name##_t *mp;												\
-		size_t size;													\
 	} kl_##name##_t;													\
 	SCOPE kl_##name##_t *kl_init_##name(void) {							\
 		kl_##name##_t *kl = calloc(1, sizeof(kl_##name##_t));			\
@@ -104,17 +103,17 @@
 	SCOPE kltype_t *kl_pushp_##name(kl_##name##_t *kl) {				\
 		kl1_##name *q, *p = kmp_alloc(name, kl->mp);					\
 		q = kl->tail; p->next = 0; kl->tail->next = p; kl->tail = p;	\
-		++kl->size;														\
 		return &q->data;												\
 	}																	\
-	SCOPE int kl_shift_##name(kl_##name##_t *kl, kltype_t *d) {			\
+	SCOPE void kl_shift_##name(kl_##name##_t *kl) {			\
 		kl1_##name *p;													\
-		if (kl->head->next == 0) return -1;								\
-		--kl->size;														\
 		p = kl->head; kl->head = kl->head->next;						\
-		if (d) *d = p->data;											\
 		kmp_free(name, kl->mp, p);										\
-		return 0;														\
+	}\
+	SCOPE void kl_remove_next_##name(kl1_##name *kl1) {			\
+		kl1_##name *p = kl1->next;													\
+		kl1->next = kl1->next->next;						\
+		free(kl1);\
 	}
 
 #define KLIST_INIT(name, kltype_t, kmpfree_t)							\
@@ -130,6 +129,7 @@
 #define kl_init(name) kl_init_##name()
 #define kl_destroy(name, kl) kl_destroy_##name(kl)
 #define kl_pushp(name, kl) kl_pushp_##name(kl)
-#define kl_shift(name, kl, d) kl_shift_##name(kl, d)
+#define kl_shift(name, kl) kl_shift_##name(kl)
+#define kl_remove_next(name, kl) kl_remove_next_##name(kl)
 
 #endif
