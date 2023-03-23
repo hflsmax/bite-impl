@@ -1,7 +1,7 @@
 eff NoSuchElement : ∀[].∀{}.() -> int_[];;
 
 let arrLen = 100100100 in
-let arr = arrayMalloc arrLen in
+let arr = arrayInit arrLen in
 
 dcl iterIdx := 0 in
 let iterNext = fn [] {exc : NoSuchElement} () : int_[~exc] is 

@@ -52,10 +52,10 @@ type lambda_kind =
 [@@deriving sexp]
 
 type buildin_fun = 
-  | ArrayMalloc
+  | ArrayInit
   | ArrayGet
 [@@deriving sexp]
-let buildin_fun = [("arrayMalloc", ArrayMalloc); ("arrayGet", ArrayGet)]
+let buildin_fun = [("arrayInit", ArrayInit); ("arrayGet", ArrayGet)]
 
 (* Expressions *)
 type expr = expr' Zoo.located

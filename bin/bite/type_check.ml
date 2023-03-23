@@ -35,7 +35,7 @@ let hvar_to_rich_hvar eff_defs h_env h = let fname = List.assoc h h_env in h, fn
 let default_attrs = Syntax.R.default_attrs
 
 let type_of_buildin = function
-  | ArrayMalloc -> TAbs ([], [], [TInt], TBuildIn, [])
+  | ArrayInit -> TAbs ([], [], [TInt], TBuildIn, [])
   | ArrayGet -> TAbs ([], [], [TBuildIn; TInt], TInt, [])
 
 let fn_index = ref 0

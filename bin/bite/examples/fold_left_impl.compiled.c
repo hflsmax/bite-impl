@@ -13,7 +13,7 @@ volatile int jmpret;
 
 typedef struct main_env_t {} main_env_t;
 
-void* arrayMalloc(int size) {
+void* arrayInit(int size) {
     return malloc(size * sizeof(int));
 }
 
@@ -136,7 +136,7 @@ int main()
 main_locals_t locals;
 
 locals.arrLen = 100100100;
-locals.arr = arrayMalloc(locals.arrLen);
+locals.arr = arrayInit(locals.arrLen);
 locals.iterIdx = 0;
 locals.iterNext_fptr = (void*)fn1;
 locals.iterNext_env = &locals;

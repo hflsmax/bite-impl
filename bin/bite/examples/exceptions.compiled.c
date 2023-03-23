@@ -14,7 +14,7 @@ volatile int jmpret;
 
 typedef struct main_env_t {} main_env_t;
 
-inline void* arrayMalloc(int size) {
+inline void* arrayInit(int size) {
     return malloc(size * sizeof(int));
 }
 
