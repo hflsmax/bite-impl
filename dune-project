@@ -2,7 +2,7 @@
 
 (using menhir 2.1)
 
-(name plzoo)
+(name bite)
 
 (generate_opam_files true)
 
@@ -18,7 +18,7 @@
 (documentation https://url/to/documentation)
 
 (package
- (name plzoo)
+ (name bite)
  (synopsis "A short synopsis")
  (description "A longer description")
  (depends ocaml dune)
