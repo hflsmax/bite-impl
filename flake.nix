@@ -41,9 +41,9 @@
         #     $ nix build
         #     $ nix run -- <args?>
         #
-        default = self.packages.${system}.hello;
+        default = self.packages.${system}.bite;
 
-        hello = ocamlPackages.buildDunePackage {
+        bite = ocamlPackages.buildDunePackage {
           pname = "bite";
           version = "0.1.0";
           duneVersion = "3";
@@ -52,6 +52,7 @@
           buildInputs = [ 
             ocamlPackages.ppx_sexp_conv
             ocamlPackages.core
+            ocamlPackages.ocaml-lsp
           ];
 
           nativeBuildInputs = [
