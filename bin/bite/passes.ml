@@ -98,6 +98,12 @@ let propogate_const_fun_to_callsite value_store ((exp, ty, effs, attrs) : R.expr
       | Some fun_name -> (exp, ty, effs, {attrs with topLevelFunctionName = Some fun_name})
       | None -> (exp, ty, effs, attrs)
       end
+   | Raise ((x, _, _), es, hs, exps) ->
+      begin
+      match List.assoc_opt x value_store with
+      | Some fun_name -> (exp, ty, effs, {attrs with topLevelFunctionName = Some fun_name})
+      | None -> (exp, ty, effs, attrs)
+      end
    | _ -> (exp, ty, effs, attrs)
 
 let mark_builtin_call ((exp, ty, effs, attrs) : R.expr) : R.expr =
@@ -125,9 +131,11 @@ let transform_exp (exp : R.expr) : R.expr =
    (* NOTE: it's ok to use the associate list and never pop, as the program is already type checked
    and all variabels are bound before use *)
    | FullFun (kind, fun_name, es1, hs, tm_args, ty, es2, exp_body) ->
-      value_store := (fun_name, fun_name) :: !value_store;
+      value_store := (fun_name, fun_name) :: !value_store (* For recursive function. *)
+   | Handle (x, h, (FullFun (kind, fun_name, es1, hs, tm_args, ty, es2, exp_body), _, _, _), _) ->
+      value_store := (x, fun_name) :: !value_store
    | Let (x, _, (FullFun (kind, fun_name, es1, hs, tm_args, ty, es2, exp_body), _, _, _), _) ->
-      value_store := (x, fun_name) :: !value_store;
+      value_store := (x, fun_name) :: !value_store
    | _ -> ()
   end;
   (* Add pre-transformer here. This corresponds to a top-dowm transformation *)

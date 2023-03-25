@@ -6,3 +6,5 @@ _build
 *.byte
 .DS_Store
 result
+.vscode
+a.out
