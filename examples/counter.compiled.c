@@ -158,12 +158,12 @@ locals.lset_fptr = lset_fptr;
 locals.lset_env = lset_env;
 locals.lset_jb = lset_jb;
 
-locals.i = fn2(locals.lget_env, locals.lget_jb);
+locals.i = ((int(*)(void*, jmp_buf*))locals.lget_fptr)(locals.lget_env, locals.lget_jb);
 if (({locals.i == 0;})) {
 return locals.n;
 } else {
 
-fn3(locals.lset_env, locals.lset_jb, ({locals.i - 1;}));
+((int(*)(void*, jmp_buf*, int))locals.lset_fptr)(locals.lset_env, locals.lset_jb, ({locals.i - 1;}));
 __attribute__((musttail))return f(locals.env, ({locals.n + 1;}), locals.lget_fptr, locals.lget_env, locals.lget_jb, locals.lset_fptr, locals.lset_env, locals.lset_jb);
 };
 }

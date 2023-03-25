@@ -2,6 +2,9 @@
 open Syntax
 open Syntax.R
 open Common
+open Sexplib.Std
+(* open Util *)
+
 let get_var_depth (x : name) (slink : static_link) : int =
    let rec get_var_depth' (x : name) (slink : static_link) (depth : int) : int =
       match slink with
@@ -115,6 +118,8 @@ let mark_builtin_call ((exp, ty, effs, attrs) : R.expr) : R.expr =
          (exp, ty, effs, attrs)
    | _ -> (exp, ty, effs, attrs)
 
+
+
 (* Mark children's cf_dest according to the current cf_dest *)
 let mark_cf_dest ((exp, ty, effs, attrs) as rexp : R.expr) : R.expr =
    let mark cf_dest (exp, ty, effs, attrs) = (exp, ty, effs, {attrs with cfDest = cf_dest}) in
@@ -145,67 +150,58 @@ let mark_cf_dest ((exp, ty, effs, attrs) as rexp : R.expr) : R.expr =
    | Resume e -> (Resume (mark attrs.cfDest e), ty, effs, attrs)
    | Seq (e1, e2) -> (Seq (mark Continue e1, mark attrs.cfDest e2), ty, effs, attrs)
 
+type pass_state = {
+   curr_func_name : string;
+   value_store : (string * string) list;
+}
+[@@deriving sexp]
 
 (* Bottom-up AST walker *)
 let transform_exp (exp : R.expr) : R.expr =
- let curr_func_name = ref "" in
- let value_store = ref [] in
-  let rec transform_exp' ((exp, ty, effs, attrs) as rexp: R.expr) : R.expr =
-  (* Add pre-metadata-updater here. *)
-  begin
-  match exp with
-  | FullFun (_, x, _, _, _, _, _, _) -> curr_func_name := x
-  | _ -> ()
-  end;
-  begin
-   match exp with
-   (* NOTE: it's ok to use the associate list and never pop, as the program is already type checked
-   and all variabels are bound before use *)
-   | FullFun (kind, fun_name, es1, hs, tm_args, ty, es2, exp_body) ->
-      value_store := (fun_name, fun_name) :: !value_store (* For recursive function. *)
-   | Handle (x, h, (FullFun (kind, fun_name, es1, hs, tm_args, ty, es2, exp_body), _, _, _), _) ->
-      value_store := (x, fun_name) :: !value_store
-   | Let (x, _, (FullFun (kind, fun_name, es1, hs, tm_args, ty, es2, exp_body), _, _, _), _) ->
-      value_store := (x, fun_name) :: !value_store
-   | _ -> ()
-  end;
+  let rec transform_exp' state ((exp, ty, effs, attrs) as rexp: R.expr) : R.expr =
   (* Add pre-transformer here. This corresponds to a top-dowm transformation *)
   let (exp_pre, ty_pre, effs_pre, attrs_pre) as rexp_pre = 
-   mark_cf_dest @@ (mark_recursive_call !curr_func_name) @@ (propogate_const_fun_to_callsite !value_store) @@ mark_builtin_call rexp 
+   mark_cf_dest @@ (mark_recursive_call state.curr_func_name) @@ (propogate_const_fun_to_callsite state.value_store) @@ mark_builtin_call rexp 
   in
       let exp_walked = 
          match exp_pre with
-         | Times (e1, e2) -> (Times (transform_exp' e1, transform_exp' e2))
-         | Plus (e1, e2) -> (Plus (transform_exp' e1, transform_exp' e2))
-         | Minus (e1, e2) -> (Minus (transform_exp' e1, transform_exp' e2))
-         | Equal (e1, e2) -> (Equal (transform_exp' e1, transform_exp' e2))
-         | Less (e1, e2) -> (Less (transform_exp' e1, transform_exp' e2))
-         | Assign (e1, e2) -> (Assign (transform_exp' e1, transform_exp' e2))
-         | Deref e -> (Deref (transform_exp' e))
+         | Times (e1, e2) -> (Times (transform_exp' state e1, transform_exp' state e2))
+         | Plus (e1, e2) -> (Plus (transform_exp' state e1, transform_exp' state e2))
+         | Minus (e1, e2) -> (Minus (transform_exp' state e1, transform_exp' state e2))
+         | Equal (e1, e2) -> (Equal (transform_exp' state e1, transform_exp' state e2))
+         | Less (e1, e2) -> (Less (transform_exp' state e1, transform_exp' state e2))
+         | Assign (e1, e2) -> (Assign (transform_exp' state e1, transform_exp' state e2))
+         | Deref e -> (Deref (transform_exp' state e))
          | If (e1, e2, e3) ->
-            (If (transform_exp' e1, transform_exp' e2, transform_exp' e3))
+            (If (transform_exp' state e1, transform_exp' state e2, transform_exp' state e3))
          | Let (x, ty, e1, e2) ->
-            (* NOTE: run e2 first because our constant propogation doesn't pop, 
-               so this prevents polution of x inside e1 *)
-            let e2' = transform_exp' e2 in
-            let e1' = transform_exp' e1 in
+            let e1' = transform_exp' state e1 in
+            let new_state_for_e2 = match e1 with
+               | (FullFun (kind, fun_name, es1, hs, tm_args, ty, es2, exp_body), _, _, _) ->
+                  {state with value_store = (x, fun_name) :: state.value_store}
+               | _ -> state in
+            let e2' = transform_exp' new_state_for_e2 e2 in
             (Let (x, ty, e1', e2'))
          | Decl (x, ty, e1, e2) ->
-            (Decl (x, ty, transform_exp' e1, transform_exp' e2))
+            (Decl (x, ty, transform_exp' state e1, transform_exp' state e2))
          | Handle (x, h, exp_catch, exp_handle) ->
-            (Handle (x, h, transform_exp' exp_catch, transform_exp' exp_handle))
+            let[@warning "-partial-match"](FullFun (kind, fun_name, es1, hs, tm_args, ty, es2, exp_body), _, _, _) = exp_catch in
+            (Handle (x, h, transform_exp' state exp_catch, transform_exp' 
+               {state with value_store = (x, fun_name) :: state.value_store} exp_handle))
          | FullFun (kind, x, es1, hs, tm_args, ty, es2, exp_body) ->
-            (FullFun (kind, x, es1, hs, tm_args, ty, es2, transform_exp' exp_body))
+            (FullFun (kind, x, es1, hs, tm_args, ty, es2, transform_exp' 
+               (* Remember the name of self so to identify recursive function. *)
+               {state with curr_func_name = x; value_store = (x, x) :: state.value_store} exp_body )) 
          | FullApply (exp, es, hs, exps) ->
-            (FullApply (transform_exp' exp, es, hs, List.map (fun exp_iter -> transform_exp' exp_iter) exps))
+            (FullApply (transform_exp' state exp, es, hs, List.map (transform_exp' state) exps))
          | Raise (h, es, hs, exps) ->
-            (Raise (h, es, hs, List.map (fun exp_iter -> transform_exp' exp_iter) exps))
-         | Resume e -> (Resume (transform_exp' e))
+            (Raise (h, es, hs, List.map (transform_exp' state) exps))
+         | Resume e -> (Resume (transform_exp' state e))
          | Seq (e1, e2) ->
-            (Seq (transform_exp' e1, transform_exp' e2))
+            (Seq (transform_exp' state e1, transform_exp' state e2))
          | Int _  | Bool _ | Var _ as e -> e
       in
       (* Add post-transformer here. This corresponds to a bottom-up transformation *)
       transform_handler exp_walked, ty_pre, effs_pre, attrs_pre
   in
-  transform_exp' exp
+  transform_exp' {curr_func_name = ""; value_store = []; } exp

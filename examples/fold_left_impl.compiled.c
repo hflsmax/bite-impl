@@ -161,7 +161,7 @@ if (({locals.env->iterIdx < locals.env->arrLen;})) {
 locals.env->iterIdx = ({locals.env->iterIdx + 1;});
 return ArrayGet(locals.env->arr, ({locals.env->iterIdx - 1;}));
 } else {
-return fn3(locals.exc_env, locals.exc_jb);
+return ((int(*)(void*, jmp_buf*))locals.exc_fptr)(locals.exc_env, locals.exc_jb);
 }
 }
 
