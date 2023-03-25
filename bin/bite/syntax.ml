@@ -106,14 +106,22 @@ module R = struct
 type hvar = string * fname * ty
 [@@deriving sexp]
 
+(* Control-flow destination *)
+type cf_dest =
+  | Return
+  | Abort
+  | Continue (* Neither return or abort. *)
+[@@deriving sexp]
+
 type attrs = { 
   isRecursiveCall: bool;
   topLevelFunctionName: string option;
+  cfDest: cf_dest;
   isBuiltin: bool;
 }
 [@@deriving sexp]
 
-let default_attrs = { isRecursiveCall = false; topLevelFunctionName = None; isBuiltin = false; }
+let default_attrs = { isRecursiveCall = false; topLevelFunctionName = None; isBuiltin = false; cfDest = Continue; }
 
 type expr = expr' * ty * effs * attrs
 and expr' =
@@ -139,7 +147,6 @@ and expr' =
   | Raise of hvar * effs * hvar list * expr list
   | Resume of expr
   | Seq of expr * expr  
-  | Abort	
 [@@deriving sexp]
 end
 

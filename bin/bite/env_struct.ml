@@ -43,7 +43,7 @@ let rec get_fun_info ((exp, ty, effs, attrs): R.expr) (pfun_name : string option
   | Resume e -> get_fun_info e pfun_name
   | Seq (e1, e2) ->
       get_fun_info e1 pfun_name @++@ get_fun_info e2 pfun_name
-  | Int _  | Bool _ | Abort  -> [], []
+  | Int _  | Bool _  -> [], []
 
 let local_to_struct_field (x, ty) : string =
   match ty with

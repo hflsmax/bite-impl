@@ -21,11 +21,11 @@ let analyze_lambda_kind (f : R.expr') : lambda_kind =
       | _ -> Abortive
       end
    | FullFun (Lambda, _, _, _, _, _, _, body) -> Lambda
-   | _ -> Zoo.error "Handler is not a full function: %t@." (Print.rexpr f)
+   | _ -> Zoo.error "Handler is not a full function: %t@." (Print.rexpr' f)
 
 let wrap_in_main (exp : expr) : expr = 
   let fun_def = FullFun (Lambda, "main", [], [], [], TInt, [], exp) in
-  fun_def, full_fun_to_tabs fun_def, [], {default_attrs with isRecursiveCall = false}
+  fun_def, full_fun_to_tabs fun_def, [], {default_attrs with cfDest = Return}
 
 (* 
    1. record variable depth
@@ -64,7 +64,7 @@ let enrich_type (eff_defs : f_ENV) (exp : R.expr) : R.expr =
     | Resume e -> (Resume (enrich_type' e slink))
     | Seq (e1, e2) ->
        (Seq (enrich_type' e1 slink, enrich_type' e2 slink))
-    | Int _  | Bool _  | Abort as e -> e
+    | Int _  | Bool _  as e -> e
    end, ty, effs, attrs
   in
     enrich_type' exp (gather_locals exp :: [])
@@ -115,6 +115,37 @@ let mark_builtin_call ((exp, ty, effs, attrs) : R.expr) : R.expr =
          (exp, ty, effs, attrs)
    | _ -> (exp, ty, effs, attrs)
 
+(* Mark children's cf_dest according to the current cf_dest *)
+let mark_cf_dest ((exp, ty, effs, attrs) as rexp : R.expr) : R.expr =
+   let mark cf_dest (exp, ty, effs, attrs) = (exp, ty, effs, {attrs with cfDest = cf_dest}) in
+   match exp with
+   | Var _ | Int _ | Bool _ -> rexp
+   | Times(e1, e2) -> (Times(mark Continue e1, mark Continue e2), ty, effs, attrs)
+   | Plus(e1, e2) -> (Plus(mark Continue e1, mark Continue e2), ty, effs, attrs)
+   | Minus(e1, e2) -> (Minus(mark Continue e1, mark Continue e2), ty, effs, attrs)
+   | Equal(e1, e2) -> (Equal(mark Continue e1, mark Continue e2), ty, effs, attrs)
+   | Less(e1, e2) -> (Less(mark Continue e1, mark Continue e2), ty, effs, attrs)
+   | Deref e -> (Deref (mark Continue e), ty, effs, attrs)
+   | Assign(e1, e2) -> (Assign(mark Continue e1, mark Continue e2), ty, effs, attrs)
+   | If(e1, e2, e3) -> (If(mark Continue e1, mark attrs.cfDest e2, mark attrs.cfDest e3), ty, effs, attrs)
+   | Let(x, ty, e1, e2) -> (Let(x, ty, mark Continue e1, mark attrs.cfDest e2), ty, effs, attrs)
+   | Decl(x, ty, e1, e2) -> (Decl(x, ty, mark Continue e1, mark attrs.cfDest e2), ty, effs, attrs)
+   | Handle(x, fname, e1, e2) -> (Handle(x, fname, mark Continue e1, mark attrs.cfDest e2), ty, effs, attrs)
+   | FullFun(kind, x, es1, hs, tm_args, ty, es2, e) ->
+      begin
+      match kind with
+      | TailResumptive | Lambda -> 
+         (FullFun(kind, x, es1, hs, tm_args, ty, es2, mark Return e), ty, effs, attrs)
+      | Abortive -> 
+         (FullFun(kind, x, es1, hs, tm_args, ty, es2, mark Abort e), ty, effs, attrs)
+      | GeneralHandler -> Zoo.error "General handlers not supported"
+      end
+   | FullApply(e1, eargs, hargs, targs) -> (FullApply(mark Continue e1, eargs, hargs, List.map (mark Continue) targs), ty, effs, attrs)
+   | Raise(x, es, hs, exps) -> (Raise(x, es, hs, List.map (mark Continue) exps), ty, effs, attrs)
+   | Resume e -> (Resume (mark attrs.cfDest e), ty, effs, attrs)
+   | Seq (e1, e2) -> (Seq (mark Continue e1, mark attrs.cfDest e2), ty, effs, attrs)
+
+
 (* Bottom-up AST walker *)
 let transform_exp (exp : R.expr) : R.expr =
  let curr_func_name = ref "" in
@@ -140,7 +171,7 @@ let transform_exp (exp : R.expr) : R.expr =
   end;
   (* Add pre-transformer here. This corresponds to a top-dowm transformation *)
   let (exp_pre, ty_pre, effs_pre, attrs_pre) as rexp_pre = 
-    (mark_recursive_call !curr_func_name) @@ (propogate_const_fun_to_callsite !value_store) @@ mark_builtin_call rexp 
+   mark_cf_dest @@ (mark_recursive_call !curr_func_name) @@ (propogate_const_fun_to_callsite !value_store) @@ mark_builtin_call rexp 
   in
       let exp_walked = 
          match exp_pre with
@@ -172,7 +203,7 @@ let transform_exp (exp : R.expr) : R.expr =
          | Resume e -> (Resume (transform_exp' e))
          | Seq (e1, e2) ->
             (Seq (transform_exp' e1, transform_exp' e2))
-         | Int _  | Bool _ | Var _ | Abort as e -> e
+         | Int _  | Bool _ | Var _ as e -> e
       in
       (* Add post-transformer here. This corresponds to a bottom-up transformation *)
       transform_handler exp_walked, ty_pre, effs_pre, attrs_pre

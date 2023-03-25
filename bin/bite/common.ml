@@ -37,7 +37,7 @@ let rec gather_locals ((exp, _, _, attrs) : R.expr) : locals =
       List.fold_left (fun acc exp_iter -> acc @ (gather_locals exp_iter)) [] e
   | Resume e -> gather_locals e
   | Seq (e1, e2) -> gather_locals e1 @ gather_locals e2
-  | Var _ | Int _ | Bool _ | Deref _  | Abort -> []
+  | Var _ | Int _ | Bool _ | Deref _  -> []
 
 (* Gather all free variables in an expression. It's computed by finding all used variables that are not bound *)
 let rec gather_free_vars ((exp, ty, _, attrs) : R.expr) : locals =
@@ -71,7 +71,7 @@ let rec gather_free_vars ((exp, ty, _, attrs) : R.expr) : locals =
   | Seq (e1, e2) -> gather_free_vars e1 @ gather_free_vars e2
   | Deref x -> gather_free_vars x
   | Var (_, x) -> [(x, ty)]
-  | Int _ | Bool _ | Abort -> [] 
+  | Int _ | Bool _ -> [] 
   |> List.sort_uniq compare
 
 let rec ty_to_string ty : string =

@@ -201,10 +201,9 @@ struct
       Format.printf "%s -- programming languages zoo@\n" L.name ;
       Format.printf "Type %s to exit.@." eof ;
       try
-        let ctx = ref ctx in
           while true do
             try
-              let cmd = read_toplevel (wrap_syntax_errors toplevel_parser) () in
+              let _ = read_toplevel (wrap_syntax_errors toplevel_parser) () in
                 (* ctx := L.exec !ctx cmd *)
                 ()
                 (* TODO *)

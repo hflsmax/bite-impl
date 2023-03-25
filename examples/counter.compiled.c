@@ -1,4 +1,36 @@
-#include <setjmp.h>
+
+typedef struct __jmp_buf_tag {
+    unsigned long __jb[2];
+} jmp_buf[1];
+int setjmp(jmp_buf) __attribute__((__returns_twice__));
+__attribute__((__noreturn__)) void longjmp(jmp_buf, int);
+
+__asm__(
+".global _setjmp\n\t"
+".global setjmp\n\t"
+".type _setjmp, @function\n\t"
+".type setjmp, @function\n\t"
+"_setjmp:\n\t"
+"setjmp:\n\t"
+"lea 8(%rsp),%rdx\n\t"
+"mov %rdx,(%rdi)\n\t"
+"mov (%rsp),%rdx\n\t"
+"mov %rdx,8(%rdi)\n\t"
+"xor %eax,%eax\n\t"
+"ret\n\t"
+
+".global _longjmp\n\t"
+".global longjmp\n\t"
+".type _longjmp,@function\n\t"
+".type longjmp,@function\n\t"
+"_longjmp:\n\t"
+"longjmp:\n\t"
+"xor %eax,%eax\n\t"
+"cmp $1,%esi\n\t"
+"adc %esi,%eax\n\t"
+"mov (%rdi),%rsp\n\t"
+"jmp *8(%rdi)\n\t");
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
@@ -126,12 +158,12 @@ locals.lset_fptr = lset_fptr;
 locals.lset_env = lset_env;
 locals.lset_jb = lset_jb;
 
-locals.i = ((int(*)(void*, jmp_buf*))locals.lget_fptr)(locals.lget_env, locals.lget_jb);
+locals.i = fn2(locals.lget_env, locals.lget_jb);
 if (({locals.i == 0;})) {
 return locals.n;
 } else {
 
-((int(*)(void*, jmp_buf*, int))locals.lset_fptr)(locals.lset_env, locals.lset_jb, ({locals.i - 1;}));
+fn3(locals.lset_env, locals.lset_jb, ({locals.i - 1;}));
 __attribute__((musttail))return f(locals.env, ({locals.n + 1;}), locals.lget_fptr, locals.lget_env, locals.lget_jb, locals.lset_fptr, locals.lset_env, locals.lset_jb);
 };
 }
