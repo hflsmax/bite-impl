@@ -51,6 +51,7 @@ let type_of_builtin = function
   | IterNext -> TAbs ([], [], [ TBuiltin ], TBuiltin, [])
   | IterSet -> TAbs ([], [], [ TBuiltin; TInt ], TInt, [])
   | IterGet -> TAbs ([], [], [ TBuiltin ], TInt, [])
+  | Print -> TAbs ([], [], [ TInt ], TInt, [])
 
 let fn_index = ref 0
 

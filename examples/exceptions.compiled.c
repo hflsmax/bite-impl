@@ -98,6 +98,11 @@ int IterGet(void* iter) {
   return ((kliter_t(int_list)*)iter)->data;
 }
 
+int Print(int x) {
+  printf("%d\n", x);
+  return 0;
+}
+
 typedef struct main_locals_t {
 main_env_t* env;
 void *run_fptr;
@@ -156,6 +161,6 @@ main_locals_t locals;
 
 locals.run_fptr = (void*)g;
 locals.run_env = &locals;
-return g(locals.run_env, 10);
+return Print(g(locals.run_env, 10));
 
 }

@@ -10,6 +10,6 @@ let run =
         end
     end
 in
-    run 10
+    Print (run 10)
 end
 ;;

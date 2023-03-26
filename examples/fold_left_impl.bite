@@ -29,7 +29,7 @@ let foldLeft =
         end
     end 
 in
-    foldLeft add 0
+    Print (foldLeft add 0)
 end
 end
 end

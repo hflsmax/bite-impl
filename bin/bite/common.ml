@@ -183,6 +183,11 @@ void IterSet(void* iter, int val) {
 int IterGet(void* iter) {
   return ((kliter_t(int_list)*)iter)->data;
 }
+
+int Print(int x) {
+  printf("%d\n", x);
+  return 0;
+}
 |}
 
 let fst3 (x, _, _) = x

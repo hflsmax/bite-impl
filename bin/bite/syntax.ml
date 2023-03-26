@@ -42,6 +42,7 @@ type builtin_fun =
   | IterNext
   | IterSet
   | IterGet
+  | Print
 [@@deriving sexp]
 
 let builtin_fun =
@@ -57,6 +58,7 @@ let builtin_fun =
     ("IterNext", IterNext);
     ("IterSet", IterSet);
     ("IterGet", IterGet);
+    ("Print", Print);
   ]
 
 (* Expressions *)

@@ -60,21 +60,21 @@
               legacyPackages.clang_15
             ];
 
-            postCheck =
+            # we build examples in buildPhase because that's when we have access to $out
+            postBuild =
               let
                 examples = builtins.map (name: lib.strings.removeSuffix ".bite" name) (builtins.filter (path: lib.strings.hasSuffix ".bite" path) (builtins.attrNames (builtins.readDir ./examples)));
               in
-              builtins.concatStringsSep ""
-                (builtins.map
+              (builtins.concatStringsSep ""
+                ((builtins.map
                   (name:
                     ''
                       echo "checking example ${name}"
                       dune exec bite -- -l ./examples/${name}.bite -o ./examples/${name}.compiled.c
                       clang -O3 -o ./examples/${name}.exe ./examples/${name}.compiled.c
                       ./examples/${name}.exe
-                      touch $out
                     '')
-                  examples);
+                  examples) ++ ["mkdir $out; cp -r ./examples/ $out/examples"]));
 
           };
         };
