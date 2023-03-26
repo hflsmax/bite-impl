@@ -1,7 +1,8 @@
 (library
  (name zoo)
  (libraries unix sexplib)
- (preprocess (pps ppx_sexp_conv)))
+ (preprocess
+  (pps ppx_sexp_conv)))
 
 (env
  (dev

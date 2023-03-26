@@ -1,6 +1,7 @@
-let sjlj_def = function 
+let sjlj_def = function
   | Config.GLIBC -> "#include <setjmp.h>"
-  | Config.X64 -> {|
+  | Config.X64 ->
+      {|
 typedef struct __jmp_buf_tag {
     unsigned long __jb[2];
 } jmp_buf[1];
@@ -33,7 +34,8 @@ __asm__(
 "mov (%rdi),%rsp\n\t"
 "jmp *8(%rdi)\n\t");
 |}
-  | Config.A64 -> {|
+  | Config.A64 ->
+      {|
 typedef struct __jmp_buf_tag {
     unsigned long __jb[2];
 } jmp_buf[1];

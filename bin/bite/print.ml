@@ -25,7 +25,8 @@ let static_link sl ppf =
   Zoo.print_parens ppf "%s" (Sexp.to_string_hum (Syntax.sexp_of_static_link sl))
 
 let fun_info es ppf =
-  Zoo.print_parens ppf "%s" (Sexp.to_string_hum (Env_struct.sexp_of_fun_info es))
+  Zoo.print_parens ppf "%s"
+    (Sexp.to_string_hum (Env_struct.sexp_of_fun_info es))
 
 let tys ts ppf =
   Zoo.print_parens ppf "%s" (Sexp.to_string_hum (Syntax.sexp_of_tys ts))
