@@ -22,7 +22,7 @@ module Bite = Zoo.Main (struct
         let ((exp', _, _, _) as exp) = Passes.wrap_in_main exp in
         let ((exp', _, _, _) as exp) = Passes.enrich_type eff_defs exp in
         let ((exp', _, _, _) as exp) = Passes.transform_exp exp in
-        Zoo.print_info "%t@." (Print.rexpr' exp');
+        (* Zoo.print_info "%t@." (Print.rexpr' exp'); *)
         let fun_infos, _ = Env_struct.get_fun_info exp None in
         let env_structs_string =
           Common.extra_defs Config.X64
