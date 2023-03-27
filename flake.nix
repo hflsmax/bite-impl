@@ -56,6 +56,7 @@
             ];
 
             nativeBuildInputs = [
+              legacyPackages.ocamlformat
               ocamlPackages.menhir
               legacyPackages.clang_15
             ];

@@ -23,7 +23,7 @@ end in
             )
         end in
             handle behead : Behead = fn [] {} () : int_[] is resume (ListShift !list; 0) end in
-                iter {yield behead} !list
+                Print (iter {yield behead} !list)
             end
         end
     end

@@ -98,6 +98,11 @@ int IterGet(void* iter) {
   return ((kliter_t(int_list)*)iter)->data;
 }
 
+int Print(int x) {
+  printf("%d\n", x);
+  return 0;
+}
+
 typedef struct main_locals_t {
 main_env_t* env;
 int arrLen;
@@ -221,5 +226,5 @@ locals.add_fptr = (void*)fn2;
 locals.add_env = &locals;
 locals.foldLeft_fptr = (void*)foldLeftRec;
 locals.foldLeft_env = &locals;
-return foldLeftRec(locals.foldLeft_env, locals.add_fptr, locals.add_env, 0);
+return Print(foldLeftRec(locals.foldLeft_env, locals.add_fptr, locals.add_env, 0));
 }

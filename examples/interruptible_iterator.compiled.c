@@ -1,4 +1,36 @@
-#include <setjmp.h>
+
+typedef struct __jmp_buf_tag {
+    unsigned long __jb[2];
+} jmp_buf[1];
+int setjmp(jmp_buf) __attribute__((__returns_twice__));
+__attribute__((__noreturn__)) void longjmp(jmp_buf, int);
+
+__asm__(
+".global _setjmp\n\t"
+".global setjmp\n\t"
+".type _setjmp, @function\n\t"
+".type setjmp, @function\n\t"
+"_setjmp:\n\t"
+"setjmp:\n\t"
+"lea 8(%rsp),%rdx\n\t"
+"mov %rdx,(%rdi)\n\t"
+"mov (%rsp),%rdx\n\t"
+"mov %rdx,8(%rdi)\n\t"
+"xor %eax,%eax\n\t"
+"ret\n\t"
+
+".global _longjmp\n\t"
+".global longjmp\n\t"
+".type _longjmp,@function\n\t"
+".type longjmp,@function\n\t"
+"_longjmp:\n\t"
+"longjmp:\n\t"
+"xor %eax,%eax\n\t"
+"cmp $1,%esi\n\t"
+"adc %esi,%eax\n\t"
+"mov (%rdi),%rsp\n\t"
+"jmp *8(%rdi)\n\t");
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
@@ -64,6 +96,11 @@ void IterSet(void* iter, int val) {
 
 int IterGet(void* iter) {
   return ((kliter_t(int_list)*)iter)->data;
+}
+
+int Print(int x) {
+  printf("%d\n", x);
+  return 0;
 }
 
 typedef struct main_locals_t {
@@ -223,6 +260,6 @@ locals.behead_fptr = (void*)fn4;
 locals.behead_env = &locals;
 jmp_buf _behead_jb;
 locals.behead_jb = &_behead_jb;
-return iterRec(locals.iter_env, locals.list, locals.yield_fptr, locals.yield_env, locals.yield_jb, locals.behead_fptr, locals.behead_env, locals.behead_jb);
+return Print(iterRec(locals.iter_env, locals.list, locals.yield_fptr, locals.yield_env, locals.yield_jb, locals.behead_fptr, locals.behead_env, locals.behead_jb));
 
 }

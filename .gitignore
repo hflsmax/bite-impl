@@ -8,3 +8,5 @@ _build
 result
 .vscode
 a.out
+.direnv
+*.exe

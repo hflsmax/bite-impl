@@ -100,40 +100,43 @@ let enrich_type (eff_defs : f_ENV) (exp : R.expr) : R.expr =
   enrich_type' exp (gather_locals exp :: [])
 
 (* If tail-resumptive, remove resume expression such that it's treated like a function *)
-let transform_handler (exp : R.expr') : R.expr' =
-  match exp with
-  | FullFun
-      ( TailResumptive,
-        x,
-        es1,
-        hs,
-        tm_args,
-        ty,
-        es2,
-        (exp_body, exp_body_ty, exp_body_es, exp_body_attrs) ) ->
-      let[@warning "-partial-match"] (Resume exp_body') = exp_body in
-      FullFun (TailResumptive, x, es1, hs, tm_args, ty, es2, exp_body')
-  | FullFun
-      ( Abortive,
-        x,
-        es1,
-        hs,
-        tm_args,
-        ty,
-        es2,
-        (exp_body, exp_body_ty, exp_body_es, exp_body_attrs) ) ->
-      exp
-  | FullFun
-      ( GeneralHandler,
-        x,
-        es1,
-        hs,
-        tm_args,
-        ty,
-        es2,
-        (exp_body, exp_body_ty, exp_body_es, exp_body_attrs) ) ->
-      Zoo.error "Other handler kind not supported"
-  | _ -> exp
+let transform_handler ((exp, ty, effs, attrs) : R.expr) : R.expr =
+  ( (match exp with
+    | FullFun
+        ( TailResumptive,
+          x,
+          es1,
+          hs,
+          tm_args,
+          ty,
+          es2,
+          (exp_body, exp_body_ty, exp_body_es, exp_body_attrs) ) ->
+        let[@warning "-partial-match"] (Resume exp_body') = exp_body in
+        FullFun (TailResumptive, x, es1, hs, tm_args, ty, es2, exp_body')
+    | FullFun
+        ( Abortive,
+          x,
+          es1,
+          hs,
+          tm_args,
+          ty,
+          es2,
+          (exp_body, exp_body_ty, exp_body_es, exp_body_attrs) ) ->
+        exp
+    | FullFun
+        ( GeneralHandler,
+          x,
+          es1,
+          hs,
+          tm_args,
+          ty,
+          es2,
+          (exp_body, exp_body_ty, exp_body_es, exp_body_attrs) ) ->
+        Zoo.error "Other handler kind not supported"
+    | _ -> exp),
+    ty,
+    effs,
+    attrs )
 
 let mark_recursive_call fun_name ((exp, ty, effs, attrs) : R.expr) : R.expr =
   match exp with
@@ -238,10 +241,9 @@ let transform_exp (exp : R.expr) : R.expr =
       mark_cf_dest
       @@ mark_recursive_call state.curr_func_name
       @@ propogate_const_fun_to_callsite state.value_store
-      @@ mark_builtin_call rexp
+      @@ mark_builtin_call @@ transform_handler rexp
     in
-    let exp_walked =
-      match exp_pre with
+    ( (match exp_pre with
       | Times (e1, e2) ->
           Times (transform_exp' state e1, transform_exp' state e2)
       | Plus (e1, e2) -> Plus (transform_exp' state e1, transform_exp' state e2)
@@ -322,9 +324,9 @@ let transform_exp (exp : R.expr) : R.expr =
           Raise (h, es, hs, List.map (transform_exp' state) exps)
       | Resume e -> Resume (transform_exp' state e)
       | Seq (e1, e2) -> Seq (transform_exp' state e1, transform_exp' state e2)
-      | (Int _ | Bool _ | Var _) as e -> e
-    in
-    (* Add post-transformer here. This corresponds to a bottom-up transformation *)
-    (transform_handler exp_walked, ty_pre, effs_pre, attrs_pre)
+      | (Int _ | Bool _ | Var _) as e -> e),
+      ty_pre,
+      effs_pre,
+      attrs_pre )
   in
   transform_exp' { curr_func_name = ""; value_store = [] } exp
