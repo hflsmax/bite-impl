@@ -24,7 +24,7 @@ in
       end
     end
   in 
-    Print (run 10)
+    Print (run 100100100)
   end
 end
 ;;

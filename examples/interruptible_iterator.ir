@@ -150,7 +150,7 @@ eff Yield = (TAbs () ((replace Replace) (behead Behead)) (TInt) TInt
         ((isRecursiveCall false) (topLevelFunctionName ()) (cfDest Continue)
          (isOptimizedSjlj false) (isBuiltin true)))
        () ()
-       (((Int 100100) TInt ()
+       (((Int 100100100) TInt ()
          ((isRecursiveCall false) (topLevelFunctionName ()) (cfDest Continue)
           (isOptimizedSjlj false) (isBuiltin false)))))
       TBuiltin ()

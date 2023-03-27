@@ -184,12 +184,8 @@ int fn1(void *env, int n) {
   locals.s = locals.n;
   locals.lget_fptr = (void *)fn2;
   locals.lget_env = &locals;
-  jmp_buf _lget_jb;
-  locals.lget_jb = &_lget_jb;
   locals.lset_fptr = (void *)fn3;
   locals.lset_env = &locals;
-  jmp_buf _lset_jb;
-  locals.lset_jb = &_lset_jb;
   return f(locals.env->counter_env, 0, locals.lget_fptr, locals.lget_env,
            locals.lget_jb, locals.lset_fptr, locals.lset_env, locals.lset_jb);
 }
@@ -201,5 +197,5 @@ int main() {
   locals.counter_env = &locals;
   locals.run_fptr = (void *)fn1;
   locals.run_env = &locals;
-  return Print(fn1(locals.run_env, 10));
+  return Print(fn1(locals.run_env, 100100100));
 }

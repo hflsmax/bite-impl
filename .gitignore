@@ -10,3 +10,4 @@ result
 a.out
 .direnv
 *.exe
+.gdb_history

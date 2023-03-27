@@ -18,6 +18,7 @@ let can_be_returned exp =
 
 (* Compile an expression to a top-level and a list of functions *)
 let compile exp : string =
+  let global_code = ref "" in
   let fs = ref [] in
   let rec compile_rec ((exp, ty, effs, attrs) : R.expr) : string =
     (match exp with
@@ -87,19 +88,46 @@ let compile exp : string =
           match kind with
           | TailResumptive -> exp_handle_code
           | Abortive ->
+              let c1 =
+                if attrs.isOptimizedSjlj then spf "%s_saved || " fun_name
+                else ""
+              in
+              let c2 =
+                if attrs.isOptimizedSjlj then
+                  spf "locals.%s_jb = &%s_jb;\n" handler_var_name fun_name
+                else
+                  spf "jmp_buf _%s_jb;\nlocals.%s_jb = &_%s_jb;\n" fun_name
+                    handler_var_name fun_name
+              in
+              let c3 =
+                if attrs.isOptimizedSjlj then spf "%s_saved = true;\n" fun_name
+                else ""
+              in
+              let _ =
+                if attrs.isOptimizedSjlj then
+                  global_code :=
+                    spf "bool %s_saved = false;\njmp_buf %s_jb;\n" fun_name
+                      fun_name
+                    ^ !global_code
+                else ()
+              in
               if attrs.cfDest = Continue then
-                spf "(_setjmp(*locals.%s_jb) == 0 ? ({%s;}) : ({%s;}))"
-                  handler_var_name exp_handle_code "jmpret"
+                spf "%s\n(%s_setjmp(locals.%s_jb) == 0 ? ({%s%s;}) : ({%s;}))"
+                  c2 c1 handler_var_name c3 exp_handle_code "jmpret"
               else
-                spf "if (_setjmp(*locals.%s_jb) == 0) {\n%s;\n} else {\n%s;\n}"
-                  handler_var_name exp_handle_code "return jmpret;"
+                spf
+                  "%s\n\
+                   if (%s_setjmp(locals.%s_jb) == 0) {\n\
+                   %s%s;\n\
+                   } else {\n\
+                   %s;\n\
+                   }"
+                  c2 c1 handler_var_name c3 exp_handle_code "return jmpret;"
           | _ -> error "Other handler kind not supported"
         in
         (if attrs.cfDest = Continue then "({" else "")
         ^ spf "locals.%s_fptr = (void*)%s;\n" handler_var_name fun_name
         ^ spf "locals.%s_env = &locals;\n" handler_var_name
-        ^ spf "jmp_buf _%s_jb;\n" handler_var_name
-        ^ spf "locals.%s_jb = &_%s_jb;\n" handler_var_name handler_var_name
         ^ exp_handle_code
         ^ if attrs.cfDest = Continue then ";})" else ""
     | FullFun (kind, x, es1, hs, tm_args, ty, es2, body_exp) ->
@@ -229,4 +257,4 @@ let compile exp : string =
     if attrs.cfDest = Abort then code ^ "_longjmp(jb, 1);\n" else code
   in
   let _ = compile_rec exp in
-  String.concat "\n" (List.rev !fs)
+  !global_code ^ String.concat "\n" (List.rev !fs)

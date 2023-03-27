@@ -137,6 +137,8 @@ typedef foldLeftRec_locals_t fn3_env_t;
 typedef struct fn3_locals_t {
   fn3_env_t *env;
 } fn3_locals_t;
+bool fn3_saved = false;
+jmp_buf fn3_jb;
 int fn1(void *env, void *exc_fptr, void *exc_env, jmp_buf *exc_jb) {
   fn1_locals_t locals;
   locals.env = (fn1_env_t *)env;
@@ -184,13 +186,14 @@ int foldLeftRec(void *env, void *op_fptr, void *op_env, int acc) {
   ({
     locals.exc_fptr = (void *)fn3;
     locals.exc_env = &locals;
-    jmp_buf _exc_jb;
-    locals.exc_jb = &_exc_jb;
-    (_setjmp(*locals.exc_jb) == 0 ? ({
+    locals.exc_jb = &fn3_jb;
+
+    (fn3_saved || _setjmp(locals.exc_jb) == 0 ? ({
+      fn3_saved = true;
       locals.next = fn1(locals.env->iterNext_env, locals.exc_fptr,
                         locals.exc_env, locals.exc_jb);
     })
-                                  : ({ jmpret; }));
+                                              : ({ jmpret; }));
   });
   if (locals.toBreak) {
     return locals.acc;

@@ -108,6 +108,8 @@ typedef g_locals_t fn1_env_t;
 typedef struct fn1_locals_t {
   fn1_env_t *env;
 } fn1_locals_t;
+bool fn1_saved = false;
+jmp_buf fn1_jb;
 int fn1(void *env, jmp_buf jb) {
   fn1_locals_t locals;
   locals.env = (fn1_env_t *)env;
@@ -123,9 +125,10 @@ int g(void *env, int n) {
 
   locals.lexc_fptr = (void *)fn1;
   locals.lexc_env = &locals;
-  jmp_buf _lexc_jb;
-  locals.lexc_jb = &_lexc_jb;
-  if (_setjmp(*locals.lexc_jb) == 0) {
+  locals.lexc_jb = &fn1_jb;
+
+  if (fn1_saved || _setjmp(locals.lexc_jb) == 0) {
+    fn1_saved = true;
     if (({ locals.n == 0; })) {
       return fn1(locals.lexc_env, locals.lexc_jb);
     } else {
@@ -141,5 +144,5 @@ int main() {
 
   locals.run_fptr = (void *)g;
   locals.run_env = &locals;
-  return Print(g(locals.run_env, 10));
+  return Print(g(locals.run_env, 100100100));
 }

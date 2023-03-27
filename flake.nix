@@ -58,7 +58,11 @@
             nativeBuildInputs = [
               legacyPackages.ocamlformat
               ocamlPackages.menhir
-              legacyPackages.clang_15
+              legacyPackages.clang_13
+              legacyPackages.pwndbg
+              legacyPackages.jq
+              legacyPackages.bc
+              legacyPackages.python39Packages.tabulate
             ];
 
             # we build examples in buildPhase because that's when we have access to $out
