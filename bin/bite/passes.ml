@@ -3,7 +3,7 @@ open Syntax.R
 open Common
 open Sexplib.Std
 open Util
-(* open Util *)
+open Pass_util
 
 let get_var_depth (x : name) (slink : static_link) : int =
   let rec get_var_depth' (x : name) (slink : static_link) (depth : int) : int =
@@ -102,9 +102,35 @@ let enrich_type (eff_defs : f_ENV) (exp : R.expr) : R.expr =
 
 type pass_state = {
   curr_func_name : string;
+  curr_func_is_tail_recursive : bool;
   value_store : (string * string) list;
 }
 [@@deriving sexp]
+
+let check_tail_recursive state ((exp, ty, effs, attrs) : R.expr) =
+  match exp with
+  | FullFun (kind, x, es1, hs, tm_args, ty, es2, exp_body) ->
+      (* If there is a recursive call that is not in tail position, set to false *)
+      if
+        List.length
+          (gather_exp true
+             (function
+               | FullApply ((Var (_, x'), _, _, _), _, _, _), _, _, attrs ->
+                   x = x' && not attrs.isRecursiveCall
+               | _ -> false)
+             exp_body)
+        != 0
+      then { state with curr_func_is_tail_recursive = false }
+      else { state with curr_func_is_tail_recursive = true }
+  | _ -> state
+
+let mark_optimized_sjlj state ((exp, ty, effs, attrs) : R.expr) =
+  match exp with
+  | Handle (x, (fname, _), exp_catch, exp_handle) ->
+      if state.curr_func_is_tail_recursive then
+        (exp, ty, effs, { attrs with isOptimizedSjlj = true })
+      else (exp, ty, effs, attrs)
+  | _ -> (exp, ty, effs, attrs)
 
 (* If tail-resumptive, remove resume expression such that it's treated like a function *)
 let transform_handler _ ((exp, ty, effs, attrs) : R.expr) : R.expr =
@@ -235,16 +261,15 @@ let mark_cf_dest _ ((exp, ty, effs, attrs) as rexp : R.expr) : R.expr =
       (Seq (mark Continue e1, mark attrs.cfDest e2), ty, effs, attrs)
 
 (* Bottom-up AST walker *)
-let transform_exp init_state passes (exp : R.expr) : R.expr =
+let transform_exp init_state exp_passes state_passes (exp : R.expr) : R.expr =
   let rec transform_exp_rec state ((exp, ty, effs, attrs) as rexp : R.expr) :
       R.expr =
     (* Add pre-transformer here. This corresponds to a top-dowm transformation *)
     let ((exp_pre, ty_pre, effs_pre, attrs_pre) as rexp_pre) =
-      List.fold_left (fun rexp pass -> pass state rexp) rexp passes
-      (* mark_cf_dest
-         @@ mark_recursive_call state.curr_func_name
-         @@ propogate_const_fun_to_callsite state.value_store
-         @@ mark_builtin_call @@ transform_handler rexp *)
+      List.fold_left (fun rexp pass -> pass state rexp) rexp exp_passes
+    in
+    let state =
+      List.fold_left (fun state pass -> pass state rexp) state state_passes
     in
     ( (match exp_pre with
       | Times (e1, e2) ->
@@ -337,14 +362,18 @@ let transform_exp init_state passes (exp : R.expr) : R.expr =
   in
   transform_exp_rec init_state exp
 
+let init_state =
+  { curr_func_name = ""; curr_func_is_tail_recursive = false; value_store = [] }
+
 let transform (exp : R.expr) : R.expr =
-  transform_exp
-    { curr_func_name = ""; value_store = [] }
-    [
-      transform_handler;
-      mark_cf_dest;
-      mark_recursive_call;
-      propogate_const_fun_to_callsite;
-      mark_builtin_call;
-    ]
-    exp
+  exp
+  |> transform_exp init_state
+       [
+         transform_handler;
+         mark_cf_dest;
+         mark_recursive_call;
+         propogate_const_fun_to_callsite;
+         mark_builtin_call;
+       ]
+       []
+  |> transform_exp init_state [ mark_optimized_sjlj ] [ check_tail_recursive ]

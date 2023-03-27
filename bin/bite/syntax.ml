@@ -110,6 +110,7 @@ module R = struct
     isRecursiveCall : bool;
     topLevelFunctionName : string option;
     cfDest : cf_dest;
+    isOptimizedSjlj : bool;
     isBuiltin : bool;
   }
   [@@deriving sexp]
@@ -119,6 +120,7 @@ module R = struct
       isRecursiveCall = false;
       topLevelFunctionName = None;
       isBuiltin = false;
+      isOptimizedSjlj = false;
       cfDest = Continue;
     }
 

@@ -4,6 +4,10 @@ set -e
 
 EXAMPLES=$(ls ./examples/*.bite 2>/dev/null | sed 's|.*/\(.*\)\.bite$|\1|')
 
+echo "dune build..."
+dune build
+dune build @fmt --auto-promote
+
 echo "Checking examples..."
 
 for name in $EXAMPLES; do

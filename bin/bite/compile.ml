@@ -17,64 +17,62 @@ let can_be_returned exp =
       false
 
 (* Compile an expression to a top-level and a list of functions *)
-let rec compile ((exp, ty, effs, attrs) as exp' : R.expr) : string * string list
-    =
-  ( (match exp with
+let compile exp : string =
+  let fs = ref [] in
+  let rec compile_rec ((exp, ty, effs, attrs) : R.expr) : string =
+    (match exp with
     | Var (depth, x) ->
-        ( spf "locals.%s%s"
-            (String.concat "" (List.init depth (fun _ -> "env->")))
-            x,
-          [] )
-    | Int k -> (string_of_int k, [])
-    | Bool b -> (string_of_bool b, [])
+        spf "locals.%s%s"
+          (String.concat "" (List.init depth (fun _ -> "env->")))
+          x
+    | Int k -> string_of_int k
+    | Bool b -> string_of_bool b
     | Times (e1, e2) ->
-        let e1', f1 = compile e1 in
-        let e2', f2 = compile e2 in
-        (spf "({%s * %s;})" e1' e2', f1 @ f2)
+        let e1' = compile_rec e1 in
+        let e2' = compile_rec e2 in
+        spf "({%s * %s;})" e1' e2'
     | Plus (e1, e2) ->
-        let e1', f1 = compile e1 in
-        let e2', f2 = compile e2 in
-        (spf "({%s + %s;})" e1' e2', f1 @ f2)
+        let e1' = compile_rec e1 in
+        let e2' = compile_rec e2 in
+        spf "({%s + %s;})" e1' e2'
     | Minus (e1, e2) ->
-        let e1', f1 = compile e1 in
-        let e2', f2 = compile e2 in
-        (spf "({%s - %s;})" e1' e2', f1 @ f2)
+        let e1' = compile_rec e1 in
+        let e2' = compile_rec e2 in
+        spf "({%s - %s;})" e1' e2'
     | Equal (e1, e2) ->
-        let e1', f1 = compile e1 in
-        let e2', f2 = compile e2 in
-        (spf "({%s == %s;})" e1' e2', f1 @ f2)
+        let e1' = compile_rec e1 in
+        let e2' = compile_rec e2 in
+        spf "({%s == %s;})" e1' e2'
     | Less (e1, e2) ->
-        let e1', f1 = compile e1 in
-        let e2', f2 = compile e2 in
-        (spf "({%s < %s;})" e1' e2', f1 @ f2)
+        let e1' = compile_rec e1 in
+        let e2' = compile_rec e2 in
+        spf "({%s < %s;})" e1' e2'
     | Deref e ->
-        let e', _ = compile e in
-        (e', [])
+        let e' = compile_rec e in
+        e'
     | Assign (e1, e2) ->
-        let e1', _ = compile e1 in
-        let e2', f2 = compile e2 in
-        (spf "%s = %s;\n" e1' e2', f2)
+        let e1' = compile_rec e1 in
+        let e2' = compile_rec e2 in
+        spf "%s = %s;\n" e1' e2'
     | If (e1, e2, e3) ->
-        let e1', f1 = compile e1 in
-        let e2', f2 = compile e2 in
-        let e3', f3 = compile e3 in
-        if attrs.cfDest = Continue then
-          (spf "(%s ? %s : %s)" e1' e2' e3', f1 @ f2 @ f3)
-        else (spf "if (%s) {\n%s;\n} else {\n%s;\n}" e1' e2' e3', f1 @ f2 @ f3)
-    | Let (x, _, e1, e2) ->
-        let e1', f1 = compile e1 in
-        let e2', f2 = compile e2 in
-        ( (match e1 with
-          | FullFun (_, fun_name, _, _, _, _, _, _), _, _, _ ->
-              spf "locals.%s_fptr = (void*)%s;\n" x fun_name
-              ^ spf "locals.%s_env = &locals;\n" x
-              ^ e2' ^ "\n"
-          | _ -> spf "locals.%s = %s;\n%s;" x e1' e2'),
-          f1 @ f2 )
+        let e1' = compile_rec e1 in
+        let e2' = compile_rec e2 in
+        let e3' = compile_rec e3 in
+        if attrs.cfDest = Continue then spf "(%s ? %s : %s)" e1' e2' e3'
+        else spf "if (%s) {\n%s;\n} else {\n%s;\n}" e1' e2' e3'
+    | Let (x, _, e1, e2) -> (
+        let e1' = compile_rec e1 in
+        let e2' = compile_rec e2 in
+        match e1 with
+        | FullFun (_, fun_name, _, _, _, _, _, _), _, _, _ ->
+            spf "locals.%s_fptr = (void*)%s;\n" x fun_name
+            ^ spf "locals.%s_env = &locals;\n" x
+            ^ e2' ^ "\n"
+        | _ -> spf "locals.%s = %s;\n%s;" x e1' e2')
     | Decl (x, _, e1, e2) ->
-        let e1', f1 = compile e1 in
-        let e2', f2 = compile e2 in
-        (spf "locals.%s = %s;\n%s" x e1' e2', f1 @ f2)
+        let e1' = compile_rec e1 in
+        let e2' = compile_rec e2 in
+        spf "locals.%s = %s;\n%s" x e1' e2'
     | Handle (handler_var_name, (fname, fname_ty), exp_catch, exp_handle) ->
         let[@warning "-partial-match"] ( FullFun
                                            (kind, fun_name, _, _, _, _, _, _),
@@ -83,8 +81,8 @@ let rec compile ((exp, ty, effs, attrs) as exp' : R.expr) : string * string list
                                          _ ) =
           exp_catch
         in
-        let exp_catch_code, f1 = compile exp_catch in
-        let exp_handle_code, f2 = compile exp_handle in
+        let _ = compile_rec exp_catch in
+        let exp_handle_code = compile_rec exp_handle in
         let exp_handle_code =
           match kind with
           | TailResumptive -> exp_handle_code
@@ -97,14 +95,13 @@ let rec compile ((exp, ty, effs, attrs) as exp' : R.expr) : string * string list
                   handler_var_name exp_handle_code "return jmpret;"
           | _ -> error "Other handler kind not supported"
         in
-        ( ((if attrs.cfDest = Continue then "({" else "")
-          ^ spf "locals.%s_fptr = (void*)%s;\n" handler_var_name fun_name
-          ^ spf "locals.%s_env = &locals;\n" handler_var_name
-          ^ spf "jmp_buf _%s_jb;\n" handler_var_name
-          ^ spf "locals.%s_jb = &_%s_jb;\n" handler_var_name handler_var_name
-          ^ exp_handle_code
-          ^ if attrs.cfDest = Continue then ";})" else ""),
-          f1 @ f2 )
+        (if attrs.cfDest = Continue then "({" else "")
+        ^ spf "locals.%s_fptr = (void*)%s;\n" handler_var_name fun_name
+        ^ spf "locals.%s_env = &locals;\n" handler_var_name
+        ^ spf "jmp_buf _%s_jb;\n" handler_var_name
+        ^ spf "locals.%s_jb = &_%s_jb;\n" handler_var_name handler_var_name
+        ^ exp_handle_code
+        ^ if attrs.cfDest = Continue then ";})" else ""
     | FullFun (kind, x, es1, hs, tm_args, ty, es2, body_exp) ->
         let code_tm_args =
           (if x <> "main" then [ "void* env" ] else [])
@@ -143,25 +140,24 @@ let rec compile ((exp, ty, effs, attrs) as exp' : R.expr) : string * string list
                      h h h h h h)
             |> String.concat "")
         in
-        let code_body, f1 = compile body_exp in
+        let code_body = compile_rec body_exp in
         let this_fun =
           spf "%s %s(%s)\n{\n%s\n%s\n}\n" (ty_to_string ty) x
             (String.concat ", " (code_tm_args @ code_hs))
             code_init code_body
         in
-        ( "CURRENTLY ONLY SUPPORT FUNCTIONS ASSIGNED TO A VARIABLE OR A HANDLER",
-          f1 @ [ this_fun ] )
+        fs := this_fun :: !fs;
+        "CURRENTLY ONLY SUPPORT FUNCTIONS ASSIGNED TO A VARIABLE OR A HANDLER"
     | FullApply (((lhs_name, lhs_ty, _, _) as lhs), es, hs, exps) ->
-        let lhs', f1 = compile lhs in
-        let exps', f2 =
-          List.split
-            (List.map
-               (fun ((exp, ty, _, _) as rexp) ->
-                 let exp_code, fs = compile rexp in
-                 match ty with
-                 | TAbs _ -> (spf "%s_fptr, %s_env" exp_code exp_code, fs)
-                 | _ -> (exp_code, fs))
-               exps)
+        let lhs' = compile_rec lhs in
+        let exps' =
+          List.map
+            (fun ((exp, ty, _, _) as rexp) ->
+              let exp_code = compile_rec rexp in
+              match ty with
+              | TAbs _ -> spf "%s_fptr, %s_env" exp_code exp_code
+              | _ -> exp_code)
+            exps
         in
         let handler_args =
           List.map
@@ -184,18 +180,16 @@ let rec compile ((exp, ty, effs, attrs) as exp' : R.expr) : string * string list
             Option.get attrs.topLevelFunctionName
           else spf "((%s)%s_fptr)" (tabs_to_string lhs_ty false) lhs'
         in
-        ( spf "%s(%s)" lhs_code (String.concat ", " args_code),
-          f1 @ List.concat f2 )
+        spf "%s(%s)" lhs_code (String.concat ", " args_code)
     | Raise (((_, _, hty) as h), es, hs, exps) ->
-        let exps', f2 =
-          List.split
-            (List.map
-               (fun ((exp, ty, _, _) as rexp) ->
-                 let exp_code, fs = compile rexp in
-                 match ty with
-                 | TAbs _ -> (spf "%s_fptr, %s_env" exp_code exp_code, fs)
-                 | _ -> (exp_code, fs))
-               exps)
+        let exps' =
+          List.map
+            (fun ((exp, ty, _, _) as rexp) ->
+              let exp_code = compile_rec rexp in
+              match ty with
+              | TAbs _ -> spf "%s_fptr, %s_env" exp_code exp_code
+              | _ -> exp_code)
+            exps
         in
         let handler_code = compile_hvar @@ fst3 @@ h in
         let handler_args =
@@ -214,23 +208,25 @@ let rec compile ((exp, ty, effs, attrs) as exp' : R.expr) : string * string list
             Option.get attrs.topLevelFunctionName
           else spf "((%s)%s_fptr)" (tabs_to_string hty true) handler_code
         in
-        (spf "%s(%s)" lhs_code (String.concat ", " args_code), List.concat f2)
+        spf "%s(%s)" lhs_code (String.concat ", " args_code)
     | Resume e ->
-        let e', f1 = compile e in
-        ("", f1)
+        let e' = compile_rec e in
+        ""
     | Seq (e1, e2) ->
-        let e1', f1 = compile e1 in
-        let e2', f2 = compile e2 in
-        (spf "\n%s;\n%s;" e1' e2', f1 @ f2))
-  |> fun (code, fs) ->
-    ( (if can_be_returned exp then
-       match attrs.cfDest with
-       | Return ->
-           (if attrs.isRecursiveCall then "__attribute__((musttail))" else "")
-           ^ "return " ^ code ^ ";"
-       | Abort -> spf "jmpret = %s;\n" code
-       | Continue -> code
-      else code),
-      fs ) )
-  |> fun (code, fs) ->
-  ((if attrs.cfDest = Abort then code ^ "_longjmp(jb, 1);\n" else code), fs)
+        let e1' = compile_rec e1 in
+        let e2' = compile_rec e2 in
+        spf "\n%s;\n%s;" e1' e2')
+    |> fun code ->
+    (if can_be_returned exp then
+     match attrs.cfDest with
+     | Return ->
+         (if attrs.isRecursiveCall then "__attribute__((musttail))" else "")
+         ^ "return " ^ code ^ ";"
+     | Abort -> spf "jmpret = %s;\n" code
+     | Continue -> code
+    else code)
+    |> fun code ->
+    if attrs.cfDest = Abort then code ^ "_longjmp(jb, 1);\n" else code
+  in
+  let _ = compile_rec exp in
+  String.concat "\n" (List.rev !fs)

@@ -72,12 +72,11 @@ let compile eff_defs = function
         Common.extra_defs Config.X64
         :: List.map (fun es -> Env_struct.get_env_struct es) fun_infos
       in
-      let _, codes = Compile.compile exp in
-      let codes = List.map Common.cleanup codes in
+      let code = Common.cleanup (Compile.compile exp) in
       ( eff_defs,
         ( Format.asprintf "%t@." (Print.rexpr' exp'),
-          Printf.sprintf "%s" (String.concat "\n" env_structs_string)
-          ^ String.concat "\n" codes ) )
+          Printf.sprintf "%s" (String.concat "\n" env_structs_string) ^ code )
+      )
   | Syntax.Decl_eff (x, ty) ->
       Type_check.ty_ok eff_defs [] [] ty;
       ( (x, ty) :: eff_defs,
