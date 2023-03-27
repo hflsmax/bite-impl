@@ -3,6 +3,7 @@
 open Syntax
 open Syntax.R
 open Common
+open Util
 
 let compile_hvar hvar = "locals." ^ hvar
 
@@ -94,7 +95,7 @@ let rec compile ((exp, ty, effs, attrs) as exp' : R.expr) : string * string list
               else
                 spf "if (_setjmp(*locals.%s_jb) == 0) {\n%s;\n} else {\n%s;\n}"
                   handler_var_name exp_handle_code "return jmpret;"
-          | _ -> Zoo.error "Other handler kind not supported"
+          | _ -> error "Other handler kind not supported"
         in
         ( ((if attrs.cfDest = Continue then "({" else "")
           ^ spf "locals.%s_fptr = (void*)%s;\n" handler_var_name fun_name

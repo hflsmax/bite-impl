@@ -1,6 +1,7 @@
 (* Abstract syntax. *)
 
 open Sexplib.Std
+open Util
 
 (* Variable names *)
 type name = string [@@deriving sexp]
@@ -62,7 +63,7 @@ let builtin_fun =
   ]
 
 (* Expressions *)
-type expr = expr' Zoo.located
+type expr = expr' located
 
 and expr' =
   | Var of name

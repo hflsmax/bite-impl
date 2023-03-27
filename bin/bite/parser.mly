@@ -1,5 +1,6 @@
 %{
   open Syntax
+  open Util
 %}
 
 %token TINT
@@ -186,8 +187,8 @@ plain_expr:
   | DECL x = VAR ASSIGN e1 = expr IN e2 = expr END
     { Decl (x, e1, e2) }
   | HANDLE x = VAR COLON fname = VAR EQUAL e1 = lambda IN e2 = expr END
-    { let [@warning "-partial-match"] {Zoo.data=(FullFun (_, name, es1, hs, tm_params, t, es2, exp_body)); Zoo.loc=loc} = e1 in
-      Handle (x, fname, Zoo.locate ~loc:loc (FullFun (GeneralHandler, name, es1, hs, tm_params, t, es2, exp_body)), e2) }
+    { let [@warning "-partial-match"] {data=(FullFun (_, name, es1, hs, tm_params, t, es2, exp_body)); loc=loc} = e1 in
+      Handle (x, fname, locate ~loc:loc (FullFun (GeneralHandler, name, es1, hs, tm_params, t, es2, exp_body)), e2) }
   | e1 = expr SEMI e2 = expr
     { Seq (e1, e2) }
 
@@ -218,7 +219,7 @@ effect_declare:
 
 mark_position(X):
   x = X
-  { Zoo.locate ~loc:(Zoo.make_location $startpos $endpos) x }
+  { locate ~loc:(make_location $startpos $endpos) x }
 
 %%
 

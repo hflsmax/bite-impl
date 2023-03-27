@@ -1,26 +1,27 @@
 (** Type checking. *)
 
 open Syntax
+open Util
 
-let typing_error ~loc = Zoo.error ~kind:"Type error" ~loc
+let typing_error ~loc = error ~kind:"Type error" ~loc
 
 let fname_ok (eff_defs : f_ENV) (fname : fname) =
   if not (List.mem_assoc fname eff_defs) then
-    Zoo.error ~kind:"Type error" "unknown effect %s" fname
+    error ~kind:"Type error" "unknown effect %s" fname
 
 let hd_ok loc (h_env : h_ENV) (s : hvar) =
   if not (List.mem_assoc s h_env) then
-    Zoo.error ~loc ~kind:"Type error" "unknown handler %s in %t" s
+    error ~loc ~kind:"Type error" "unknown handler %s in %t" s
       (Print.h_ENV h_env)
 
 let eff_ok (e_env : e_ENV) (h_env : h_ENV) (e : eff) =
   match e with
   | EVar s ->
       if not (List.mem e e_env) then
-        Zoo.error ~kind:"Type error" "unknown effect var %s" s
+        error ~kind:"Type error" "unknown effect var %s" s
   | HVar s ->
       if not (List.mem_assoc s h_env) then
-        Zoo.error ~kind:"Type error" "unknown handler var %s" s
+        error ~kind:"Type error" "unknown handler var %s" s
 
 let rec ty_ok (eff_defs : f_ENV) (e_env : e_ENV) (h_env : h_ENV) ty =
   match ty with
@@ -56,7 +57,7 @@ let type_of_builtin = function
 let fn_index = ref 0
 
 let rec type_of (eff_defs : f_ENV) (e_env : e_ENV) (h_env : h_ENV)
-    (t_env : t_ENV) { Zoo.data = e; loc } : R.expr =
+    (t_env : t_ENV) { data = e; loc } : R.expr =
   match e with
   | Var x -> (
       match List.assoc_opt x builtin_fun with
