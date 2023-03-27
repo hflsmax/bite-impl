@@ -1,0 +1,3 @@
+[submodule "libmprompt"]
+	path = libmprompt
+	url = https://github.com/koka-lang/libmprompt.git
