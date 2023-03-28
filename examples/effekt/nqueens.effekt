@@ -1,0 +1,46 @@
+import immutable/list
+
+effect Choose(n: Int): Int
+effect Fail(): Unit
+
+def safe(queen: Int, diag: Int, solution: List[Int]): Boolean = 
+    solution match {
+        case Nil() => true
+        case Cons(q, qs) => queen != q &&
+                            queen != q + diag &&
+                            queen != q - diag &&
+                            safe (queen, diag + 1, qs)
+    }
+
+def find_solutions(n: Int, col: Int): List[Int] / { Choose, Fail } = {
+    if (col == 0) {
+        Nil()
+    } else {
+        val sol = find_solutions(n, col - 1);
+        val queen = do Choose(n);
+        if (safe(queen, 1, sol)) {
+            Cons(queen, sol)
+        } else {
+            do Fail(); Nil()
+        }
+    }
+}
+
+
+def count_solutions(n: Int): Int = {
+    try { find_solutions(n, n); 1 }
+    with Fail { 0 }
+    with Choose { n => 
+        var i = 1;
+        var acc = 0;
+        while (i != n) {
+            acc = acc + resume(i);
+            i = i + 1;
+        }
+        resume(i) + acc
+    }
+}
+
+def main() = {
+    println(count_solutions(8))
+}

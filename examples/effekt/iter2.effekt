@@ -1,0 +1,44 @@
+// This example is from Effekt's repository, we rewrite it using recursion in interruptible_iterator
+// otherwise there's no difference
+
+import immutable/list
+
+effect Yield(value: Int): Unit / { Replace, Behead }
+effect Replace(value: Int): Unit
+effect Behead(): Unit
+
+// we do not have mutable lists, yet...
+def iter(l: List[Int]): List[Int] / { Yield, Behead } = {
+    var in: List[Int] = l;
+    var out: List[Int] = Nil();
+
+    while (not(in.isEmpty)) { ignoring[EmptyList] {
+        var hd = in.head;
+        val tl = in.tail;
+        try { do Yield(hd); in = tl }
+        with Replace { n =>
+            hd = n;
+            out = Cons(n, out);
+            resume(())
+        }
+        with Behead { resume(()) }
+    }};
+
+    out.reverse
+}
+
+def main() = ignoring[EmptyList] {
+    var lst = [0, 1, 3, 0 - 2, 0 - 8, 9];
+
+    val res = try { lst.iter }
+    with Yield { x =>
+      resume { if (x < 0) do Behead() else do Replace(x * 2) }
+    }
+    with Behead { () =>
+        println("beheading in client?");
+        lst = lst.tail;
+        resume(())
+    };
+
+    println(res)
+}

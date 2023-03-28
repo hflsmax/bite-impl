@@ -1,0 +1,20 @@
+effect Set(n: Int): Unit
+effect Get(): Int
+
+def state(init: Int) { f: => Int / { Set, Get } } = {
+    var s = init;
+    try { f() }
+    with Set { n => s = n; resume(()) }
+    with Get { resume(s) }
+}
+
+def counter(c: Int): Int / { Set, Get } = {
+    val i = do Get();
+    if (i == 0) { c } else { do Set(i - 1); counter(c + 1) }
+}
+
+def main() = {
+    println(state(100100100){
+        () => counter(0)
+    })
+}

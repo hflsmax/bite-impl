@@ -1,0 +1,20 @@
+effect LogInfo(msg: String): Unit
+
+def call_f[A, B](a: A) { f: A => B / {} } : B = {
+    try {
+        do LogInfo("# before call f()");
+        val b = f(a);
+        do LogInfo("# after call f()");
+        b
+    } with LogInfo {
+        msg => println(msg); resume(())
+    }
+}
+
+def main() = {
+    try {
+        call_f(1) { _ => do LogInfo("# do not print to console") }
+    } with LogInfo {
+        _ => resume(()) 
+    }
+}

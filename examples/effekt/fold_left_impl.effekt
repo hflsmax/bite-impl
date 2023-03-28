@@ -1,0 +1,35 @@
+import mutable/array
+
+effect NoSuchElementException(): Int
+
+def main() = {
+    val arrLen = 100100100;
+    val arr = array(arrLen, 0);
+
+    var iterIdx = 0;
+    def iterNext(): Int / {NoSuchElementException} = {
+        if (iterIdx < arrLen) {
+            iterIdx = iterIdx + 1;
+            unsafeGet(arr, iterIdx - 1)
+        } else {
+            do NoSuchElementException()
+        }
+    }
+
+    def foldLeft (acc: Int) {f: (Int, Int) => Int}: Int = {
+        var break = false;
+        var next = 0;
+        try {
+            next = iterNext();
+        } with NoSuchElementException {
+            () => break = true
+        }
+        if (break) {
+            acc
+        } else {
+            foldLeft (f(acc, next)) { f }
+        }
+    }
+
+    foldLeft (0) { (acc, next) => acc + next }
+}
