@@ -1,0 +1,53 @@
+effect Choose {
+  def choose(n: Int): Int
+}
+effect Fail {
+  def fail(): Unit
+}
+effect Choice = {Choose,Fail}
+
+effect Yield {
+  def yield(a: Int, b: Int, c: Int): Unit
+}
+
+def triple(n: Int, s: Int): Unit / {Choice, Yield} = {
+  val i = do choose(n)
+  val j = do choose(i - 1)
+  val k = do choose(j - 1)
+  if (i + j + k == s) {
+    do yield(i, j, k)
+  } else {
+    do fail()
+  }
+}
+
+def yieldTriples(n: Int, s: Int): Unit / {Yield} = {
+  try {
+    triple(n, s)
+  } with Choose {
+    def choose(n) = {
+      var i = 1;
+      while (i < n) {
+        resume(i);
+        i = i + 1
+      }
+    }
+  } with Fail {
+    def fail() = ()
+  }
+}
+
+def countTriples(n: Int, s: Int): Int = {
+  var cnt = 0;
+  try {
+    yieldTriples(n, s)
+  } with Yield {
+    def yield(i: Int, j: Int, k: Int) = {
+      cnt = cnt + 1;
+      resume(())
+    }
+  };
+  cnt
+}
+
+def main() = println(countTriples(8, 6))

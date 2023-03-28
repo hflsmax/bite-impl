@@ -1,0 +1,13 @@
+let fibonacci =
+    fun fibonacciRec [] {} (n : int) : int_[] is
+        if n = 0 then
+            0
+        else if n = 1 then
+            1
+        else
+            fibonacciRec (n - 1) + fibonacciRec (n - 2)
+    end
+in
+    Print (fibonacci 50)
+end
+;;

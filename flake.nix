@@ -63,6 +63,9 @@
               legacyPackages.jq
               legacyPackages.bc
               legacyPackages.python39Packages.tabulate
+              legacyPackages.mlton
+              legacyPackages.cmake
+              legacyPackages.gdb
             ];
 
             # we build examples in buildPhase because that's when we have access to $out

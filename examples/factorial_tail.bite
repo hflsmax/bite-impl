@@ -1,0 +1,13 @@
+let factorial =
+    fun factorialRec [] {} (n : int, acc : int) : int_[] is
+        if n = 0 then
+            acc
+        else
+            factorialRec (n - 1) (acc * n)
+    end
+in
+    let factorialTail = fn [] {} (n : int) : int_[] is factorial n 1 end in
+        Print (factorialTail 33)
+    end
+end
+;;

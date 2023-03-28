@@ -1,0 +1,34 @@
+eff Choose : ∀[].∀{}.(int) -> int_[];;
+
+dcl cnt := 0 in
+    let countTriples = fun countTriplesRec [] {lch: Choose} (n: int, s: int) : int_[~lch] is
+        let ra = raise lch {} n in
+            let rb = raise lch {} (ra - 1) in
+                let rc = raise lch {} (rb - 1) in
+                    if (ra + rb + rc = s) then
+                        cnt := !cnt + 1
+                    else
+                        0
+                end
+            end
+        end
+    end in
+        handle lch : Choose = fn [] {} (n : int) : int_[] is
+            let r = ReifyResumer () in
+                let iter = fun iterRec [] {} (i : int) : int_[] is
+                    if n < i then
+                        0
+                    else
+                        resume (r i);
+                        (iterRec (i + 1))
+                end in
+                    iter 1
+                end
+            end
+        end in
+            countTriples {lch} 500 127;
+            Print (!cnt)
+        end
+    end
+end
+;;
