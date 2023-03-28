@@ -1,0 +1,21 @@
+effect Exc(): Unit
+
+def loop(n: Int) : Int = {
+    var i = n;
+    var ret = 0;
+    while (i >= 0) {
+        var x = 0;
+        try{
+            i = i - 1;
+            if (i == 0) {
+                do Exc()
+            }
+        } with Exc {
+         () => ret = ret + 1; resume(())
+        }
+    }; ret
+}
+
+def main() = {
+    println(loop(100100100))
+}
