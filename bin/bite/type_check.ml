@@ -9,10 +9,9 @@ let fname_ok (eff_defs : f_ENV) (fname : fname) =
   if not (List.mem_assoc fname eff_defs) then
     error ~kind:"Type error" "unknown effect %s" fname
 
-let hd_ok loc (h_env : h_ENV) (s : hvar) =
+let hd_ok (h_env : h_ENV) (s : hvar) =
   if not (List.mem_assoc s h_env) then
-    error ~loc ~kind:"Type error" "unknown handler %s in %t" s
-      (Print.h_ENV h_env)
+    error ~kind:"Type error" "unknown handler %s in %t" s (Print.h_ENV h_env)
 
 let eff_ok (e_env : e_ENV) (h_env : h_ENV) (e : eff) =
   match e with
@@ -38,7 +37,7 @@ let hvar_to_rich_hvar eff_defs h_env h =
   let fname = List.assoc h h_env in
   (h, fname, List.assoc fname eff_defs)
 
-let default_attrs = Syntax.R.default_attrs
+let default_attrs = Syntax.default_attrs
 
 let type_of_builtin = function
   | ArrayInit -> TAbs ([], [], [ TInt ], TBuiltin, [])
@@ -53,96 +52,96 @@ let type_of_builtin = function
   | IterSet -> TAbs ([], [], [ TBuiltin; TInt ], TInt, [])
   | IterGet -> TAbs ([], [], [ TBuiltin ], TInt, [])
   | Print -> TAbs ([], [], [ TInt ], TInt, [])
+  | ReifyResumer -> TAbs ([], [], [], TBuiltin, [])
 
 let fn_index = ref 0
 
 let rec type_of (eff_defs : f_ENV) (e_env : e_ENV) (h_env : h_ENV)
-    (t_env : t_ENV) { data = e; loc } : R.expr =
+    (t_env : t_ENV) (e, attrs) : expr =
   match e with
   | Var x -> (
       match List.assoc_opt x builtin_fun with
       | None -> (
-          try (R.Var (0, x), List.assoc x t_env, [], default_attrs)
-          with Not_found -> typing_error ~loc "unknown variable %s" x)
+          try (Var x, { default_attrs with ty = List.assoc x t_env })
+          with Not_found ->
+            typing_error ~loc:attrs.loc "unknown variable %s" x)
       | Some b ->
-          ( R.Var (0, x),
-            type_of_builtin b,
-            [],
-            { default_attrs with isBuiltin = true } ))
-  | Int i -> (R.Int i, TInt, [], default_attrs)
-  | Bool b -> (R.Bool b, TBool, [], default_attrs)
+          ( Var x,
+            {
+              default_attrs with
+              ty = type_of_builtin b;
+              effs = [];
+              isBuiltin = true;
+            } ))
+  | Int i -> (Int i, { default_attrs with ty = TInt; effs = [] })
+  | Bool b -> (Bool b, { default_attrs with ty = TBool; effs = [] })
   | Times (exp1, exp2) ->
-      let exp1', ty1, es1, attrs1 = type_of eff_defs e_env h_env t_env exp1 in
-      let exp2', ty2, es2, attrs2 = type_of eff_defs e_env h_env t_env exp2 in
-      if ty1 <> TInt || ty2 <> TInt then
-        typing_error ~loc "In a times exp: lhs type is %t, rhs type is %t"
-          (Print.ty ty1) (Print.ty ty2);
-      ( Times ((exp1', ty1, es1, attrs1), (exp2', ty2, es2, attrs2)),
-        TInt,
-        es1 @ es2,
-        default_attrs )
+      let exp1', attrs1 = type_of eff_defs e_env h_env t_env exp1 in
+      let exp2', attrs2 = type_of eff_defs e_env h_env t_env exp2 in
+      if attrs1.ty <> TInt || attrs2.ty <> TInt then
+        typing_error ~loc:attrs.loc
+          "In a times exp: lhs type is %t, rhs type is %t" (Print.ty attrs1.ty)
+          (Print.ty attrs2.ty);
+      ( Times ((exp1', attrs1), (exp2', attrs2)),
+        { default_attrs with ty = TInt; effs = attrs1.effs @ attrs2.effs } )
   | Plus (exp1, exp2) ->
-      let exp1', ty1, es1, attrs1 = type_of eff_defs e_env h_env t_env exp1 in
-      let exp2', ty2, es2, attrs2 = type_of eff_defs e_env h_env t_env exp2 in
-      if ty1 <> TInt || ty2 <> TInt then
-        typing_error ~loc "In a plus exp: lhs type is %t, rhs type is %t"
-          (Print.ty ty1) (Print.ty ty2);
-      ( Plus ((exp1', ty1, es1, attrs1), (exp2', ty2, es2, attrs2)),
-        TInt,
-        es1 @ es2,
-        default_attrs )
+      let exp1', attrs1 = type_of eff_defs e_env h_env t_env exp1 in
+      let exp2', attrs2 = type_of eff_defs e_env h_env t_env exp2 in
+      if attrs1.ty <> TInt || attrs2.ty <> TInt then
+        typing_error ~loc:attrs.loc
+          "In a plus exp: lhs type is %t, rhs type is %t" (Print.ty attrs1.ty)
+          (Print.ty attrs2.ty);
+      ( Plus ((exp1', attrs1), (exp2', attrs2)),
+        { default_attrs with ty = TInt; effs = attrs1.effs @ attrs2.effs } )
   | Minus (exp1, exp2) ->
-      let exp1', ty1, es1, attrs1 = type_of eff_defs e_env h_env t_env exp1 in
-      let exp2', ty2, es2, attrs2 = type_of eff_defs e_env h_env t_env exp2 in
-      if ty1 <> TInt || ty2 <> TInt then
-        typing_error ~loc "In a minus exp: lhs type is %t, rhs type is %t"
-          (Print.ty ty1) (Print.ty ty2);
-      ( Minus ((exp1', ty1, es1, attrs1), (exp2', ty2, es2, attrs2)),
-        TInt,
-        es1 @ es2,
-        default_attrs )
+      let exp1', attrs1 = type_of eff_defs e_env h_env t_env exp1 in
+      let exp2', attrs2 = type_of eff_defs e_env h_env t_env exp2 in
+      if attrs1.ty <> TInt || attrs2.ty <> TInt then
+        typing_error ~loc:attrs.loc
+          "In a minus exp: lhs type is %t, rhs type is %t" (Print.ty attrs1.ty)
+          (Print.ty attrs2.ty);
+      ( Minus ((exp1', attrs1), (exp2', attrs2)),
+        { default_attrs with ty = TInt; effs = attrs1.effs @ attrs2.effs } )
   | Equal (exp1, exp2) ->
-      let exp1', ty1, es1, attrs1 = type_of eff_defs e_env h_env t_env exp1 in
-      let exp2', ty2, es2, attrs2 = type_of eff_defs e_env h_env t_env exp2 in
-      if ty1 <> TInt || ty2 <> TInt then
-        typing_error ~loc "In an equal exp: lhs type is %t, rhs type is %t"
-          (Print.ty ty1) (Print.ty ty2);
-      ( Equal ((exp1', ty1, es1, attrs1), (exp2', ty2, es2, attrs2)),
-        TBool,
-        es1 @ es2,
-        default_attrs )
+      let exp1', attrs1 = type_of eff_defs e_env h_env t_env exp1 in
+      let exp2', attrs2 = type_of eff_defs e_env h_env t_env exp2 in
+      if attrs1.ty <> TInt || attrs2.ty <> TInt then
+        typing_error ~loc:attrs.loc
+          "In an equal exp: lhs type is %t, rhs type is %t" (Print.ty attrs1.ty)
+          (Print.ty attrs2.ty);
+      ( Equal ((exp1', attrs1), (exp2', attrs2)),
+        { default_attrs with ty = TBool; effs = attrs1.effs @ attrs2.effs } )
   | Less (exp1, exp2) ->
-      let exp1', ty1, es1, attrs1 = type_of eff_defs e_env h_env t_env exp1 in
-      let exp2', ty2, es2, attrs2 = type_of eff_defs e_env h_env t_env exp2 in
-      if ty1 <> TInt || ty2 <> TInt then
-        typing_error ~loc "In an equal exp: lhs type is %t, rhs type is %t"
-          (Print.ty ty1) (Print.ty ty2);
-      ( Less ((exp1', ty1, es1, attrs1), (exp2', ty2, es2, attrs2)),
-        TBool,
-        es1 @ es2,
-        default_attrs )
+      let exp1', attrs1 = type_of eff_defs e_env h_env t_env exp1 in
+      let exp2', attrs2 = type_of eff_defs e_env h_env t_env exp2 in
+      if attrs1.ty <> TInt || attrs2.ty <> TInt then
+        typing_error ~loc:attrs.loc
+          "In an equal exp: lhs type is %t, rhs type is %t" (Print.ty attrs1.ty)
+          (Print.ty attrs2.ty);
+      ( Less ((exp1', attrs1), (exp2', attrs2)),
+        { default_attrs with ty = TBool; effs = attrs1.effs @ attrs2.effs } )
   | If (exp1, exp2, exp3) ->
-      let exp1', ty1, es1, attrs1 = type_of eff_defs e_env h_env t_env exp1 in
-      let exp2', ty2, es2, attrs2 = type_of eff_defs e_env h_env t_env exp2 in
-      let exp3', ty3, es3, attrs3 = type_of eff_defs e_env h_env t_env exp3 in
-      if ty1 <> TBool then
-        typing_error ~loc "In an if exp: condition type is %t" (Print.ty ty1);
-      if ty2 <> ty3 then
-        typing_error ~loc "%t and %t are not the same type" (Print.ty ty2)
-          (Print.ty ty3);
-      ( If
-          ( (exp1', ty1, es1, attrs1),
-            (exp2', ty2, es2, attrs2),
-            (exp3', ty3, es3, attrs3) ),
-        ty2,
-        es1 @ es2 @ es3,
-        default_attrs )
-  | FullFun (kind, x, es1, hs, tm_args, ty, es2, exp_body) ->
+      let exp1', attrs1 = type_of eff_defs e_env h_env t_env exp1 in
+      let exp2', attrs2 = type_of eff_defs e_env h_env t_env exp2 in
+      let exp3', attrs3 = type_of eff_defs e_env h_env t_env exp3 in
+      if attrs1.ty <> TBool then
+        typing_error ~loc:attrs.loc "In an if exp: condition type is %t"
+          (Print.ty attrs1.ty);
+      if attrs2.ty <> attrs3.ty then
+        typing_error ~loc:attrs.loc "%t and %t are not the same type"
+          (Print.ty attrs2.ty) (Print.ty attrs3.ty);
+      ( If ((exp1', attrs1), (exp2', attrs2), (exp3', attrs3)),
+        {
+          default_attrs with
+          ty = attrs2.ty;
+          effs = attrs1.effs @ attrs2.effs @ attrs2.effs;
+        } )
+  | FullFun (x, es1, hs, tm_args, ty, es2, exp_body) ->
       let x =
-        if x = None then (
+        if x = "" then (
           fn_index := !fn_index + 1;
           "fn" ^ string_of_int !fn_index)
-        else Option.get x
+        else x
       in
       let ty_args = List.map snd tm_args in
       let new_e_env = es1 @ e_env in
@@ -151,138 +150,156 @@ let rec type_of (eff_defs : f_ENV) (e_env : e_ENV) (h_env : h_ENV)
       List.iter (fname_ok eff_defs) (snd (List.split hs));
       ty_ok eff_defs new_e_env new_h_env ty;
       List.iter (eff_ok new_e_env new_h_env) es2;
-      let exp_body', ty_e, es_e, attrs_e =
+      let exp_body', attrs_body =
         type_of eff_defs new_e_env new_h_env
           (((x, TAbs (es1, hs, ty_args, ty, es2)) :: tm_args) @ t_env)
           exp_body
       in
-      if kind = Lambda && ty_e <> ty then
-        typing_error ~loc
+      if attrs.handlerKind = None && attrs_body.ty <> ty then
+        typing_error ~loc:attrs.loc
           "The function body has the wrong type, expected %t but got %t"
-          (Print.ty ty) (Print.ty ty_e);
-      if kind = Lambda && List.exists (fun e -> not (List.mem e es2)) es_e then
-        typing_error ~loc
+          (Print.ty ty) (Print.ty attrs_body.ty);
+      if
+        attrs.handlerKind = None
+        && List.exists (fun e -> not (List.mem e es2)) attrs_body.effs
+      then
+        typing_error ~loc:attrs.loc
           "The function body has more effects than allowed by the function type";
-      let hs' =
-        List.map
-          (fun (name, fname) -> (name, fname, List.assoc fname eff_defs))
-          hs
-      in
-      ( FullFun
-          (kind, x, es1, hs', tm_args, ty, es2, (exp_body', ty_e, es_e, attrs_e)),
-        TAbs (es1, hs, ty_args, ty, es2),
-        [],
-        default_attrs )
-  | Assign (v_exp, exp) -> (
-      match v_exp.data with
+      ( FullFun (x, es1, hs, tm_args, ty, es2, (exp_body', attrs_body)),
+        {
+          default_attrs with
+          ty = TAbs (es1, hs, ty_args, ty, es2);
+          effs = [];
+          hvarParams =
+            List.map
+              (fun (name, fname) -> (name, fname, List.assoc fname eff_defs))
+              hs;
+        } )
+  | Assign (exp_v, exp) -> (
+      match fst exp_v with
       | Var x -> (
-          let v_exp', ty_v, es_v, attrs_v =
-            type_of eff_defs e_env h_env t_env v_exp
-          in
-          let exp', ty_e, es_e, attrs_e =
-            type_of eff_defs e_env h_env t_env exp
-          in
+          let exp_v', attrs_v = type_of eff_defs e_env h_env t_env exp_v in
+          let exp', attrs_e = type_of eff_defs e_env h_env t_env exp in
           try
             match List.assoc x t_env with
             | TMut ty_x ->
-                if ty_x <> ty_e then
-                  typing_error ~loc "This expression can't be type checked";
-                ( Assign
-                    ((v_exp', ty_v, es_v, attrs_v), (exp', ty_e, es_e, attrs_e)),
-                  ty_e,
-                  es_e,
-                  default_attrs )
-            | _ -> typing_error ~loc "LHS of assignment must be of mutable type"
-          with Not_found -> typing_error ~loc "unknown variable %s" x)
-      | _ -> typing_error ~loc "LHS of assignment must be a variable")
+                if ty_x <> attrs_e.ty then
+                  typing_error ~loc:attrs.loc
+                    "This expression can't be type checked";
+                ( Assign ((exp_v', attrs_v), (exp', attrs_e)),
+                  { default_attrs with ty = attrs_e.ty; effs = attrs_e.effs } )
+            | _ ->
+                typing_error ~loc:attrs.loc
+                  "LHS of assignment must be of mutable type"
+          with Not_found ->
+            typing_error ~loc:attrs.loc "unknown variable %s" x)
+      | _ -> typing_error ~loc:attrs.loc "LHS of assignment must be a variable")
   | Deref v_exp -> (
-      match v_exp.data with
+      match fst v_exp with
       | Var x -> (
           try
             match List.assoc x t_env with
             | TMut ty_x ->
-                let v_exp', ty_v, es_v, attrs_v =
+                let v_exp', attrs_v =
                   type_of eff_defs e_env h_env t_env v_exp
                 in
-                (Deref (v_exp', ty_v, es_v, attrs_v), ty_x, [], default_attrs)
-            | _ -> typing_error ~loc "Operand to deref must be of mutable type"
-          with Not_found -> typing_error ~loc "unknown variable %s" x)
-      | _ -> typing_error ~loc "Operand to deref must be a variable")
+                ( Deref (v_exp', attrs_v),
+                  { default_attrs with ty = ty_x; effs = [] } )
+            | _ ->
+                typing_error ~loc:attrs.loc
+                  "Operand to deref must be of mutable type"
+          with Not_found ->
+            typing_error ~loc:attrs.loc "unknown variable %s" x)
+      | _ -> typing_error ~loc:attrs.loc "Operand to deref must be a variable")
   | Let (x, exp1, exp2) ->
-      let exp1', ty1, es1, attrs1 = type_of eff_defs e_env h_env t_env exp1 in
-      let exp2', ty2, es2, attrs2 =
-        type_of eff_defs e_env h_env ((x, ty1) :: t_env) exp2
+      let exp1', attrs1 = type_of eff_defs e_env h_env t_env exp1 in
+      let exp2', attrs2 =
+        type_of eff_defs e_env h_env ((x, attrs1.ty) :: t_env) exp2
       in
-      ( Let (x, ty1, (exp1', ty1, es1, attrs1), (exp2', ty2, es2, attrs2)),
-        ty2,
-        es1 @ es2,
-        default_attrs )
+      ( Let (x, (exp1', attrs1), (exp2', attrs2)),
+        { default_attrs with ty = attrs2.ty; effs = attrs1.effs @ attrs2.effs }
+      )
   | Decl (x, exp1, exp2) ->
-      let exp1', ty1, es1, attrs1 = type_of eff_defs e_env h_env t_env exp1 in
-      let exp2', ty2, es2, attrs2 =
-        type_of eff_defs e_env h_env ((x, TMut ty1) :: t_env) exp2
+      let exp1', attrs1 = type_of eff_defs e_env h_env t_env exp1 in
+      let exp2', attrs2 =
+        type_of eff_defs e_env h_env ((x, TMut attrs1.ty) :: t_env) exp2
       in
-      ( Decl (x, ty1, (exp1', ty1, es1, attrs1), (exp2', ty2, es2, attrs2)),
-        ty2,
-        es1 @ es2,
-        default_attrs )
+      ( Decl (x, (exp1', attrs1), (exp2', attrs2)),
+        { default_attrs with ty = attrs1.ty; effs = attrs1.effs @ attrs2.effs }
+      )
   | Handle (x, fname, exp_catch, exp_handle) -> (
-      let exp_catch', ty_catch, es_catch, attrs_catch =
+      let exp_catch', attrs_catch =
         type_of eff_defs e_env h_env t_env exp_catch
       in
-      let exp_handle', ty_handle, es_handle, attrs_handle =
+      let exp_handle', attrs_handle =
         type_of eff_defs e_env ((x, fname) :: h_env) t_env exp_handle
       in
       try
         match List.assoc fname eff_defs with
         | TAbs (es1, hs, ts, t, es2) as ty_fname ->
             (* TODO: check that the answer type matches *)
-            (* if ty_handle <> t then typing_error ~loc "The type of handle expression and catch body must be the same."; *)
-            if ty_catch <> ty_fname then
-              typing_error ~loc
+            if attrs_catch.ty <> ty_fname then
+              typing_error ~loc:attrs.loc
                 "The handler's type must match the type of effect definition, \
                  expected %t but got %t"
-                (Print.ty ty_fname) (Print.ty ty_catch);
+                (Print.ty ty_fname) (Print.ty attrs_catch.ty);
             ( Handle
                 ( x,
-                  (fname, ty_fname),
-                  (exp_catch', ty_catch, es_catch, attrs_catch),
-                  (exp_handle', ty_handle, es_handle, attrs_handle) ),
-              ty_handle,
-              List.filter (fun e -> e <> HVar x) es_handle,
-              default_attrs )
-        | _ -> typing_error ~loc "effect definition must be of type TAbs"
-      with Not_found -> typing_error ~loc "unknown effect name %s" fname)
+                  fname,
+                  (exp_catch', attrs_catch),
+                  (exp_handle', attrs_handle) ),
+              {
+                default_attrs with
+                ty = attrs_handle.ty;
+                effs = List.filter (fun e -> e <> HVar x) attrs_handle.effs;
+                bindHvar = Some (x, fname, ty_fname);
+              } )
+        | _ ->
+            typing_error ~loc:attrs.loc "effect definition must be of type TAbs"
+      with Not_found ->
+        typing_error ~loc:attrs.loc "unknown effect name %s" fname)
   | FullApply (exp1, es, hs, exps) -> (
-      let exp1', ty1, es1, attrs1 = type_of eff_defs e_env h_env t_env exp1 in
-      match ty1 with
+      let exp1', attrs1 = type_of eff_defs e_env h_env t_env exp1 in
+      match attrs1.ty with
       | TAbs (es1', hs', ts', t', es2') ->
           List.iter (eff_ok e_env h_env) es;
-          List.iter (hd_ok loc h_env) hs;
+          List.iter (hd_ok h_env) hs;
           let exps_list = List.map (type_of eff_defs e_env h_env t_env) exps in
           let exps', tys, ess =
             List.fold_right
-              (fun (a, b, c, _) (s1, s2, s3) -> (a :: s1, b :: s2, c :: s3))
+              (fun (exp, attrs) (s1, s2, s3) ->
+                (exp :: s1, attrs.ty :: s2, attrs.effs :: s3))
               exps_list ([], [], [])
           in
           if List.length es <> List.length es1' then
-            typing_error ~loc "Wrong number of effect arguments.";
+            typing_error ~loc:attrs.loc "Wrong number of effect arguments.";
           let actual_fnames = List.map (fun h -> List.assoc h h_env) hs in
           let expected_fnames = snd (List.split hs') in
           if actual_fnames <> expected_fnames then
-            typing_error ~loc "Wrong handlers types, expected %s, got %s"
+            typing_error ~loc:attrs.loc
+              "Wrong handlers types, expected %s, got %s"
               (String.concat ", " expected_fnames)
               (String.concat ", " actual_fnames);
           if tys <> ts' then
-            typing_error ~loc
+            typing_error ~loc:attrs.loc
               "Wrong types of term arguments, expected %t, got %t"
               (Print.tys ts') (Print.tys tys);
-          let hs'' = List.map (hvar_to_rich_hvar eff_defs h_env) hs in
-          ( FullApply ((exp1', ty1, es1, attrs1), es, hs'', exps_list),
-            t',
-            es2' @ es1 @ List.concat ess,
-            default_attrs )
-      | _ -> typing_error ~loc "The lhs of application must be of type TAbs")
+          ( FullApply ((exp1', attrs1), es, hs, exps_list),
+            {
+              default_attrs with
+              ty = t';
+              effs = es2' @ attrs1.effs @ List.concat ess;
+              hvarArgs = List.map (hvar_to_rich_hvar eff_defs h_env) hs;
+            } )
+      | TBuiltin ->
+          let exps_list = List.map (type_of eff_defs e_env h_env t_env) exps in
+          ( FullApply ((exp1', attrs1), es, hs, exps_list),
+            { default_attrs with ty = TBuiltin } )
+      | _ ->
+          typing_error ~loc:attrs.loc
+            "The lhs of application \"%t\" of type \"%t\" must be of type TAbs"
+            (Print.expr (fst exp1))
+            (Print.ty attrs1.ty))
   | Raise (hvar, es, hs, exps) -> (
       List.assoc_opt hvar h_env |> function
       | Some fname -> (
@@ -290,41 +307,49 @@ let rec type_of (eff_defs : f_ENV) (e_env : e_ENV) (h_env : h_ENV)
             match List.assoc fname eff_defs with
             | TAbs (es1', hs', ts', t', es2') ->
                 List.iter (eff_ok e_env h_env) es;
-                List.iter (hd_ok loc h_env) hs;
+                List.iter (hd_ok h_env) hs;
                 let exps_list =
                   List.map (type_of eff_defs e_env h_env t_env) exps
                 in
                 let exps', tys, ess =
                   List.fold_right
-                    (fun (a, b, c, _) (s1, s2, s3) ->
-                      (a :: s1, b :: s2, c :: s3))
+                    (fun (exp, attrs) (s1, s2, s3) ->
+                      (exp :: s1, attrs.ty :: s2, attrs.effs :: s3))
                     exps_list ([], [], [])
                 in
                 if List.length es <> List.length es1' then
-                  typing_error ~loc "Wrong number of effect arguments.";
+                  typing_error ~loc:attrs.loc
+                    "Wrong number of effect arguments.";
                 if
                   List.map (fun h -> List.assoc h h_env) hs
                   <> snd (List.split hs')
-                then typing_error ~loc "Wrong types of handler arguments.";
+                then
+                  typing_error ~loc:attrs.loc
+                    "Wrong types of handler arguments.";
                 if tys <> ts' then
-                  typing_error ~loc "Wrong types of term arguments.";
-                let hvar' = hvar_to_rich_hvar eff_defs h_env hvar in
-                let hs'' = List.map (hvar_to_rich_hvar eff_defs h_env) hs in
-                ( R.Raise (hvar', es, hs'', exps_list),
-                  t',
-                  (HVar hvar :: es2') @ List.concat ess,
-                  default_attrs )
-            | _ -> typing_error ~loc "effect definition must be of type TAbs"
-          with Not_found -> typing_error ~loc "unknown effect name %s" fname)
-      | None -> typing_error ~loc "unknown handler %s" hvar)
+                  typing_error ~loc:attrs.loc "Wrong types of term arguments.";
+                ( Raise (hvar, es, hs, exps_list),
+                  {
+                    default_attrs with
+                    ty = t';
+                    effs = (HVar hvar :: es2') @ List.concat ess;
+                    hvarArgs = List.map (hvar_to_rich_hvar eff_defs h_env) hs;
+                    lhsHvar = Some (hvar_to_rich_hvar eff_defs h_env hvar);
+                  } )
+            | _ ->
+                typing_error ~loc:attrs.loc
+                  "effect definition must be of type TAbs"
+          with Not_found ->
+            typing_error ~loc:attrs.loc "unknown effect name %s" fname)
+      | None -> typing_error ~loc:attrs.loc "unknown handler %s" hvar)
   | Resume e ->
       (* TODO: check e's type corresponds to handler's return type *)
-      let e', ty_e, es_e, attrs_e = type_of eff_defs e_env h_env t_env e in
-      (Resume (e', ty_e, es_e, attrs_e), ty_e, es_e, default_attrs)
+      let e', attrs_e = type_of eff_defs e_env h_env t_env e in
+      ( Resume (e', attrs_e),
+        { default_attrs with ty = attrs_e.ty; effs = attrs_e.effs } )
   | Seq (exp1, exp2) ->
-      let exp1', ty1, es1, attrs1 = type_of eff_defs e_env h_env t_env exp1 in
-      let exp2', ty2, es2, attrs2 = type_of eff_defs e_env h_env t_env exp2 in
-      ( Seq ((exp1', ty1, es1, attrs1), (exp2', ty2, es2, attrs2)),
-        ty2,
-        es1 @ es2,
-        default_attrs )
+      let exp1', attrs1 = type_of eff_defs e_env h_env t_env exp1 in
+      let exp2', attrs2 = type_of eff_defs e_env h_env t_env exp2 in
+      ( Seq ((exp1', attrs1), (exp2', attrs2)),
+        { default_attrs with ty = attrs2.ty; effs = attrs1.effs @ attrs2.effs }
+      )

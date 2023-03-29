@@ -13,12 +13,6 @@ let h_ENV h_env ppf =
 let expr e ppf =
   print_parens ppf "%s" (Sexp.to_string_hum (Syntax.sexp_of_expr' e))
 
-let rexpr' e ppf =
-  print_parens ppf "%s" (Sexp.to_string_hum (Syntax.R.sexp_of_expr' e))
-
-let rexpr e ppf =
-  print_parens ppf "%s" (Sexp.to_string_hum (Syntax.R.sexp_of_expr e))
-
 let ty t ppf = print_parens ppf "%s" (Sexp.to_string_hum (Syntax.sexp_of_ty t))
 
 let static_link sl ppf =
@@ -30,8 +24,8 @@ let fun_info es ppf =
 let tys ts ppf =
   print_parens ppf "%s" (Sexp.to_string_hum (Syntax.sexp_of_tys ts))
 
-let lambda_kind k ppf =
-  print_parens ppf "%s" (Sexp.to_string_hum (Syntax.sexp_of_lambda_kind k))
+let handlerKind k ppf =
+  print_parens ppf "%s" (Sexp.to_string_hum (Syntax.sexp_of_handlerKind k))
 
 let attrs a ppf =
-  print_parens ppf "%s" (Sexp.to_string_hum (Syntax.R.sexp_of_attrs a))
+  print_parens ppf "%s" (Sexp.to_string_hum (Syntax.sexp_of_attrs a))

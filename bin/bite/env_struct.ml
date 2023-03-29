@@ -10,11 +10,11 @@ type fun_info = {
 }
 [@@deriving sexp]
 
-let rec get_fun_info ((exp, ty, effs, attrs) : R.expr)
-    (pfun_name : string option) : fun_info list * name list =
+let rec get_fun_info ((exp, attrs) : expr) (pfun_name : string option) :
+    fun_info list * name list =
   let ( @++@ ) (l1, l2) (l1', l2') = (l1 @ l1', l2 @ l2') in
   match exp with
-  | Var (_, x) -> ([], [])
+  | Var x -> ([], [])
   | Times (e1, e2) -> get_fun_info e1 pfun_name @++@ get_fun_info e2 pfun_name
   | Plus (e1, e2) -> get_fun_info e1 pfun_name @++@ get_fun_info e2 pfun_name
   | Minus (e1, e2) -> get_fun_info e1 pfun_name @++@ get_fun_info e2 pfun_name
@@ -25,22 +25,19 @@ let rec get_fun_info ((exp, ty, effs, attrs) : R.expr)
   | If (e1, e2, e3) ->
       get_fun_info e1 pfun_name @++@ get_fun_info e2 pfun_name
       @++@ get_fun_info e3 pfun_name
-  | Let (x, ty, e1, e2) ->
-      get_fun_info e1 pfun_name @++@ get_fun_info e2 pfun_name
-  | Decl (x, ty, e1, e2) ->
-      get_fun_info e1 pfun_name @++@ get_fun_info e2 pfun_name
+  | Let (x, e1, e2) -> get_fun_info e1 pfun_name @++@ get_fun_info e2 pfun_name
+  | Decl (x, e1, e2) -> get_fun_info e1 pfun_name @++@ get_fun_info e2 pfun_name
   | Handle (x, fname, exp_catch, exp_handle) ->
-      let[@warning "-partial-match"] ( R.FullFun (_, fun_name, _, _, _, _, _, _),
-                                       _,
-                                       _,
-                                       _ ) =
+      let[@warning "-partial-match"] FullFun (fun_name, _, _, _, _, _, _), _ =
         exp_catch
       in
       ([], [ fun_name ])
       @++@ get_fun_info exp_catch pfun_name
       @++@ get_fun_info exp_handle pfun_name
-  | FullFun (_, fun_name, es1, hs, tm_args, ty, es2, exp_body) ->
-      let hd_args = List.map (fun (name, _, ty) -> (name, ty)) hs in
+  | FullFun (fun_name, es1, hs, tm_args, ty, es2, exp_body) ->
+      let hd_args =
+        List.map (fun (name, _, ty) -> (name, ty)) attrs.hvarParams
+      in
       let fun_infos, handlers = get_fun_info exp_body (Some fun_name) in
       ( {
           fun_name;

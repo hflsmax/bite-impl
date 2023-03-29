@@ -1,8 +1,8 @@
-open Syntax.R
+open Syntax
 
 let gather_exp include_all_lexical_scope predicate exp =
-  let rec gather_exp' ((exp, _, _, _) as rexp) =
-    (if predicate rexp then [ exp ] else [])
+  let rec gather_exp' (exp, attrs) =
+    (if predicate (exp, attrs) then [ exp ] else [])
     @
     match exp with
     | Times (e1, e2) -> gather_exp' e1 @ gather_exp' e2
@@ -13,11 +13,11 @@ let gather_exp include_all_lexical_scope predicate exp =
     | Assign (e1, e2) -> gather_exp' e1 @ gather_exp' e2
     | Deref e -> gather_exp' e
     | If (e1, e2, e3) -> gather_exp' e1 @ gather_exp' e2 @ gather_exp' e3
-    | Let (x, ty, e1, e2) -> gather_exp' e1 @ gather_exp' e2
-    | Decl (x, ty, e1, e2) -> gather_exp' e1 @ gather_exp' e2
+    | Let (x, e1, e2) -> gather_exp' e1 @ gather_exp' e2
+    | Decl (x, e1, e2) -> gather_exp' e1 @ gather_exp' e2
     | Handle (x, h, exp_catch, exp_handle) ->
         gather_exp' exp_catch @ gather_exp' exp_handle
-    | FullFun (kind, x, es1, hs, tm_args, ty, es2, exp_body) ->
+    | FullFun (x, es1, hs, tm_args, ty, es2, exp_body) ->
         if include_all_lexical_scope then gather_exp' exp_body else []
     | FullApply (exp, es, hs, exps) ->
         gather_exp' exp @ List.concat (List.map gather_exp' exps)

@@ -1,20 +1,18 @@
 open Syntax
-open Syntax.R
 
 let spf = Printf.sprintf
 
-let full_fun_to_tabs (exp : R.expr') : ty =
+let full_fun_to_tabs (exp : expr') : ty =
   match exp with
-  | FullFun (_, x, es1, hs, tm_args, ty, es2, exp) ->
+  | FullFun (x, es1, hs, tm_args, ty, es2, exp) ->
       let tm_args_ty = List.split tm_args |> snd in
-      let hs' = List.map (fun (name, fname, _) -> (name, fname)) hs in
-      TAbs (es1, hs', tm_args_ty, ty, es2)
+      TAbs (es1, hs, tm_args_ty, ty, es2)
   | _ -> failwith "full_fun_to_tabs: can only be called on FullFun"
 
 (* Gather all local variables introduced within the scope of a function (excluding arguments)
    This is to create a list of local variables that represent the stacks.
 *)
-let rec gather_locals ((exp, _, _, attrs) : R.expr) : locals =
+let rec gather_locals ((exp, attrs) : expr) : locals =
   match exp with
   | Times (e1, e2)
   | Plus (e1, e2)
@@ -24,12 +22,13 @@ let rec gather_locals ((exp, _, _, attrs) : R.expr) : locals =
       gather_locals e1 @ gather_locals e2
   | Assign (x, e) -> gather_locals e
   | If (e1, e2, e3) -> gather_locals e1 @ gather_locals e2 @ gather_locals e3
-  | Let (x, ty, e1, e2) -> ((x, ty) :: gather_locals e1) @ gather_locals e2
-  | Decl (x, ty, e1, e2) ->
-      ((x, TMut ty) :: gather_locals e1) @ gather_locals e2
-  | Handle (x, (_, ty), catch_exp, handle_exp) ->
-      ((x, ty) :: gather_locals catch_exp) @ gather_locals handle_exp
-  | FullFun (_, x, _, _, _, _, _, _) -> []
+  | Let (x, e1, e2) -> ((x, (snd e1).ty) :: gather_locals e1) @ gather_locals e2
+  | Decl (x, e1, e2) ->
+      ((x, (snd e1).ty) :: gather_locals e1) @ gather_locals e2
+  | Handle (x, _, catch_exp, handle_exp) ->
+      ((x, (snd catch_exp).ty) :: gather_locals catch_exp)
+      @ gather_locals handle_exp
+  | FullFun (x, _, _, _, _, _, _) -> []
   | FullApply (e1, _, _, e2) ->
       gather_locals e1
       @ List.fold_left (fun acc exp_iter -> acc @ gather_locals exp_iter) [] e2
@@ -40,51 +39,51 @@ let rec gather_locals ((exp, _, _, attrs) : R.expr) : locals =
   | Var _ | Int _ | Bool _ | Deref _ -> []
 
 (* Gather all free variables in an expression. It's computed by finding all used variables that are not bound *)
-let rec gather_free_vars ((exp, ty, _, attrs) : R.expr) : locals =
-  let exclude name locals =
-    List.filter (fun (name', _) -> name <> name') locals
-  in
-  let exclude_all names locals =
-    List.filter (fun (name', _) -> not (List.mem name' names)) locals
-  in
-  match exp with
-  | Times (e1, e2)
-  | Plus (e1, e2)
-  | Minus (e1, e2)
-  | Equal (e1, e2)
-  | Less (e1, e2) ->
-      gather_free_vars e1 @ gather_free_vars e2
-  | Assign (x, e) ->
-      let[@warning "-partial-match"] Var (_, name), ty, _, _ = x in
-      (name, ty) :: gather_free_vars e
-  | If (e1, e2, e3) ->
-      gather_free_vars e1 @ gather_free_vars e2 @ gather_free_vars e3
-  | Let (x, ty, e1, e2) -> gather_free_vars e1 @ exclude x (gather_free_vars e2)
-  | Decl (x, ty, e1, e2) ->
-      gather_free_vars e1 @ exclude x (gather_free_vars e2)
-  | Handle (x, (_, ty), catch_exp, handle_exp) ->
-      gather_free_vars catch_exp @ exclude x (gather_free_vars handle_exp)
-  | FullFun (_, x, _, hparams, tparams, _, _, body) ->
-      let hparams' = List.map (fun (name, _, _) -> name) hparams in
-      let tparams' = List.map (fun (name, _) -> name) tparams in
-      exclude_all ((x :: hparams') @ tparams') (gather_free_vars body)
-  | FullApply (lhs, _, hargs, targs) ->
-      let hvars = List.map (fun (name, _, ty) -> (name, ty)) hargs in
-      gather_free_vars lhs @ hvars
-      @ List.fold_left
-          (fun acc exp_iter -> acc @ gather_free_vars exp_iter)
-          [] targs
-  | Raise ((name, _, ty), _, hargs, targs) ->
-      let hvars = List.map (fun (name, _, ty) -> (name, ty)) hargs in
-      ((name, ty) :: hvars)
-      @ List.fold_left
-          (fun acc exp_iter -> acc @ gather_free_vars exp_iter)
-          [] targs
-  | Resume e -> gather_free_vars e
-  | Seq (e1, e2) -> gather_free_vars e1 @ gather_free_vars e2
-  | Deref x -> gather_free_vars x
-  | Var (_, x) -> [ (x, ty) ]
-  | Int _ | Bool _ -> [] |> List.sort_uniq compare
+(* let rec gather_free_vars ((exp, ty, _, attrs) : expr) : locals =
+   let exclude name locals =
+     List.filter (fun (name', _) -> name <> name') locals
+   in
+   let exclude_all names locals =
+     List.filter (fun (name', _) -> not (List.mem name' names)) locals
+   in
+   match exp with
+   | Times (e1, e2)
+   | Plus (e1, e2)
+   | Minus (e1, e2)
+   | Equal (e1, e2)
+   | Less (e1, e2) ->
+       gather_free_vars e1 @ gather_free_vars e2
+   | Assign (x, e) ->
+       let[@warning "-partial-match"] Var (_, name), ty, _, _ = x in
+       (name, ty) :: gather_free_vars e
+   | If (e1, e2, e3) ->
+       gather_free_vars e1 @ gather_free_vars e2 @ gather_free_vars e3
+   | Let (x, ty, e1, e2) -> gather_free_vars e1 @ exclude x (gather_free_vars e2)
+   | Decl (x, ty, e1, e2) ->
+       gather_free_vars e1 @ exclude x (gather_free_vars e2)
+   | Handle (x, (_, ty), catch_exp, handle_exp) ->
+       gather_free_vars catch_exp @ exclude x (gather_free_vars handle_exp)
+   | FullFun (_, x, _, hparams, tparams, _, _, body) ->
+       let hparams' = List.map (fun (name, _, _) -> name) hparams in
+       let tparams' = List.map (fun (name, _) -> name) tparams in
+       exclude_all ((x :: hparams') @ tparams') (gather_free_vars body)
+   | FullApply (lhs, _, hargs, targs) ->
+       let hvars = List.map (fun (name, _, ty) -> (name, ty)) hargs in
+       gather_free_vars lhs @ hvars
+       @ List.fold_left
+           (fun acc exp_iter -> acc @ gather_free_vars exp_iter)
+           [] targs
+   | Raise ((name, _, ty), _, hargs, targs) ->
+       let hvars = List.map (fun (name, _, ty) -> (name, ty)) hargs in
+       ((name, ty) :: hvars)
+       @ List.fold_left
+           (fun acc exp_iter -> acc @ gather_free_vars exp_iter)
+           [] targs
+   | Resume e -> gather_free_vars e
+   | Seq (e1, e2) -> gather_free_vars e1 @ gather_free_vars e2
+   | Deref x -> gather_free_vars x
+   | Var (_, x) -> [ (x, ty) ]
+   | Int _ | Bool _ -> [] |> List.sort_uniq compare *)
 
 let rec ty_to_string ty : string =
   match ty with
@@ -108,11 +107,6 @@ let tabs_to_string ty is_handler : string =
       Printf.sprintf "%s(*)(%s)" (ty_to_string ty)
         (String.concat ", " (ty_args @ handler_ty_args))
   | _ -> failwith "tabs_to_string: can only be called on TAbs"
-
-let get_fullfun_name (exp : expr') : string =
-  match exp with
-  | FullFun (_, x, _, _, _, _, _, _) -> x
-  | _ -> failwith "get_fullfun_name: can only be called on FullFun"
 
 let extra_defs arch =
   Sjlj.sjlj_def arch
@@ -191,6 +185,8 @@ int Print(int x) {
 |}
 
 let fst3 (x, _, _) = x
+let snd3 (_, x, _) = x
+let trd3 (_, _, x) = x
 
 let cleanup s =
   let rec remove_semisemi (s : string) : string =

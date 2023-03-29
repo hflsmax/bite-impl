@@ -1,17 +1,15 @@
+open Sexplib
+
 type location =
   | Location of Lexing.position * Lexing.position  (** delimited location *)
   | Nowhere  (** no location *)
 
-type 'a located = { data : 'a; loc : location }
-
-let sexp_of_located sexp_of_a { data; loc } = sexp_of_a data
-let located_of_sexp a_of_sexp sexp = { data = a_of_sexp sexp; loc = Nowhere }
+let sexp_of_location sexp_of_a = Sexp.Atom "Nowhere"
+let location_of_sexp a_of_sexp = Nowhere
 let make_location loc1 loc2 = Location (loc1, loc2)
 
 let location_of_lex lex =
   Location (Lexing.lexeme_start_p lex, Lexing.lexeme_end_p lex)
-
-let locate ?(loc = Nowhere) x = { data = x; loc }
 
 exception Error of (location * string * string)
 
@@ -62,6 +60,11 @@ let print_message ?(loc = Nowhere) msg_type =
       Format.kfprintf (fun ppf -> Format.fprintf ppf "@.") Format.err_formatter
 
 let print_error (loc, err_type, msg) = print_message ~loc err_type "%s" msg
+
+let print_info msg =
+  Format.kfprintf
+    (fun ppf -> Format.pp_print_flush ppf ())
+    Format.std_formatter msg
 
 let error ?(kind = "Error") ?(loc = Nowhere) =
   let k _ =

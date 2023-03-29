@@ -38,9 +38,9 @@
 %type <Syntax.command> toplevel
 
 // %nonassoc IS
-%nonassoc RESUME
 %nonassoc ELSE
 %left SEMI
+%nonassoc RESUME
 %nonassoc ASSIGN
 %nonassoc EQUAL LESS
 %left PLUS MINUS
@@ -103,12 +103,12 @@ plain_lambda:
                 LBRACE hs = hd_param* RBRACE 
                 tm_params = tm_params
                 COLON t = ty UNDERSCORE LBRACKET es2 = eff_name* RBRACKET IS e = expr END
-    { FullFun (Lambda, Some x, es1, hs, tm_params, t, es2, e) }
+    { FullFun (x, es1, hs, tm_params, t, es2, e) }
   | FN LBRACKET es1 = eff_name* RBRACKET 
                 LBRACE hs = hd_param* RBRACE 
                 tm_params = tm_params
                 COLON t = ty UNDERSCORE LBRACKET es2 = eff_name* RBRACKET IS e = expr END
-    { FullFun (Lambda, None, es1, hs, tm_params, t, es2, e) }
+    { FullFun ("", es1, hs, tm_params, t, es2, e) }
 
 lhs: mark_position(plain_lhs) { $1 }
 plain_lhs:
@@ -187,8 +187,8 @@ plain_expr:
   | DECL x = VAR ASSIGN e1 = expr IN e2 = expr END
     { Decl (x, e1, e2) }
   | HANDLE x = VAR COLON fname = VAR EQUAL e1 = lambda IN e2 = expr END
-    { let [@warning "-partial-match"] {data=(FullFun (_, name, es1, hs, tm_params, t, es2, exp_body)); loc=loc} = e1 in
-      Handle (x, fname, locate ~loc:loc (FullFun (GeneralHandler, name, es1, hs, tm_params, t, es2, exp_body)), e2) }
+    { let [@warning "-partial-match"] (FullFun _, _) = e1 in
+      Handle (x, fname, e1, e2) }
   | e1 = expr SEMI e2 = expr
     { Seq (e1, e2) }
 

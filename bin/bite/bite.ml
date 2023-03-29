@@ -61,12 +61,11 @@ let wrap_syntax_errors parser lex =
   | _ -> syntax_error ~loc:(location_of_lex lex) "syntax error"
 
 let compile eff_defs = function
-  | Syntax.Expr ({ data = exp'; _ } as exp) ->
+  | Syntax.Expr ((exp', attrs) as exp) ->
       (* check the type of [exp], compile it, and run it. *)
-      let ((exp', _, _, _) as exp) = Type_check.type_of eff_defs [] [] [] exp in
-      let ((exp', _, _, _) as exp) = Passes.wrap_in_main exp in
-      let ((exp', _, _, _) as exp) = Passes.enrich_type eff_defs exp in
-      let ((exp', _, _, _) as exp) = Passes.transform exp in
+      let ((exp', _) as exp) = Type_check.type_of eff_defs [] [] [] exp in
+      let ((exp', _) as exp) = Passes.wrap_in_main exp in
+      let ((exp', _) as exp) = Passes.transform eff_defs exp in
       let fun_infos, _ = Env_struct.get_fun_info exp None in
       let env_structs_string =
         Common.extra_defs Config.X64
@@ -74,7 +73,7 @@ let compile eff_defs = function
       in
       let code = Common.cleanup (Compile.compile exp) in
       ( eff_defs,
-        ( Format.asprintf "%t@." (Print.rexpr' exp'),
+        ( Format.asprintf "%t@." (Print.expr exp'),
           Printf.sprintf "%s" (String.concat "\n" env_structs_string) ^ code )
       )
   | Syntax.Decl_eff (x, ty) ->

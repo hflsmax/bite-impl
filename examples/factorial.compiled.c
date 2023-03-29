@@ -116,5 +116,5 @@ int main() {
 
   locals.factorial_fptr = (void *)factorialRec;
   locals.factorial_env = &locals;
-  return Print(factorialRec(locals.factorial_env, 34));
+  return Print(factorialRec(locals.factorial_env, 33));
 }

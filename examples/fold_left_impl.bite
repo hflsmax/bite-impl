@@ -18,7 +18,7 @@ let foldLeft =
     fun foldLeftRec [] {} (op : ∀[].∀{}.(int, int) -> int_[], acc : int) : int_[] is
         dcl next := 0 in
         dcl toBreak := false in
-            handle exc : NoSuchElement = fn [] {} () : int_[] is toBreak := true end in
+            handle exc : NoSuchElement = fn [] {} () : int_[] is toBreak := true; 0 end in
                 next := iterNext {exc} ()
             end;
             if (!toBreak) then

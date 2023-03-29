@@ -170,6 +170,7 @@ int fn3(void *env, jmp_buf jb) {
   locals.env = (fn3_env_t *)env;
 
   locals.env->toBreak = true;
+  jmpret = 0;
   _longjmp(jb, 1);
 }
 

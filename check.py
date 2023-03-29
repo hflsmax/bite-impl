@@ -11,6 +11,7 @@ from tabulate import tabulate
 def parse_args():
     parser = argparse.ArgumentParser(description="Run Bite compiler examples")
     parser.add_argument("example", nargs="*", help="Examples to run. If not specified, run all examples.")
+    parser.add_argument("--allow-fail", action="store_true", help="Allow subprocess commands to fail and display failed names.")
     parser.add_argument("--perf", action="store_true", help="Run examples with hyperfine and report performance results.")
     parser.add_argument("--save", action="store_true", help="Save performance and output data to file.")
     return parser.parse_args()
@@ -19,14 +20,23 @@ def parse_args():
 def get_examples():
     return [os.path.splitext(f)[0] for f in os.listdir("./examples") if f.endswith(".bite")]
 
+failed_examples = []
 
 def run_example(name):
-    print(f"Running example {name}")
-    subprocess.run(["dune", "exec", "--display", "quiet", "bite", "--", "-l", f"./examples/{name}.bite", "-o", f"./examples/{name}.compiled.c", "-oir", f"./examples/{name}.ir"], check=True)
-    subprocess.run(["clang-format", "-i", f"./examples/{name}.compiled.c"], check=True)
-    subprocess.run(["clang", "-O3", "-o", f"./examples/{name}.exe", f"./examples/{name}.compiled.c"], check=True)
-    output = subprocess.run([f"./examples/{name}.exe"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True, text=True)
-    return output.stdout
+    try:
+        print(f"Running example {name}")
+        subprocess.run(["dune", "exec", "--display", "quiet", "bite", "--", "-l", f"./examples/{name}.bite", "-o", f"./examples/{name}.compiled.c", "-oir", f"./examples/{name}.ir"], check=True)
+        subprocess.run(["clang-format", "-i", f"./examples/{name}.compiled.c"], check=True)
+        subprocess.run(["clang", "-O3", "-o", f"./examples/{name}.exe", f"./examples/{name}.compiled.c"], check=True)
+        output = subprocess.run([f"./examples/{name}.exe"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True, text=True)
+        return output.stdout.strip()
+    except subprocess.CalledProcessError as e:
+        if args.allow_fail:
+            failed_examples.append(name)
+            print(f"Failed to run example {name} with error code {e.returncode}")
+            return None
+        else:
+            raise e
 
 
 def save_data(perf_data):
@@ -45,6 +55,8 @@ def load_data():
 
 def run_perf(name):
     output = run_example(name)
+    if output is None:
+        return None
     with tempfile.NamedTemporaryFile() as tmp:
         subprocess.run(["hyperfine", "--shell=none", "-w", "3", "--export-json", tmp.name, f"./examples/{name}.exe", "--"], check=True, text=True)
         perf_json = json.load(tmp)
@@ -84,7 +96,7 @@ if args.perf:
         for name, mean, stddev, user, system, output in perf_results:
             mean_change = "NA"
             if name in loaded_data:
-                if loaded_data[name]["output"] != output:
+                if loaded_data[name]["output"].strip() != output.strip():
                     output = f"{output} (DIFFERENT)"
                 mean_change = (mean - loaded_data[name]["mean"]) / loaded_data[name]["mean"] * 100
             table.append([name, mean, stddev, user, system, mean_change, output])
@@ -110,9 +122,15 @@ else:
     print()
     loaded_data = load_data()
     for name in examples:
-        output_data = run_example(name).strip()
+        output_data = run_example(name)
+        if output_data is None:
+            continue
         print(f"{output_data}")
-        if name in loaded_data and loaded_data[name]["output"] != output:
+        if name in loaded_data and loaded_data[name]["output"].strip() != output_data:
             print(f"Output for {name} is different!")
 
-print("Check completed successfully!")
+if failed_examples:
+    print("Check failed!")
+    print(f"Failed examples: {failed_examples}")
+else:
+    print("Check completed successfully!")
