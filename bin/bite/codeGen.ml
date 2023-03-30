@@ -1,10 +1,10 @@
-(** Bite compiler. *)
+(** Bite codeGenr. *)
 
 open Syntax
 open Common
 open Util
 
-let compile_hvar hvar = "locals." ^ hvar
+let codeGen_hvar hvar = "locals." ^ hvar
 
 let can_be_returned exp =
   match exp with
@@ -16,10 +16,10 @@ let can_be_returned exp =
       false
 
 (* Compile an expression to a top-level and a list of functions *)
-let compile exp : string =
+let codeGen exp : string =
   let global_code = ref "" in
   let fs = ref [] in
-  let rec compile_rec ((exp, attrs) : expr) : string =
+  let rec codeGen_rec ((exp, attrs) : expr) : string =
     (match exp with
     | Var x ->
         if attrs.isBuiltin then x
@@ -30,41 +30,41 @@ let compile exp : string =
     | Int k -> string_of_int k
     | Bool b -> string_of_bool b
     | Times (e1, e2) ->
-        let e1' = compile_rec e1 in
-        let e2' = compile_rec e2 in
+        let e1' = codeGen_rec e1 in
+        let e2' = codeGen_rec e2 in
         spf "({%s * %s;})" e1' e2'
     | Plus (e1, e2) ->
-        let e1' = compile_rec e1 in
-        let e2' = compile_rec e2 in
+        let e1' = codeGen_rec e1 in
+        let e2' = codeGen_rec e2 in
         spf "({%s + %s;})" e1' e2'
     | Minus (e1, e2) ->
-        let e1' = compile_rec e1 in
-        let e2' = compile_rec e2 in
+        let e1' = codeGen_rec e1 in
+        let e2' = codeGen_rec e2 in
         spf "({%s - %s;})" e1' e2'
     | Equal (e1, e2) ->
-        let e1' = compile_rec e1 in
-        let e2' = compile_rec e2 in
+        let e1' = codeGen_rec e1 in
+        let e2' = codeGen_rec e2 in
         spf "({%s == %s;})" e1' e2'
     | Less (e1, e2) ->
-        let e1' = compile_rec e1 in
-        let e2' = compile_rec e2 in
+        let e1' = codeGen_rec e1 in
+        let e2' = codeGen_rec e2 in
         spf "({%s < %s;})" e1' e2'
     | Deref e ->
-        let e' = compile_rec e in
+        let e' = codeGen_rec e in
         e'
     | Assign (e1, e2) ->
-        let e1' = compile_rec e1 in
-        let e2' = compile_rec e2 in
+        let e1' = codeGen_rec e1 in
+        let e2' = codeGen_rec e2 in
         spf "%s = %s;\n" e1' e2'
     | If (e1, e2, e3) ->
-        let e1' = compile_rec e1 in
-        let e2' = compile_rec e2 in
-        let e3' = compile_rec e3 in
+        let e1' = codeGen_rec e1 in
+        let e2' = codeGen_rec e2 in
+        let e3' = codeGen_rec e3 in
         if attrs.cfDest = Continue then spf "(%s ? %s : %s)" e1' e2' e3'
         else spf "if (%s) {\n%s;\n} else {\n%s;\n}" e1' e2' e3'
     | Let (x, e1, e2) -> (
-        let e1' = compile_rec e1 in
-        let e2' = compile_rec e2 in
+        let e1' = codeGen_rec e1 in
+        let e2' = codeGen_rec e2 in
         match e1 with
         | FullFun (fun_name, _, _, _, _, _, _), _ ->
             spf "locals.%s_fptr = (void*)%s;\n" x fun_name
@@ -72,15 +72,15 @@ let compile exp : string =
             ^ e2' ^ "\n"
         | _ -> spf "locals.%s = %s;\n%s;" x e1' e2')
     | Decl (x, e1, e2) ->
-        let e1' = compile_rec e1 in
-        let e2' = compile_rec e2 in
+        let e1' = codeGen_rec e1 in
+        let e2' = codeGen_rec e2 in
         spf "locals.%s = %s;\n%s" x e1' e2'
     | Handle (handler_var_name, fname, exp_catch, exp_handle) ->
         let[@warning "-partial-match"] FullFun (fun_name, _, _, _, _, _, _), _ =
           exp_catch
         in
-        let _ = compile_rec exp_catch in
-        let exp_handle_code = compile_rec exp_handle in
+        let _ = codeGen_rec exp_catch in
+        let exp_handle_code = codeGen_rec exp_handle in
         let exp_handle_code =
           match Option.get attrs.handlerKind with
           | TailResumptive -> exp_handle_code
@@ -165,7 +165,7 @@ let compile exp : string =
                      h h h h h h)
             |> String.concat "")
         in
-        let code_body = compile_rec body_exp in
+        let code_body = codeGen_rec body_exp in
         let this_fun =
           spf "%s %s(%s)\n{\n%s\n%s\n}\n" (ty_to_string ty) x
             (String.concat ", " (code_tm_args @ code_hs))
@@ -174,11 +174,11 @@ let compile exp : string =
         fs := this_fun :: !fs;
         "CURRENTLY ONLY SUPPORT FUNCTIONS ASSIGNED TO A VARIABLE OR A HANDLER"
     | FullApply (((lhs_name, lhs_attrs) as lhs), es, hs, exps) ->
-        let lhs' = compile_rec lhs in
+        let lhs' = codeGen_rec lhs in
         let exps' =
           List.map
             (fun ((exp, attrs) as rexp) ->
-              let exp_code = compile_rec rexp in
+              let exp_code = codeGen_rec rexp in
               match attrs.ty with
               | TAbs _ -> spf "%s_fptr, %s_env" exp_code exp_code
               | _ -> exp_code)
@@ -211,13 +211,13 @@ let compile exp : string =
         let exps' =
           List.map
             (fun ((exp, attrs) as rexp) ->
-              let exp_code = compile_rec rexp in
+              let exp_code = codeGen_rec rexp in
               match attrs.ty with
               | TAbs _ -> spf "%s_fptr, %s_env" exp_code exp_code
               | _ -> exp_code)
             exps
         in
-        let handler_code = compile_hvar h in
+        let handler_code = codeGen_hvar h in
         let handler_args =
           List.map
             (fun x -> spf "locals.%s_fptr, locals.%s_env, locals.%s_jb" x x x)
@@ -240,12 +240,12 @@ let compile exp : string =
         let[@warning "-partial-match"] FullApply (resumer, es, hs, [ ret ]), _ =
           e
         in
-        let resumer' = compile_rec resumer in
-        let ret' = compile_rec ret in
+        let resumer' = codeGen_rec resumer in
+        let ret' = codeGen_rec ret in
         spf "mp_resume(%s, (void*)%s);" resumer' ret'
     | Seq (e1, e2) ->
-        let e1' = compile_rec e1 in
-        let e2' = compile_rec e2 in
+        let e1' = codeGen_rec e1 in
+        let e2' = codeGen_rec e2 in
         spf "\n%s;\n%s;" e1' e2')
     |> fun code ->
     if can_be_returned exp then
@@ -257,5 +257,5 @@ let compile exp : string =
       | Continue -> code
     else code
   in
-  let _ = compile_rec exp in
+  let _ = codeGen_rec exp in
   !global_code ^ String.concat "\n" (List.rev !fs)
