@@ -33,9 +33,10 @@ let rec ty_ok (eff_defs : f_ENV) (e_env : e_ENV) (h_env : h_ENV) ty =
       List.iter (eff_ok new_e_env new_h_env) es2
   | _ -> ()
 
-let hvar_to_rich_hvar eff_defs h_env h =
-  let fname = List.assoc h h_env in
-  (h, fname, List.assoc fname eff_defs)
+let hvar_to_rich_hvar eff_defs h_env name =
+  let fname = List.assoc name h_env in
+  let ty = List.assoc fname eff_defs in
+  { name; fname; ty }
 
 let default_attrs = Syntax.default_attrs
 
@@ -155,14 +156,11 @@ let rec type_of (eff_defs : f_ENV) (e_env : e_ENV) (h_env : h_ENV)
           (((x, TAbs (es1, hs, ty_args, ty, es2)) :: tm_args) @ t_env)
           exp_body
       in
-      if attrs.handlerKind = None && attrs_body.ty <> ty then
+      if attrs_body.ty <> ty then
         typing_error ~loc:attrs.loc
           "The function body has the wrong type, expected %t but got %t"
           (Print.ty ty) (Print.ty attrs_body.ty);
-      if
-        attrs.handlerKind = None
-        && List.exists (fun e -> not (List.mem e es2)) attrs_body.effs
-      then
+      if List.exists (fun e -> not (List.mem e es2)) attrs_body.effs then
         typing_error ~loc:attrs.loc
           "The function body has more effects than allowed by the function type";
       ( FullFun (x, es1, hs, tm_args, ty, es2, (exp_body', attrs_body)),
@@ -172,7 +170,8 @@ let rec type_of (eff_defs : f_ENV) (e_env : e_ENV) (h_env : h_ENV)
           effs = [];
           hvarParams =
             List.map
-              (fun (name, fname) -> (name, fname, List.assoc fname eff_defs))
+              (fun (name, fname) ->
+                { name; fname; ty = List.assoc fname eff_defs })
               hs;
         } )
   | Assign (exp_v, exp) -> (
@@ -252,7 +251,7 @@ let rec type_of (eff_defs : f_ENV) (e_env : e_ENV) (h_env : h_ENV)
                 default_attrs with
                 ty = attrs_handle.ty;
                 effs = List.filter (fun e -> e <> HVar x) attrs_handle.effs;
-                bindHvar = Some (x, fname, ty_fname);
+                bindHvar = Some { name = x; fname; ty = ty_fname };
               } )
         | _ ->
             typing_error ~loc:attrs.loc "effect definition must be of type TAbs"

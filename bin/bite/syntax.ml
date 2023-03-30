@@ -6,6 +6,9 @@ open Util
 (* Variable names *)
 type name = string [@@deriving sexp]
 
+type handlerKind = TailResumptive | Abortive | Multishot | SingleShot
+[@@deriving sexp]
+
 (* Effect names *)
 type fname = string [@@deriving sexp]
 type hvar = string [@@deriving sexp]
@@ -27,9 +30,6 @@ type f_ENV = (fname * ty) list [@@deriving sexp]
 type e_ENV = effs [@@deriving sexp]
 type h_ENV = (hvar * fname) list [@@deriving sexp]
 type t_ENV = (name * ty) list [@@deriving sexp]
-
-type handlerKind = TailResumptive | Abortive | GeneralHandler
-[@@deriving sexp]
 
 type builtin_fun =
   | ArrayInit
@@ -68,6 +68,8 @@ let builtin_fun =
 type cf_dest = Return | Abort | Continue (* Neither return or abort. *)
 [@@deriving sexp]
 
+type richHvar = { name : name; fname : fname; ty : ty } [@@deriving sexp]
+
 type attrs = {
   loc : location;
   isRecursiveCall : bool;
@@ -78,11 +80,12 @@ type attrs = {
   varDepth : int;
   ty : ty;
   effs : effs;
-  hvarParams : (string * fname * ty) list; (* Used in FullFun *)
-  hvarArgs : (string * fname * ty) list; (* Used in FullApply and Raise *)
-  lhsHvar : (string * fname * ty) option; (* Used in Raise *)
-  bindHvar : (string * fname * ty) option; (* Used in Handle *)
+  hvarParams : richHvar list; (* Used in FullFun *)
+  hvarArgs : richHvar list; (* Used in FullApply and Raise *)
+  lhsHvar : richHvar option; (* Used in Raise *)
+  bindHvar : richHvar option; (* Used in Handle *)
   handlerKind : handlerKind option; (* Used in Handle and FullFun *)
+  isHandleBody : bool; (* Used in Handle *)
 }
 [@@deriving sexp]
 
@@ -102,6 +105,7 @@ let default_attrs =
     lhsHvar = None;
     bindHvar = None;
     handlerKind = None;
+    isHandleBody = false;
   }
 
 let locate ?(loc = Nowhere) x = (x, { default_attrs with loc })

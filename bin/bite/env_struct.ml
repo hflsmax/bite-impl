@@ -36,7 +36,7 @@ let rec get_fun_info ((exp, attrs) : expr) (pfun_name : string option) :
       @++@ get_fun_info exp_handle pfun_name
   | FullFun (fun_name, es1, hs, tm_args, ty, es2, exp_body) ->
       let hd_args =
-        List.map (fun (name, _, ty) -> (name, ty)) attrs.hvarParams
+        List.map (fun rhvar -> (rhvar.name, rhvar.ty)) attrs.hvarParams
       in
       let fun_infos, handlers = get_fun_info exp_body (Some fun_name) in
       ( {

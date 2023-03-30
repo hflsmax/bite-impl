@@ -120,7 +120,7 @@ let compile exp : string =
                    %s;\n\
                    }"
                   c2 c1 handler_var_name c3 exp_handle_code "return jmpret;"
-          | GeneralHandler -> exp_handle_code
+          | Multishot | SingleShot -> exp_handle_code
         in
         (if attrs.cfDest = Continue then "({" else "")
         ^ spf "locals.%s_fptr = (void*)%s;\n" handler_var_name fun_name
@@ -232,7 +232,7 @@ let compile exp : string =
             Option.get attrs.topLevelFunctionName
           else
             spf "((%s)%s_fptr)"
-              (tabs_to_string (trd3 (Option.get attrs.lhsHvar)) true)
+              (tabs_to_string (Option.get attrs.lhsHvar).ty true)
               handler_code
         in
         spf "%s(%s)" lhs_code (String.concat ", " args_code)

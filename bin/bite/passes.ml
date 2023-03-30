@@ -26,7 +26,7 @@ let analyze_handlerKind (f : expr') : handlerKind =
                  (fun exp -> match exp with Resume _, _ -> true | _ -> false)
                  body)
             > 0
-          then GeneralHandler
+          then Multishot
           else Abortive)
   | _ -> error "Handler is not a full function: %t@." (Print.expr f)
 
@@ -49,37 +49,30 @@ type pass_state = {
 }
 [@@deriving sexp]
 
-(* let wrap_general_handler_body _ ((exp, ty, effs, attrs) : expr) : expr =
-   match exp with
-   | Handle
-       ( x,
-         (fname, fname_ty),
-         ( FullFun (GeneralHandler, fun_name, es1, hs, tm_args, ty, es2, exp_body),
-           _,
-           _,
-           _ ),
-         exp_handle ) ->
-       let wrapper =
-         FullFun
-           ( Lambda,
-             fun_name ^ "_body_wrapper",
-             [],
-             [ (x, fname, fname_ty) ],
-             [],
-             ty,
-             [ HVar x ],
-             exp_handle )
-       in
-       let new_exp_body =
-         FullApply
-           ( (wrapper, TAbs ([], [(x, fname)], [], ty, []), [], default_attrs),
-             [],
-             [ (x, fname, fname_ty) ],
-             [] )
-       in
-       print_info "wrapped %t@." (Print.rexpr' new_exp_body);
-       (new_exp_body, ty, effs, attrs)
-   | _ -> (exp, ty, effs, attrs) *)
+let wrap_general_handler_body _ ((exp, attrs) : expr) : expr =
+  if attrs.handlerKind = Some Multishot || attrs.handlerKind = Some SingleShot
+  then
+    match exp with
+    | Handle
+        ( x,
+          fname,
+          (FullFun (fun_name, es1, hs, tm_args, ty, es2, exp_body), _),
+          exp_handle ) ->
+        let wrapper =
+          FullFun
+            ( fun_name ^ "_body_wrapper",
+              [],
+              [],
+              [],
+              attrs.ty,
+              attrs.effs,
+              exp_handle )
+        in
+        let new_exp_body = FullApply ((wrapper, default_attrs), [], [], []) in
+        print_info "wrapped %t@." (Print.expr new_exp_body);
+        (new_exp_body, { attrs with isHandleBody = true })
+    | _ -> (exp, attrs)
+  else (exp, attrs)
 
 let record_handlerKind state ((exp, attrs) : expr) =
   if attrs.handlerKind <> None then (exp, attrs)
@@ -322,7 +315,7 @@ let transform (effs_efs : f_ENV) (exp : expr) : expr =
   exp
   |> transform_exp init_state
        [
-         (* wrap_general_handler_body; *)
+         wrap_general_handler_body;
          record_handlerKind;
          record_var_depth;
          transform_handler;
