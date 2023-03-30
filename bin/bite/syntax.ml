@@ -68,7 +68,8 @@ let builtin_fun =
 type cf_dest = Return | Abort | Continue (* Neither return or abort. *)
 [@@deriving sexp]
 
-type richHvar = { name : name; fname : fname; ty : ty } [@@deriving sexp]
+type richHvar = { name : name; fname : fname; ty : ty; depth : int }
+[@@deriving sexp]
 
 type attrs = {
   loc : location;
@@ -84,8 +85,8 @@ type attrs = {
   hvarArgs : richHvar list; (* Used in FullApply and Raise *)
   lhsHvar : richHvar option; (* Used in Raise *)
   bindHvar : richHvar option; (* Used in Handle *)
-  handlerKind : handlerKind option; (* Used in Handle and FullFun *)
-  isHandleBody : bool; (* Used in Handle *)
+  handlerKind : handlerKind option; (* Used in Handle *)
+  isHandler : bool; (* Used in FullFun *)
 }
 [@@deriving sexp]
 
@@ -105,7 +106,7 @@ let default_attrs =
     lhsHvar = None;
     bindHvar = None;
     handlerKind = None;
-    isHandleBody = false;
+    isHandler = false;
   }
 
 let locate ?(loc = Nowhere) x = (x, { default_attrs with loc })

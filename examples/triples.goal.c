@@ -89,14 +89,10 @@ int Print(int x) {
 
 typedef struct main_locals_t {
   main_env_t *env;
-  jmp_buf fn2_jb;
   int cnt;
   void *countTriples_fptr;
   void *countTriples_env;
   jmp_buf *countTriples_jb;
-  void *lch_fptr;
-  void *lch_env;
-  jmp_buf *lch_jb;
 } main_locals_t;
 
 typedef main_locals_t fn1_env_t;
@@ -112,28 +108,12 @@ typedef struct fn1_locals_t {
   int rc;
 } fn1_locals_t;
 
-typedef main_locals_t fn2_env_t;
-typedef struct fn2_locals_t {
-  fn2_env_t *env;
-  int n;
-  void *r;
-  void *iter_fptr;
-  void *iter_env;
-  jmp_buf *iter_jb;
-} fn2_locals_t;
-
-typedef fn2_locals_t iterRec_env_t;
-typedef struct iterRec_locals_t {
-  iterRec_env_t *env;
-  int i;
-} iterRec_locals_t;
-
 typedef main_locals_t fn2_body_wrapper_env_t;
 typedef struct fn2_body_wrapper_locals_t {
   fn2_body_wrapper_env_t *env;
 } fn2_body_wrapper_locals_t;
 int fn1(void *env, int n, int s, void *lch_fptr, void *lch_env,
-        jmp_buf *lch_jb) {
+        void *lch_jb) {
   fn1_locals_t locals;
   locals.env = (fn1_env_t *)env;
   locals.n = n;
@@ -142,11 +122,11 @@ int fn1(void *env, int n, int s, void *lch_fptr, void *lch_env,
   locals.lch_env = lch_env;
   locals.lch_jb = lch_jb;
 
-  locals.ra = ((int (*)(void *, jmp_buf *, int))locals.lch_fptr)(
+  locals.ra = ((int (*)(void *, void *, int))locals.lch_fptr)(
       locals.lch_env, locals.lch_jb, locals.n);
-  locals.rb = ((int (*)(void *, jmp_buf *, int))locals.lch_fptr)(
+  locals.rb = ((int (*)(void *, void *, int))locals.lch_fptr)(
       locals.lch_env, locals.lch_jb, ({ locals.ra - 1; }));
-  locals.rc = ((int (*)(void *, jmp_buf *, int))locals.lch_fptr)(
+  locals.rc = ((int (*)(void *, void *, int))locals.lch_fptr)(
       locals.lch_env, locals.lch_jb, ({ locals.rb - 1; }));
   if (({ ({ ({ locals.ra + locals.rb; }) + locals.rc; }) == locals.s; })) {
     locals.env->cnt = ({ locals.env->cnt + 1; });
@@ -155,12 +135,13 @@ int fn1(void *env, int n, int s, void *lch_fptr, void *lch_env,
   };
 }
 
-int fn2_body_wrapper(void *env) {
+int fn2_body_wrapper(mp_prompt_t* p, void *env) {
   fn2_body_wrapper_locals_t locals;
   locals.env = (fn2_body_wrapper_env_t *)env;
 
-  fn1(locals.env->countTriples_env, 500, 127, locals.env->lch_fptr,
-      locals.env->lch_env, locals.env->lch_jb);
+  fn1(locals.env->countTriples_env, 500, 127, locals.env->countTriples_fptr,
+      env, locals.env->countTriples_jb);
+
   return Print(locals.env->cnt);
 }
 
@@ -170,7 +151,5 @@ int main() {
   locals.cnt = 0;
   locals.countTriples_fptr = (void *)fn1;
   locals.countTriples_env = &locals;
-  locals.lch_fptr = (void *)fn2;
-  locals.lch_env = &locals;
   mp_prompt(fn2_body_wrapper, &locals);
 }

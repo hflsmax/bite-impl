@@ -36,7 +36,7 @@ let rec ty_ok (eff_defs : f_ENV) (e_env : e_ENV) (h_env : h_ENV) ty =
 let hvar_to_rich_hvar eff_defs h_env name =
   let fname = List.assoc name h_env in
   let ty = List.assoc fname eff_defs in
-  { name; fname; ty }
+  { name; fname; ty; depth = -1 }
 
 let default_attrs = Syntax.default_attrs
 
@@ -171,7 +171,7 @@ let rec type_of (eff_defs : f_ENV) (e_env : e_ENV) (h_env : h_ENV)
           hvarParams =
             List.map
               (fun (name, fname) ->
-                { name; fname; ty = List.assoc fname eff_defs })
+                { name; fname; ty = List.assoc fname eff_defs; depth = -1 })
               hs;
         } )
   | Assign (exp_v, exp) -> (
@@ -251,7 +251,7 @@ let rec type_of (eff_defs : f_ENV) (e_env : e_ENV) (h_env : h_ENV)
                 default_attrs with
                 ty = attrs_handle.ty;
                 effs = List.filter (fun e -> e <> HVar x) attrs_handle.effs;
-                bindHvar = Some { name = x; fname; ty = ty_fname };
+                bindHvar = Some { name = x; fname; ty = ty_fname; depth = -1 };
               } )
         | _ ->
             typing_error ~loc:attrs.loc "effect definition must be of type TAbs"

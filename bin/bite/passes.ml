@@ -4,6 +4,13 @@ open Sexplib.Std
 open Util
 open Pass_util
 
+let mark_handlers state ((exp, attrs) : expr) =
+  match exp with
+  | Handle (x, fname, (c, cattrs), exp_handle) ->
+      ( Handle (x, fname, (c, { cattrs with isHandler = true }), exp_handle),
+        attrs )
+  | _ -> (exp, attrs)
+
 let get_var_depth (x : name) (slink : string list list) : int =
   let rec get_var_depth' (x : name) (slink : string list list) (depth : int) :
       int =
@@ -56,7 +63,7 @@ let wrap_general_handler_body _ ((exp, attrs) : expr) : expr =
     | Handle
         ( x,
           fname,
-          (FullFun (fun_name, es1, hs, tm_args, ty, es2, exp_body), _),
+          (FullFun (fun_name, es1, hs, tm_args, ty, es2, exp_body), fattrs),
           exp_handle ) ->
         let wrapper =
           FullFun
@@ -68,9 +75,12 @@ let wrap_general_handler_body _ ((exp, attrs) : expr) : expr =
               attrs.effs,
               exp_handle )
         in
-        let new_exp_body = FullApply ((wrapper, default_attrs), [], [], []) in
-        print_info "wrapped %t@." (Print.expr new_exp_body);
-        (new_exp_body, { attrs with isHandleBody = true })
+        ( Handle
+            ( x,
+              fname,
+              (FullFun (fun_name, es1, hs, tm_args, ty, es2, exp_body), fattrs),
+              (wrapper, default_attrs) ),
+          attrs )
     | _ -> (exp, attrs)
   else (exp, attrs)
 
@@ -79,10 +89,7 @@ let record_handlerKind state ((exp, attrs) : expr) =
   else
     match exp with
     | Handle (x, fname, (f, fattrs), exp_handle) ->
-        let new_fattrs =
-          { fattrs with handlerKind = Some (analyze_handlerKind f) }
-        in
-        ( Handle (x, fname, (f, new_fattrs), exp_handle),
+        ( Handle (x, fname, (f, { fattrs with handlerKind = Some (analyze_handlerKind f) }), exp_handle),
           { attrs with handlerKind = Some (analyze_handlerKind f) } )
     | _ -> (exp, attrs)
 
@@ -103,6 +110,12 @@ let update_static_link state ((exp, attrs) : expr) =
         static_link =
           (x :: List.hd state.static_link) :: List.tl state.static_link;
       }
+  | Handle (x, fname, exp_catch, exp_handle) ->
+      {
+        state with
+        static_link =
+          (x :: List.hd state.static_link) :: List.tl state.static_link;
+      }
   | _ -> state
 
 let record_var_depth state ((exp, attrs) : expr) =
@@ -112,6 +125,30 @@ let record_var_depth state ((exp, attrs) : expr) =
       else
         let depth = get_var_depth x state.static_link in
         (exp, { attrs with varDepth = depth })
+  | Raise (x, _, hvars, _) ->
+      let hvarArgs' =
+        List.map
+          (fun hvar ->
+            let depth = get_var_depth hvar.name state.static_link in
+            { hvar with depth })
+          attrs.hvarArgs
+      in
+      let depth = get_var_depth x state.static_link in
+      ( exp,
+        {
+          attrs with
+          lhsHvar = Some { (Option.get attrs.lhsHvar) with depth };
+          hvarArgs = hvarArgs';
+        } )
+  | FullApply (_, _, hvars, _) ->
+      let hvarArgs' =
+        List.map
+          (fun hvar ->
+            let depth = get_var_depth hvar.name state.static_link in
+            { hvar with depth })
+          attrs.hvarArgs
+      in
+      (exp, { attrs with hvarArgs = hvarArgs' })
   | _ -> (exp, attrs)
 
 let check_tail_recursive state ((exp, attrs) : expr) =
@@ -140,13 +177,12 @@ let mark_optimized_sjlj state ((exp, attrs) : expr) =
   | _ -> (exp, attrs)
 
 (* If tail-resumptive, remove resume expression such that it's treated like a function *)
-let transform_handler _ ((exp, attrs) : expr) : expr =
+let transform_tail_resumptive_handler _ ((exp, attrs) : expr) : expr =
   ( (match exp with
-    | FullFun (x, es1, hs, tm_args, ty, es2, (exp_body, exp_body_attrs)) ->
-        if attrs.handlerKind = Some TailResumptive then
-          let[@warning "-partial-match"] (Resume exp_body') = exp_body in
-          FullFun (x, es1, hs, tm_args, ty, es2, exp_body')
-        else exp
+    | FullFun (x, es1, hs, tm_args, ty, es2, (exp_body, exp_body_attrs)) -> (
+        match exp_body with
+        | Resume exp_body' -> FullFun (x, es1, hs, tm_args, ty, es2, exp_body')
+        | _ -> exp)
     | _ -> exp),
     attrs )
 
@@ -315,10 +351,11 @@ let transform (effs_efs : f_ENV) (exp : expr) : expr =
   exp
   |> transform_exp init_state
        [
-         wrap_general_handler_body;
+         mark_handlers;
          record_handlerKind;
+         wrap_general_handler_body;
          record_var_depth;
-         transform_handler;
+         transform_tail_resumptive_handler;
          mark_cf_dest;
          mark_recursive_call;
          propogate_const_fun_to_callsite;
