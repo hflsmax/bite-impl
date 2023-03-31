@@ -36,12 +36,6 @@ __asm__(".global _setjmp\n\t"
 
 #include "klist.h"
 
-typedef struct closture_t {
-  void *f_ptr;
-  void *env;
-  jmp_buf jb;
-} closure_t;
-
 volatile int jmpret;
 
 typedef struct main_env_t {
@@ -94,13 +88,13 @@ typedef struct main_locals_t {
   int iterIdx;
   void *iterNext_fptr;
   void *iterNext_env;
-  jmp_buf *iterNext_jb;
+  void *iterNext_jb;
   void *add_fptr;
   void *add_env;
-  jmp_buf *add_jb;
+  void *add_jb;
   void *foldLeft_fptr;
   void *foldLeft_env;
-  jmp_buf *foldLeft_jb;
+  void *foldLeft_jb;
 } main_locals_t;
 
 typedef main_locals_t fn1_env_t;
@@ -108,7 +102,7 @@ typedef struct fn1_locals_t {
   fn1_env_t *env;
   void *exc_fptr;
   void *exc_env;
-  jmp_buf *exc_jb;
+  void *exc_jb;
 } fn1_locals_t;
 
 typedef main_locals_t fn2_env_t;
@@ -124,13 +118,13 @@ typedef struct foldLeftRec_locals_t {
   jmp_buf fn3_jb;
   void *op_fptr;
   void *op_env;
-  jmp_buf *op_jb;
+  void *op_jb;
   int acc;
   int next;
   bool toBreak;
   void *exc_fptr;
   void *exc_env;
-  jmp_buf *exc_jb;
+  void *exc_jb;
 } foldLeftRec_locals_t;
 
 typedef foldLeftRec_locals_t fn3_env_t;
@@ -139,7 +133,8 @@ typedef struct fn3_locals_t {
 } fn3_locals_t;
 bool fn3_saved = false;
 jmp_buf fn3_jb;
-int fn1(void *env, void *exc_fptr, void *exc_env, jmp_buf *exc_jb) {
+
+int fn1(void *env, void *exc_fptr, void *exc_env, void *exc_jb) {
   fn1_locals_t locals;
   locals.env = (fn1_env_t *)env;
   locals.exc_fptr = exc_fptr;
@@ -151,8 +146,8 @@ int fn1(void *env, void *exc_fptr, void *exc_env, jmp_buf *exc_jb) {
     locals.env->iterIdx = ({ locals.env->iterIdx + 1; });
     return ArrayGet(locals.env->arr, ({ locals.env->iterIdx - 1; }));
   } else {
-    return ((int (*)(void *, jmp_buf *))locals.exc_fptr)(locals.exc_env,
-                                                         locals.exc_jb);
+    return ((int (*)(void *, void *))locals.exc_fptr)(locals.exc_env,
+                                                      locals.exc_jb);
   }
 }
 

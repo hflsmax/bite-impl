@@ -98,11 +98,11 @@ let tabs_to_string ty is_handler : string =
   | TAbs (es1, hs, ty_args, ty, es2) ->
       (* The first parameter is the env pointer. *)
       let ty_args =
-        ("void*" :: (if is_handler then [ "jmp_buf*" ] else []))
+        ("void*" :: (if is_handler then [ "void*" ] else []))
         @ List.map (fun ty_arg -> ty_to_string ty_arg) ty_args
       in
       let handler_ty_args =
-        List.init (List.length hs) (fun _ -> "void*, void*, jmp_buf*")
+        List.init (List.length hs) (fun _ -> "void*, void*, void*")
       in
       Printf.sprintf "%s(*)(%s)" (ty_to_string ty)
         (String.concat ", " (ty_args @ handler_ty_args))
@@ -116,12 +116,6 @@ let extra_defs arch =
 #include <stdbool.h>
 
 #include "klist.h"
-
-typedef struct closture_t {
-    void *f_ptr;
-    void *env;
-    jmp_buf jb;
-} closure_t;
 
 volatile int jmpret;
 

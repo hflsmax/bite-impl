@@ -36,12 +36,6 @@ __asm__(".global _setjmp\n\t"
 
 #include "klist.h"
 
-typedef struct closture_t {
-  void *f_ptr;
-  void *env;
-  jmp_buf jb;
-} closure_t;
-
 volatile int jmpret;
 
 typedef struct main_env_t {
@@ -93,10 +87,10 @@ typedef struct main_locals_t {
   int cnt;
   void *countTriples_fptr;
   void *countTriples_env;
-  jmp_buf *countTriples_jb;
+  void *countTriples_jb;
   void *lch_fptr;
   void *lch_env;
-  jmp_buf *lch_jb;
+  void *lch_jb;
 } main_locals_t;
 
 typedef main_locals_t fn1_env_t;
@@ -106,7 +100,7 @@ typedef struct fn1_locals_t {
   int s;
   void *lch_fptr;
   void *lch_env;
-  jmp_buf *lch_jb;
+  void *lch_jb;
   int ra;
   int rb;
   int rc;
@@ -119,7 +113,7 @@ typedef struct fn2_locals_t {
   void *r;
   void *iter_fptr;
   void *iter_env;
-  jmp_buf *iter_jb;
+  void *iter_jb;
 } fn2_locals_t;
 
 typedef fn2_locals_t iterRec_env_t;
@@ -132,8 +126,8 @@ typedef main_locals_t fn2_body_wrapper_env_t;
 typedef struct fn2_body_wrapper_locals_t {
   fn2_body_wrapper_env_t *env;
 } fn2_body_wrapper_locals_t;
-int fn1(void *env, int n, int s, void *lch_fptr, void *lch_env,
-        jmp_buf *lch_jb) {
+
+int fn1(void *env, int n, int s, void *lch_fptr, void *lch_env, void *lch_jb) {
   fn1_locals_t locals;
   locals.env = (fn1_env_t *)env;
   locals.n = n;
@@ -142,17 +136,42 @@ int fn1(void *env, int n, int s, void *lch_fptr, void *lch_env,
   locals.lch_env = lch_env;
   locals.lch_jb = lch_jb;
 
-  locals.ra = ((int (*)(void *, jmp_buf *, int))locals.lch_fptr)(
+  locals.ra = ((int (*)(void *, void *, int))locals.lch_fptr)(
       locals.lch_env, locals.lch_jb, locals.n);
-  locals.rb = ((int (*)(void *, jmp_buf *, int))locals.lch_fptr)(
+  locals.rb = ((int (*)(void *, void *, int))locals.lch_fptr)(
       locals.lch_env, locals.lch_jb, ({ locals.ra - 1; }));
-  locals.rc = ((int (*)(void *, jmp_buf *, int))locals.lch_fptr)(
+  locals.rc = ((int (*)(void *, void *, int))locals.lch_fptr)(
       locals.lch_env, locals.lch_jb, ({ locals.rb - 1; }));
   if (({ ({ ({ locals.ra + locals.rb; }) + locals.rc; }) == locals.s; })) {
     locals.env->cnt = ({ locals.env->cnt + 1; });
   } else {
     return 0;
   };
+}
+
+int iterRec(void *env, int i) {
+  iterRec_locals_t locals;
+  locals.env = (iterRec_env_t *)env;
+  locals.i = i;
+
+  if (({ locals.env->n < locals.i; })) {
+    return 0;
+  } else {
+
+    mp_resume(locals.env->r, (void *)locals.i);
+    __attribute__((musttail)) return iterRec(locals.env, ({ locals.i + 1; }));
+  }
+}
+
+int fn2(void *env, jmp_buf jb, int n) {
+  fn2_locals_t locals;
+  locals.env = (fn2_env_t *)env;
+  locals.n = n;
+
+  locals.r = ReifyResumer();
+  locals.iter_fptr = (void *)iterRec;
+  locals.iter_env = &locals;
+  return iterRec(locals.iter_env, 1);
 }
 
 int fn2_body_wrapper(void *env) {

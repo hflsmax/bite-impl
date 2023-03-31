@@ -36,12 +36,6 @@ __asm__(".global _setjmp\n\t"
 
 #include "klist.h"
 
-typedef struct closture_t {
-  void *f_ptr;
-  void *env;
-  jmp_buf jb;
-} closure_t;
-
 volatile int jmpret;
 
 typedef struct main_env_t {
@@ -91,7 +85,7 @@ typedef struct main_locals_t {
   main_env_t *env;
   void *run_fptr;
   void *run_env;
-  jmp_buf *run_jb;
+  void *run_jb;
 } main_locals_t;
 
 typedef main_locals_t g_env_t;
@@ -101,7 +95,7 @@ typedef struct g_locals_t {
   int n;
   void *lexc_fptr;
   void *lexc_env;
-  jmp_buf *lexc_jb;
+  void *lexc_jb;
 } g_locals_t;
 
 typedef g_locals_t fn1_env_t;
@@ -110,6 +104,7 @@ typedef struct fn1_locals_t {
 } fn1_locals_t;
 bool fn1_saved = false;
 jmp_buf fn1_jb;
+
 int fn1(void *env, jmp_buf jb) {
   fn1_locals_t locals;
   locals.env = (fn1_env_t *)env;

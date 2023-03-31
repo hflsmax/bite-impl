@@ -36,12 +36,6 @@ __asm__(".global _setjmp\n\t"
 
 #include "klist.h"
 
-typedef struct closture_t {
-  void *f_ptr;
-  void *env;
-  jmp_buf jb;
-} closure_t;
-
 volatile int jmpret;
 
 typedef struct main_env_t {
@@ -91,7 +85,7 @@ typedef struct main_locals_t {
   main_env_t *env;
   void *fibonacci_fptr;
   void *fibonacci_env;
-  jmp_buf *fibonacci_jb;
+  void *fibonacci_jb;
 } main_locals_t;
 
 typedef main_locals_t fibonacciRec_env_t;
@@ -99,6 +93,7 @@ typedef struct fibonacciRec_locals_t {
   fibonacciRec_env_t *env;
   int n;
 } fibonacciRec_locals_t;
+
 int fibonacciRec(void *env, int n) {
   fibonacciRec_locals_t locals;
   locals.env = (fibonacciRec_env_t *)env;

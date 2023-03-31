@@ -89,7 +89,11 @@ let record_handlerKind state ((exp, attrs) : expr) =
   else
     match exp with
     | Handle (x, fname, (f, fattrs), exp_handle) ->
-        ( Handle (x, fname, (f, { fattrs with handlerKind = Some (analyze_handlerKind f) }), exp_handle),
+        ( Handle
+            ( x,
+              fname,
+              (f, { fattrs with handlerKind = Some (analyze_handlerKind f) }),
+              exp_handle ),
           { attrs with handlerKind = Some (analyze_handlerKind f) } )
     | _ -> (exp, attrs)
 

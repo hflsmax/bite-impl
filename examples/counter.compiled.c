@@ -36,12 +36,6 @@ __asm__(".global _setjmp\n\t"
 
 #include "klist.h"
 
-typedef struct closture_t {
-  void *f_ptr;
-  void *env;
-  jmp_buf jb;
-} closure_t;
-
 volatile int jmpret;
 
 typedef struct main_env_t {
@@ -91,10 +85,10 @@ typedef struct main_locals_t {
   main_env_t *env;
   void *counter_fptr;
   void *counter_env;
-  jmp_buf *counter_jb;
+  void *counter_jb;
   void *run_fptr;
   void *run_env;
-  jmp_buf *run_jb;
+  void *run_jb;
 } main_locals_t;
 
 typedef main_locals_t f_env_t;
@@ -103,10 +97,10 @@ typedef struct f_locals_t {
   int n;
   void *lget_fptr;
   void *lget_env;
-  jmp_buf *lget_jb;
+  void *lget_jb;
   void *lset_fptr;
   void *lset_env;
-  jmp_buf *lset_jb;
+  void *lset_jb;
   int i;
 } f_locals_t;
 
@@ -119,10 +113,10 @@ typedef struct fn1_locals_t {
   int s;
   void *lget_fptr;
   void *lget_env;
-  jmp_buf *lget_jb;
+  void *lget_jb;
   void *lset_fptr;
   void *lset_env;
-  jmp_buf *lset_jb;
+  void *lset_jb;
 } fn1_locals_t;
 
 typedef fn1_locals_t fn2_env_t;
@@ -135,8 +129,9 @@ typedef struct fn3_locals_t {
   fn3_env_t *env;
   int n;
 } fn3_locals_t;
-int f(void *env, int n, void *lget_fptr, void *lget_env, jmp_buf *lget_jb,
-      void *lset_fptr, void *lset_env, jmp_buf *lset_jb) {
+
+int f(void *env, int n, void *lget_fptr, void *lget_env, void *lget_jb,
+      void *lset_fptr, void *lset_env, void *lset_jb) {
   f_locals_t locals;
   locals.env = (f_env_t *)env;
   locals.n = n;
@@ -147,13 +142,13 @@ int f(void *env, int n, void *lget_fptr, void *lget_env, jmp_buf *lget_jb,
   locals.lset_env = lset_env;
   locals.lset_jb = lset_jb;
 
-  locals.i = ((int (*)(void *, jmp_buf *))locals.lget_fptr)(locals.lget_env,
-                                                            locals.lget_jb);
+  locals.i = ((int (*)(void *, void *))locals.lget_fptr)(locals.lget_env,
+                                                         locals.lget_jb);
   if (({ locals.i == 0; })) {
     return locals.n;
   } else {
 
-    ((int (*)(void *, jmp_buf *, int))locals.lset_fptr)(
+    ((int (*)(void *, void *, int))locals.lset_fptr)(
         locals.lset_env, locals.lset_jb, ({ locals.i - 1; }));
     __attribute__((musttail)) return f(
         locals.env, ({ locals.n + 1; }), locals.lget_fptr, locals.lget_env,

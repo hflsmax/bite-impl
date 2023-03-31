@@ -21,7 +21,6 @@ let can_be_returned exp =
 (* Compile an expression to a top-level and a list of functions *)
 let codeGen exp : string =
   let global_code = ref "" in
-  let fs = ref [] in
   let rec codeGen_rec ((exp, attrs) : expr) : string =
     if
       LibmpromptCodeGen.is_handle exp
@@ -153,7 +152,7 @@ let codeGen exp : string =
           let code_hs =
             List.map
               (fun (h, _) ->
-                spf "void *%s_fptr, void *%s_env, jmp_buf *%s_jb" h h h)
+                spf "void *%s_fptr, void *%s_env, void *%s_jb" h h h)
               hs
           in
           let code_init =
@@ -185,7 +184,7 @@ let codeGen exp : string =
               (String.concat ", " (code_tm_args @ code_hs))
               code_init code_body
           in
-          fs := this_fun :: !fs;
+          global_code := !global_code ^ "\n" ^ this_fun ^ "\n";
           "CURRENTLY ONLY SUPPORT FUNCTIONS ASSIGNED TO A VARIABLE OR A HANDLER"
       | FullApply (((lhs_name, lhs_attrs) as lhs), es, hs, exps) ->
           let lhs' = codeGen_rec lhs in
@@ -275,4 +274,4 @@ let codeGen exp : string =
       else code
   in
   let _ = codeGen_rec exp in
-  !global_code ^ String.concat "\n" (List.rev !fs)
+  !global_code

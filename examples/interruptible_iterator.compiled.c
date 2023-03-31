@@ -36,12 +36,6 @@ __asm__(".global _setjmp\n\t"
 
 #include "klist.h"
 
-typedef struct closture_t {
-  void *f_ptr;
-  void *env;
-  jmp_buf jb;
-} closure_t;
-
 volatile int jmpret;
 
 typedef struct main_env_t {
@@ -93,14 +87,14 @@ typedef struct main_locals_t {
   jmp_buf fn4_jb;
   void *iter_fptr;
   void *iter_env;
-  jmp_buf *iter_jb;
+  void *iter_jb;
   void *list;
   void *yield_fptr;
   void *yield_env;
-  jmp_buf *yield_jb;
+  void *yield_jb;
   void *behead_fptr;
   void *behead_env;
-  jmp_buf *behead_jb;
+  void *behead_jb;
 } main_locals_t;
 
 typedef main_locals_t iterRec_env_t;
@@ -111,16 +105,16 @@ typedef struct iterRec_locals_t {
   void *l;
   void *yield_fptr;
   void *yield_env;
-  jmp_buf *yield_jb;
+  void *yield_jb;
   void *behead_fptr;
   void *behead_env;
-  jmp_buf *behead_jb;
+  void *behead_jb;
   void *replace_fptr;
   void *replace_env;
-  jmp_buf *replace_jb;
+  void *replace_jb;
   void *localBehead_fptr;
   void *localBehead_env;
-  jmp_buf *localBehead_jb;
+  void *localBehead_jb;
 } iterRec_locals_t;
 
 typedef iterRec_locals_t fn1_env_t;
@@ -140,16 +134,17 @@ typedef struct fn3_locals_t {
   int x;
   void *replace_fptr;
   void *replace_env;
-  jmp_buf *replace_jb;
+  void *replace_jb;
   void *behead_fptr;
   void *behead_env;
-  jmp_buf *behead_jb;
+  void *behead_jb;
 } fn3_locals_t;
 
 typedef main_locals_t fn4_env_t;
 typedef struct fn4_locals_t {
   fn4_env_t *env;
 } fn4_locals_t;
+
 int fn1(void *env, jmp_buf jb, int x) {
   fn1_locals_t locals;
   locals.env = (fn1_env_t *)env;
@@ -168,8 +163,8 @@ int fn2(void *env, jmp_buf jb) {
 }
 
 int iterRec(void *env, void *l, void *yield_fptr, void *yield_env,
-            jmp_buf *yield_jb, void *behead_fptr, void *behead_env,
-            jmp_buf *behead_jb) {
+            void *yield_jb, void *behead_fptr, void *behead_env,
+            void *behead_jb) {
   iterRec_locals_t locals;
   locals.env = (iterRec_env_t *)env;
   locals.l = l;
@@ -183,8 +178,8 @@ int iterRec(void *env, void *l, void *yield_fptr, void *yield_env,
   ({
     locals.replace_fptr = (void *)fn1;
     locals.replace_env = &locals;
-    ((int (*)(void *, jmp_buf *, int, void *, void *, jmp_buf *, void *, void *,
-              jmp_buf *))locals.yield_fptr)(
+    ((int (*)(void *, void *, int, void *, void *, void *, void *, void *,
+              void *))locals.yield_fptr)(
         locals.yield_env, locals.yield_jb, IterGet(locals.l),
         locals.replace_fptr, locals.replace_env, locals.replace_jb,
         locals.behead_fptr, locals.behead_env, locals.behead_jb);
@@ -202,8 +197,8 @@ int iterRec(void *env, void *l, void *yield_fptr, void *yield_env,
 }
 
 int fn3(void *env, jmp_buf jb, int x, void *replace_fptr, void *replace_env,
-        jmp_buf *replace_jb, void *behead_fptr, void *behead_env,
-        jmp_buf *behead_jb) {
+        void *replace_jb, void *behead_fptr, void *behead_env,
+        void *behead_jb) {
   fn3_locals_t locals;
   locals.env = (fn3_env_t *)env;
   locals.x = x;
@@ -215,10 +210,10 @@ int fn3(void *env, jmp_buf jb, int x, void *replace_fptr, void *replace_env,
   locals.behead_jb = behead_jb;
 
   if (({ locals.x < 0; })) {
-    return ((int (*)(void *, jmp_buf *))locals.behead_fptr)(locals.behead_env,
-                                                            locals.behead_jb);
+    return ((int (*)(void *, void *))locals.behead_fptr)(locals.behead_env,
+                                                         locals.behead_jb);
   } else {
-    return ((int (*)(void *, jmp_buf *, int))locals.replace_fptr)(
+    return ((int (*)(void *, void *, int))locals.replace_fptr)(
         locals.replace_env, locals.replace_jb, ({ locals.x * 2; }));
   }
 }

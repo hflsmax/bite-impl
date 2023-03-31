@@ -64,7 +64,7 @@ let local_to_struct_field (x, ty) : string =
   match ty with
   | TAbs _ ->
       spf "void *%s_fptr;\n" x ^ spf "void *%s_env;\n" x
-      ^ spf "jmp_buf *%s_jb;\n" x
+      ^ spf "void *%s_jb;\n" x
   | _ -> spf "%s %s;\n" (ty_to_string ty) x
 
 let get_env_struct { fun_name; pfun_name; locals; handlers } : string =
