@@ -1,0 +1,11 @@
+local
+  (* import libraries *)
+  $(SML_LIB)/basis/basis.mlb (* for string reader *)
+  $(SML_LIB)/basis/mlton.mlb
+  $(SML_LIB)/smlnj-lib/RegExp/regexp-lib.mlb (* for regular expressions *)
+
+
+  (* program files *)
+  triples.sml
+in
+end

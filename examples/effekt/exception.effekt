@@ -1,21 +1,17 @@
-effect Exc(): Unit
+effect Exc(): Int
 
-def loop(n: Int) : Int = {
-    var i = n;
-    var ret = 0;
-    while (i >= 0) {
-        var x = 0;
-        try{
-            i = i - 1;
-            if (i == 0) {
-                do Exc()
-            }
+def run(n: Int) : Int = {
+    if (n == 0) {
+        try {
+            do Exc()
         } with Exc {
-         () => ret = ret + 1; resume(())
+            () => resume(0)
         }
-    }; ret
+    } else {
+        run(n - 1)
+    }
 }
 
 def main() = {
-    println(loop(100100100))
+    println(run(100100100))
 }

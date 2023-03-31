@@ -31,7 +31,7 @@ def main(args):
 
     if args.compile_ml:
         for name in args.names:
-            command = f'mlton out/{name}.mlb'
+            command = f'mlton -output out/{name}.exe out/{name}.mlb'
             print(f'Running command: {command}')
             result = subprocess.run(command, shell=True)
 

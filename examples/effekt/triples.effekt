@@ -27,7 +27,7 @@ def yieldTriples(n: Int, s: Int): Unit / {Yield} = {
   } with Choose {
     def choose(n) = {
       var i = 1;
-      while (i < n) {
+      while (i <= n) {
         resume(i);
         i = i + 1
       }
@@ -50,4 +50,4 @@ def countTriples(n: Int, s: Int): Int = {
   cnt
 }
 
-def main() = println(countTriples(8, 6))
+def main() = println(countTriples(500, 127))
