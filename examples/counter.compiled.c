@@ -84,7 +84,6 @@ int Print(int x) {
 }
 
 typedef struct main_locals_t {
-  main_env_t *env;
   void *counter_fptr;
   void *counter_env;
   void *counter_jb;
@@ -108,9 +107,9 @@ typedef struct f_locals_t {
 
 typedef main_locals_t fn1_env_t;
 typedef struct fn1_locals_t {
-  fn1_env_t *env;
   jmp_buf fn2_jb;
   jmp_buf fn3_jb;
+  fn1_env_t *env;
   int n;
   int s;
   void *lget_fptr;
@@ -124,18 +123,20 @@ typedef struct fn1_locals_t {
 typedef fn1_locals_t fn2_env_t;
 typedef struct fn2_locals_t {
   fn2_env_t *env;
+  void *jb;
 } fn2_locals_t;
 
 typedef fn1_locals_t fn3_env_t;
 typedef struct fn3_locals_t {
   fn3_env_t *env;
+  void *jb;
   int n;
 } fn3_locals_t;
 
-int f(void *env, int n, void *lget_fptr, void *lget_env, void *lget_jb,
+int f(f_env_t *env, int n, void *lget_fptr, void *lget_env, void *lget_jb,
       void *lset_fptr, void *lset_env, void *lset_jb) {
   f_locals_t locals;
-  locals.env = (f_env_t *)env;
+  locals.env = env;
   locals.n = n;
   locals.lget_fptr = lget_fptr;
   locals.lget_env = lget_env;
@@ -158,24 +159,26 @@ int f(void *env, int n, void *lget_fptr, void *lget_env, void *lget_jb,
   };
 }
 
-int fn2(void *env, void *jb) {
+int fn2(fn2_env_t *env, void *jb) {
   fn2_locals_t locals;
-  locals.env = (fn2_env_t *)env;
+  locals.env = env;
+  locals.jb = jb;
 
   return locals.env->s;
 }
 
-int fn3(void *env, void *jb, int n) {
+int fn3(fn3_env_t *env, void *jb, int n) {
   fn3_locals_t locals;
-  locals.env = (fn3_env_t *)env;
+  locals.env = env;
+  locals.jb = jb;
   locals.n = n;
 
   locals.env->s = locals.n;
 }
 
-int fn1(void *env, int n) {
+int fn1(fn1_env_t *env, int n) {
   fn1_locals_t locals;
-  locals.env = (fn1_env_t *)env;
+  locals.env = env;
   locals.n = n;
 
   locals.s = locals.n;

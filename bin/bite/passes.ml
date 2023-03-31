@@ -165,6 +165,9 @@ let transform (effs_efs : f_ENV) (exp : expr) : expr =
          mark_recursive_call;
          mark_topLevelFunctionName;
          mark_builtin_call;
+         expand_hvar_and_funarg;
+         add_jb_arg_for_handler;
+         add_env_arg_for_fun;
        ]
        [ update_static_link; update_is_in_general_handler ]
   |> transform_exp init_state [ mark_optimized_sjlj ]

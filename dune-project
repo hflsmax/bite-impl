@@ -17,6 +17,8 @@
 
 (documentation https://url/to/documentation)
 
+(wrapped_executables false)
+
 (package
  (name bite)
  (synopsis "A short synopsis")

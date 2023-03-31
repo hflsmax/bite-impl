@@ -22,6 +22,7 @@ type ty =
   | TBool (* Booleans *)
   | TAbs of effs * (hvar * fname) list * tys * ty * effs
   | TMut of ty
+  | TCustom of string
 [@@deriving sexp]
 
 and tys = ty list [@@deriving sexp]

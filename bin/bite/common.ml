@@ -92,6 +92,7 @@ let rec ty_to_string ty : string =
   | TBool -> "bool"
   | TMut ty -> ty_to_string ty
   | TAbs _ -> "closure_t"
+  | TCustom s -> s
 
 let tabs_to_string ty is_handler : string =
   match ty with

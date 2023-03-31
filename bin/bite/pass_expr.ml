@@ -53,3 +53,57 @@ let transform_tail_resumptive_handler _ ((exp, attrs) : expr) : expr =
         | _ -> exp)
     | _ -> exp),
     attrs )
+
+let expand_hvar_and_funarg _ ((exp, attrs) : expr) : expr =
+  match exp with
+  | FullFun (x, es1, hs, tm_args, ty, es2, exp_body) ->
+      let expanded_tm_args =
+        List.map
+          (function
+            | arg_name, TAbs _ ->
+                [
+                  (arg_name ^ "_fptr", TBuiltin); (arg_name ^ "_env", TBuiltin);
+                ]
+            | p -> [ p ])
+          tm_args
+        |> List.flatten
+      in
+      let expanded_hs =
+        List.map
+          (fun (h, fname) ->
+            [
+              (h ^ "_fptr", TBuiltin);
+              (h ^ "_env", TBuiltin);
+              (h ^ "_jb", TBuiltin);
+            ])
+          hs
+        |> List.flatten
+      in
+      ( FullFun (x, es1, [], expanded_tm_args @ expanded_hs, ty, es2, exp_body),
+        attrs )
+  | _ -> (exp, attrs)
+
+let add_jb_arg_for_handler _ ((exp, attrs) : expr) : expr =
+  match exp with
+  | FullFun (x, es1, hs, tm_args, ty, es2, exp_body) ->
+      if attrs.isHandler then
+        ( FullFun (x, es1, hs, ("jb", TBuiltin) :: tm_args, ty, es2, exp_body),
+          attrs )
+      else (exp, attrs)
+  | _ -> (exp, attrs)
+
+let add_env_arg_for_fun _ ((exp, attrs) : expr) : expr =
+  match exp with
+  | FullFun (x, es1, hs, tm_args, ty, es2, exp_body) ->
+      if x <> "main" then
+        ( FullFun
+            ( x,
+              es1,
+              hs,
+              ("env", TCustom (x ^ "_env_t*")) :: tm_args,
+              ty,
+              es2,
+              exp_body ),
+          attrs )
+      else (exp, attrs)
+  | _ -> (exp, attrs)

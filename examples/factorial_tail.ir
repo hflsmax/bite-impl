@@ -1,6 +1,7 @@
 (FullFun main () () () TInt ()
  ((Let factorial
-   ((FullFun factorialRec () () ((n TInt) (acc TInt)) TInt ()
+   ((FullFun factorialRec () ()
+     ((env (TCustom factorialRec_env_t*)) (n TInt) (acc TInt)) TInt ()
      ((If
        ((Equal
          ((Var n)
@@ -75,7 +76,7 @@
      (hvarParams ()) (hvarArgs ()) (lhsHvar ()) (bindHvar ())
      (handlerKind ()) (isHandler false)))
    ((Let factorialTail
-     ((FullFun fn1 () () ((n TInt)) TInt ()
+     ((FullFun fn1 () () ((env (TCustom fn1_env_t*)) (n TInt)) TInt ()
        ((FullApply
          ((Var factorial)
           ((loc Nowhere) (isRecursiveCall false) (topLevelFunctionName ())

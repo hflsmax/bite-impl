@@ -141,49 +141,21 @@ let codeGen exp : string =
           ^ if attrs.cfDest = Continue then ";})" else ""
       | FullFun (x, es1, hs, tm_args, ty, es2, body_exp) ->
           let code_tm_args =
-            (if x <> "main" then [ "void* env" ] else [])
-            @ (if attrs.isHandler then [ "void* jb" ] else [])
-            @ List.map
-                (fun (arg_name, arg_ty) ->
-                  match arg_ty with
-                  | TAbs _ ->
-                      spf "void* %s_fptr, void* %s_env" arg_name arg_name
-                  | _ -> ty_to_string arg_ty ^ " " ^ arg_name)
-                tm_args
-          in
-          let code_hs =
             List.map
-              (fun (h, _) ->
-                spf "void *%s_fptr, void *%s_env, void *%s_jb" h h h)
-              hs
+              (fun (arg_name, arg_ty) -> ty_to_string arg_ty ^ " " ^ arg_name)
+              tm_args
           in
           let code_init =
             spf "%s_locals_t locals;\n" x
-            ^ (if x <> "main" then spf "locals.env = (%s_env_t*)env;\n" x
-              else "")
             ^ (tm_args
               |> List.map (fun (arg_name, arg_ty) ->
-                     match arg_ty with
-                     | TAbs _ ->
-                         spf
-                           "locals.%s_fptr = %s_fptr;\n\
-                            locals.%s_env = %s_env;\n"
-                           arg_name arg_name arg_name arg_name
-                     | _ -> spf "locals.%s = %s;\n" arg_name arg_name)
-              |> String.concat "")
-            ^ (List.map fst hs
-              |> List.map (fun h ->
-                     spf
-                       "locals.%s_fptr = %s_fptr;\n\
-                        locals.%s_env = %s_env;\n\
-                        locals.%s_jb = %s_jb;\n"
-                       h h h h h h)
+                     spf "locals.%s = %s;\n" arg_name arg_name)
               |> String.concat "")
           in
           let code_body = codeGen_rec body_exp in
           let this_fun =
             spf "%s %s(%s)\n{\n%s\n%s\n}\n" (ty_to_string ty) x
-              (String.concat ", " (code_tm_args @ code_hs))
+              (String.concat ", " code_tm_args)
               code_init code_body
           in
           global_code := !global_code ^ "\n" ^ this_fun ^ "\n";

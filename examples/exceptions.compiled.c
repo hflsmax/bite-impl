@@ -84,7 +84,6 @@ int Print(int x) {
 }
 
 typedef struct main_locals_t {
-  main_env_t *env;
   void *run_fptr;
   void *run_env;
   void *run_jb;
@@ -92,8 +91,8 @@ typedef struct main_locals_t {
 
 typedef main_locals_t g_env_t;
 typedef struct g_locals_t {
-  g_env_t *env;
   jmp_buf fn1_jb;
+  g_env_t *env;
   int n;
   void *lexc_fptr;
   void *lexc_env;
@@ -103,21 +102,23 @@ typedef struct g_locals_t {
 typedef g_locals_t fn1_env_t;
 typedef struct fn1_locals_t {
   fn1_env_t *env;
+  void *jb;
 } fn1_locals_t;
 bool fn1_saved = false;
 jmp_buf fn1_jb;
 
-int fn1(void *env, void *jb) {
+int fn1(fn1_env_t *env, void *jb) {
   fn1_locals_t locals;
-  locals.env = (fn1_env_t *)env;
+  locals.env = env;
+  locals.jb = jb;
 
   jmpret = 0;
   _longjmp(jb, 1);
 }
 
-int g(void *env, int n) {
+int g(g_env_t *env, int n) {
   g_locals_t locals;
-  locals.env = (g_env_t *)env;
+  locals.env = env;
   locals.n = n;
 
   locals.lexc_fptr = (void *)fn1;

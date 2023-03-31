@@ -1,6 +1,7 @@
 (FullFun main () () () TInt ()
  ((Let fibonacci
-   ((FullFun fibonacciRec () () ((n TInt)) TInt ()
+   ((FullFun fibonacciRec () ()
+     ((env (TCustom fibonacciRec_env_t*)) (n TInt)) TInt ()
      ((If
        ((Equal
          ((Var n)

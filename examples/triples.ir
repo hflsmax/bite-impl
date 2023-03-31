@@ -7,7 +7,10 @@ eff Choose = (TAbs () () (TInt) TInt ())
      (varDepth -1) (ty TInt) (effs ()) (hvarParams ()) (hvarArgs ())
      (lhsHvar ()) (bindHvar ()) (handlerKind ()) (isHandler false)))
    ((Let countTriples
-     ((FullFun fn1 () ((lch Choose)) ((n TInt) (s TInt)) TInt ((HVar lch))
+     ((FullFun fn1 () ()
+       ((env (TCustom fn1_env_t*)) (n TInt) (s TInt) (lch_fptr TBuiltin)
+        (lch_env TBuiltin) (lch_jb TBuiltin))
+       TInt ((HVar lch))
        ((Let ra
          ((Raise lch () ()
            (((Var n)
@@ -215,11 +218,17 @@ eff Choose = (TAbs () () (TInt) TInt ())
        (isHandler false)))
      ((Seq
        ((Handle lch Choose
-         ((FullFun fn2_handler_wrapper () () ((n TInt)) TInt ()
+         ((FullFun fn2_handler_wrapper () ()
+           ((env (TCustom fn2_handler_wrapper_env_t*)) (jb TBuiltin)
+            (n TInt))
+           TInt ()
            ((Let fn2
-             ((FullFun fn2 () () ((r TBuiltin)) TInt ()
+             ((FullFun fn2 () ()
+               ((env (TCustom fn2_env_t*)) (jb TBuiltin) (r TBuiltin)) TInt
+               ()
                ((Let iter
-                 ((FullFun iterRec () () ((i TInt)) TInt ()
+                 ((FullFun iterRec () ()
+                   ((env (TCustom iterRec_env_t*)) (i TInt)) TInt ()
                    ((If
                      ((Less
                        ((Var n)
@@ -387,7 +396,8 @@ eff Choose = (TAbs () () (TInt) TInt ())
            (varDepth -1) (ty (TAbs () () (TInt) TInt ())) (effs ())
            (hvarParams ()) (hvarArgs ()) (lhsHvar ()) (bindHvar ())
            (handlerKind (Multishot)) (isHandler true)))
-         ((FullFun fn2_body_wrapper () () () TInt ()
+         ((FullFun fn2_body_wrapper () ()
+           ((env (TCustom fn2_body_wrapper_env_t*))) TInt ()
            ((FullApply
              ((Var countTriples)
               ((loc Nowhere) (isRecursiveCall false)

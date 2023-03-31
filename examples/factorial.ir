@@ -1,6 +1,7 @@
 (FullFun main () () () TInt ()
  ((Let factorial
-   ((FullFun factorialRec () () ((n TInt)) TInt ()
+   ((FullFun factorialRec () ()
+     ((env (TCustom factorialRec_env_t*)) (n TInt)) TInt ()
      ((If
        ((Equal
          ((Var n)

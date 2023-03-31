@@ -67,6 +67,7 @@ let compile eff_defs = function
       let ((exp', _) as exp) = Passes.wrap_in_main exp in
       let ((exp', _) as exp) = Passes.transform eff_defs exp in
       let fun_infos, _ = Env_struct.get_fun_info exp None in
+      (* List.iter (fun es -> print_info "%t@." (Print.fun_info es)) fun_infos; *)
       let env_structs_string =
         Common.extra_defs Config.X64
         :: List.map (fun es -> Env_struct.get_env_struct es) fun_infos

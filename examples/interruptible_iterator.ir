@@ -4,11 +4,15 @@ eff Yield = (TAbs () ((replace Replace) (behead Behead)) (TInt) TInt
  ((HVar replace) (HVar behead)))
 (FullFun main () () () TInt ()
  ((Let iter
-   ((FullFun iterRec () ((yield Yield) (behead Behead)) ((l TBuiltin)) TInt
-     ((HVar yield) (HVar behead))
+   ((FullFun iterRec () ()
+     ((env (TCustom iterRec_env_t*)) (l TBuiltin) (yield_fptr TBuiltin)
+      (yield_env TBuiltin) (yield_jb TBuiltin) (behead_fptr TBuiltin)
+      (behead_env TBuiltin) (behead_jb TBuiltin))
+     TInt ((HVar yield) (HVar behead))
      ((Seq
        ((Handle replace Replace
-         ((FullFun fn1 () () ((x TInt)) TInt ()
+         ((FullFun fn1 () ()
+           ((env (TCustom fn1_env_t*)) (jb TBuiltin) (x TInt)) TInt ()
            ((Seq
              ((FullApply
                ((Var IterSet)
@@ -123,7 +127,8 @@ eff Yield = (TAbs () ((replace Replace) (behead Behead)) (TInt) TInt
            (varDepth -1) (ty TInt) (effs ()) (hvarParams ()) (hvarArgs ())
            (lhsHvar ()) (bindHvar ()) (handlerKind ()) (isHandler false)))
          ((Handle localBehead Behead
-           ((FullFun fn2 () () () TInt ()
+           ((FullFun fn2 () () ((env (TCustom fn2_env_t*)) (jb TBuiltin))
+             TInt ()
              ((Seq
                ((FullApply
                  ((Var IterRemoveNext)
@@ -262,8 +267,12 @@ eff Yield = (TAbs () ((replace Replace) (behead Behead)) (TInt) TInt
        (varDepth -1) (ty TBuiltin) (effs ()) (hvarParams ()) (hvarArgs ())
        (lhsHvar ()) (bindHvar ()) (handlerKind ()) (isHandler false)))
      ((Handle yield Yield
-       ((FullFun fn3 () ((replace Replace) (behead Behead)) ((x TInt)) TInt
-         ((HVar replace) (HVar behead))
+       ((FullFun fn3 () ()
+         ((env (TCustom fn3_env_t*)) (jb TBuiltin) (x TInt)
+          (replace_fptr TBuiltin) (replace_env TBuiltin)
+          (replace_jb TBuiltin) (behead_fptr TBuiltin) (behead_env TBuiltin)
+          (behead_jb TBuiltin))
+         TInt ((HVar replace) (HVar behead))
          ((If
            ((Less
              ((Var x)
@@ -341,7 +350,8 @@ eff Yield = (TAbs () ((replace Replace) (behead Behead)) (TInt) TInt
          (hvarArgs ()) (lhsHvar ()) (bindHvar ())
          (handlerKind (TailResumptive)) (isHandler true)))
        ((Handle behead Behead
-         ((FullFun fn4 () () () TInt ()
+         ((FullFun fn4 () () ((env (TCustom fn4_env_t*)) (jb TBuiltin)) TInt
+           ()
            ((Seq
              ((FullApply
                ((Var ListShift)

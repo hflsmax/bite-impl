@@ -84,7 +84,6 @@ int Print(int x) {
 }
 
 typedef struct main_locals_t {
-  main_env_t *env;
   jmp_buf fn2_handler_wrapper_jb;
   int cnt;
   void *countTriples_fptr;
@@ -111,6 +110,7 @@ typedef struct fn1_locals_t {
 typedef main_locals_t fn2_handler_wrapper_env_t;
 typedef struct fn2_handler_wrapper_locals_t {
   fn2_handler_wrapper_env_t *env;
+  void *jb;
   int n;
   void *fn2_fptr;
   void *fn2_env;
@@ -120,6 +120,7 @@ typedef struct fn2_handler_wrapper_locals_t {
 typedef fn2_handler_wrapper_locals_t fn2_env_t;
 typedef struct fn2_locals_t {
   fn2_env_t *env;
+  void *jb;
   void *r;
   void *iter_fptr;
   void *iter_env;
@@ -137,9 +138,10 @@ typedef struct fn2_body_wrapper_locals_t {
   fn2_body_wrapper_env_t *env;
 } fn2_body_wrapper_locals_t;
 
-int fn1(void *env, int n, int s, void *lch_fptr, void *lch_env, void *lch_jb) {
+int fn1(fn1_env_t *env, int n, int s, void *lch_fptr, void *lch_env,
+        void *lch_jb) {
   fn1_locals_t locals;
-  locals.env = (fn1_env_t *)env;
+  locals.env = env;
   locals.n = n;
   locals.s = s;
   locals.lch_fptr = lch_fptr;
@@ -159,9 +161,9 @@ int fn1(void *env, int n, int s, void *lch_fptr, void *lch_env, void *lch_jb) {
   };
 }
 
-int iterRec(void *env, int i) {
+int iterRec(iterRec_env_t *env, int i) {
   iterRec_locals_t locals;
-  locals.env = (iterRec_env_t *)env;
+  locals.env = env;
   locals.i = i;
 
   if (({ locals.env->env->n < locals.i; })) {
@@ -173,9 +175,10 @@ int iterRec(void *env, int i) {
   }
 }
 
-int fn2(void *env, void *jb, void *r) {
+int fn2(fn2_env_t *env, void *jb, void *r) {
   fn2_locals_t locals;
-  locals.env = (fn2_env_t *)env;
+  locals.env = env;
+  locals.jb = jb;
   locals.r = r;
 
   locals.iter_fptr = (void *)iterRec;
@@ -183,9 +186,10 @@ int fn2(void *env, void *jb, void *r) {
   return iterRec(locals.iter_env, 1);
 }
 
-int fn2_handler_wrapper(void *env, void *jb, int n) {
+int fn2_handler_wrapper(fn2_handler_wrapper_env_t *env, void *jb, int n) {
   fn2_handler_wrapper_locals_t locals;
-  locals.env = (fn2_handler_wrapper_env_t *)env;
+  locals.env = env;
+  locals.jb = jb;
   locals.n = n;
 
   locals.fn2_fptr = (void *)fn2;

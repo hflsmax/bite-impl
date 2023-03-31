@@ -84,7 +84,6 @@ int Print(int x) {
 }
 
 typedef struct main_locals_t {
-  main_env_t *env;
   jmp_buf fn3_jb;
   jmp_buf fn4_jb;
   void *iter_fptr;
@@ -101,9 +100,9 @@ typedef struct main_locals_t {
 
 typedef main_locals_t iterRec_env_t;
 typedef struct iterRec_locals_t {
-  iterRec_env_t *env;
   jmp_buf fn1_jb;
   jmp_buf fn2_jb;
+  iterRec_env_t *env;
   void *l;
   void *yield_fptr;
   void *yield_env;
@@ -122,17 +121,20 @@ typedef struct iterRec_locals_t {
 typedef iterRec_locals_t fn1_env_t;
 typedef struct fn1_locals_t {
   fn1_env_t *env;
+  void *jb;
   int x;
 } fn1_locals_t;
 
 typedef iterRec_locals_t fn2_env_t;
 typedef struct fn2_locals_t {
   fn2_env_t *env;
+  void *jb;
 } fn2_locals_t;
 
 typedef main_locals_t fn3_env_t;
 typedef struct fn3_locals_t {
   fn3_env_t *env;
+  void *jb;
   int x;
   void *replace_fptr;
   void *replace_env;
@@ -145,30 +147,33 @@ typedef struct fn3_locals_t {
 typedef main_locals_t fn4_env_t;
 typedef struct fn4_locals_t {
   fn4_env_t *env;
+  void *jb;
 } fn4_locals_t;
 
-int fn1(void *env, void *jb, int x) {
+int fn1(fn1_env_t *env, void *jb, int x) {
   fn1_locals_t locals;
-  locals.env = (fn1_env_t *)env;
+  locals.env = env;
+  locals.jb = jb;
   locals.x = x;
 
   IterSet(locals.env->l, locals.x);
   return 0;
 }
 
-int fn2(void *env, void *jb) {
+int fn2(fn2_env_t *env, void *jb) {
   fn2_locals_t locals;
-  locals.env = (fn2_env_t *)env;
+  locals.env = env;
+  locals.jb = jb;
 
   IterRemoveNext(locals.env->l);
   return 0;
 }
 
-int iterRec(void *env, void *l, void *yield_fptr, void *yield_env,
+int iterRec(iterRec_env_t *env, void *l, void *yield_fptr, void *yield_env,
             void *yield_jb, void *behead_fptr, void *behead_env,
             void *behead_jb) {
   iterRec_locals_t locals;
-  locals.env = (iterRec_env_t *)env;
+  locals.env = env;
   locals.l = l;
   locals.yield_fptr = yield_fptr;
   locals.yield_env = yield_env;
@@ -198,11 +203,12 @@ int iterRec(void *env, void *l, void *yield_fptr, void *yield_env,
   };
 }
 
-int fn3(void *env, void *jb, int x, void *replace_fptr, void *replace_env,
+int fn3(fn3_env_t *env, void *jb, int x, void *replace_fptr, void *replace_env,
         void *replace_jb, void *behead_fptr, void *behead_env,
         void *behead_jb) {
   fn3_locals_t locals;
-  locals.env = (fn3_env_t *)env;
+  locals.env = env;
+  locals.jb = jb;
   locals.x = x;
   locals.replace_fptr = replace_fptr;
   locals.replace_env = replace_env;
@@ -220,9 +226,10 @@ int fn3(void *env, void *jb, int x, void *replace_fptr, void *replace_env,
   }
 }
 
-int fn4(void *env, void *jb) {
+int fn4(fn4_env_t *env, void *jb) {
   fn4_locals_t locals;
-  locals.env = (fn4_env_t *)env;
+  locals.env = env;
+  locals.jb = jb;
 
   ListShift(locals.env->list);
   return 0;

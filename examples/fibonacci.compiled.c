@@ -84,7 +84,6 @@ int Print(int x) {
 }
 
 typedef struct main_locals_t {
-  main_env_t *env;
   void *fibonacci_fptr;
   void *fibonacci_env;
   void *fibonacci_jb;
@@ -96,9 +95,9 @@ typedef struct fibonacciRec_locals_t {
   int n;
 } fibonacciRec_locals_t;
 
-int fibonacciRec(void *env, int n) {
+int fibonacciRec(fibonacciRec_env_t *env, int n) {
   fibonacciRec_locals_t locals;
-  locals.env = (fibonacciRec_env_t *)env;
+  locals.env = env;
   locals.n = n;
 
   if (({ locals.n == 0; })) {

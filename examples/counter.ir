@@ -2,8 +2,11 @@ eff Fget = (TAbs () () () TInt ())
 eff Fset = (TAbs () () (TInt) TInt ())
 (FullFun main () () () TInt ()
  ((Let counter
-   ((FullFun f () ((lget Fget) (lset Fset)) ((n TInt)) TInt
-     ((HVar lget) (HVar lset))
+   ((FullFun f () ()
+     ((env (TCustom f_env_t*)) (n TInt) (lget_fptr TBuiltin)
+      (lget_env TBuiltin) (lget_jb TBuiltin) (lset_fptr TBuiltin)
+      (lset_env TBuiltin) (lset_jb TBuiltin))
+     TInt ((HVar lget) (HVar lset))
      ((Let i
        ((Raise lget () () ())
         ((loc Nowhere) (isRecursiveCall false) (topLevelFunctionName ())
@@ -135,7 +138,7 @@ eff Fset = (TAbs () () (TInt) TInt ())
      (hvarArgs ()) (lhsHvar ()) (bindHvar ()) (handlerKind ())
      (isHandler false)))
    ((Let run
-     ((FullFun fn1 () () ((n TInt)) TInt ()
+     ((FullFun fn1 () () ((env (TCustom fn1_env_t*)) (n TInt)) TInt ()
        ((Decl s
          ((Var n)
           ((loc Nowhere) (isRecursiveCall false) (topLevelFunctionName ())
@@ -143,7 +146,8 @@ eff Fset = (TAbs () () (TInt) TInt ())
            (varDepth 0) (ty TInt) (effs ()) (hvarParams ()) (hvarArgs ())
            (lhsHvar ()) (bindHvar ()) (handlerKind ()) (isHandler false)))
          ((Handle lget Fget
-           ((FullFun fn2 () () () TInt ()
+           ((FullFun fn2 () () ((env (TCustom fn2_env_t*)) (jb TBuiltin))
+             TInt ()
              ((Deref
                ((Var s)
                 ((loc Nowhere) (isRecursiveCall false)
@@ -163,7 +167,8 @@ eff Fset = (TAbs () () (TInt) TInt ())
              (hvarParams ()) (hvarArgs ()) (lhsHvar ()) (bindHvar ())
              (handlerKind (TailResumptive)) (isHandler true)))
            ((Handle lset Fset
-             ((FullFun fn3 () () ((n TInt)) TInt ()
+             ((FullFun fn3 () ()
+               ((env (TCustom fn3_env_t*)) (jb TBuiltin) (n TInt)) TInt ()
                ((Assign
                  ((Var s)
                   ((loc Nowhere) (isRecursiveCall false)

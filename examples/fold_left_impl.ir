@@ -31,7 +31,10 @@ eff NoSuchElement = (TAbs () () () TInt ())
          (varDepth -1) (ty TInt) (effs ()) (hvarParams ()) (hvarArgs ())
          (lhsHvar ()) (bindHvar ()) (handlerKind ()) (isHandler false)))
        ((Let iterNext
-         ((FullFun fn1 () ((exc NoSuchElement)) () TInt ((HVar exc))
+         ((FullFun fn1 () ()
+           ((env (TCustom fn1_env_t*)) (exc_fptr TBuiltin) (exc_env TBuiltin)
+            (exc_jb TBuiltin))
+           TInt ((HVar exc))
            ((If
              ((Less
                ((Deref
@@ -182,7 +185,8 @@ eff NoSuchElement = (TAbs () () () TInt ())
            (hvarArgs ()) (lhsHvar ()) (bindHvar ()) (handlerKind ())
            (isHandler false)))
          ((Let add
-           ((FullFun fn2 () () ((a TInt) (b TInt)) TInt ()
+           ((FullFun fn2 () () ((env (TCustom fn2_env_t*)) (a TInt) (b TInt))
+             TInt ()
              ((Plus
                ((Var a)
                 ((loc Nowhere) (isRecursiveCall false)
@@ -210,7 +214,9 @@ eff NoSuchElement = (TAbs () () () TInt ())
              (handlerKind ()) (isHandler false)))
            ((Let foldLeft
              ((FullFun foldLeftRec () ()
-               ((op (TAbs () () (TInt TInt) TInt ())) (acc TInt)) TInt ()
+               ((env (TCustom foldLeftRec_env_t*)) (op_fptr TBuiltin)
+                (op_env TBuiltin) (acc TInt))
+               TInt ()
                ((Decl next
                  ((Int 0)
                   ((loc Nowhere) (isRecursiveCall false)
@@ -229,7 +235,8 @@ eff NoSuchElement = (TAbs () () () TInt ())
                      (isHandler false)))
                    ((Seq
                      ((Handle exc NoSuchElement
-                       ((FullFun fn3 () () () TInt ()
+                       ((FullFun fn3 () ()
+                         ((env (TCustom fn3_env_t*)) (jb TBuiltin)) TInt ()
                          ((Seq
                            ((Assign
                              ((Var toBreak)

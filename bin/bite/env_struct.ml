@@ -35,14 +35,11 @@ let rec get_fun_info ((exp, attrs) : expr) (pfun_name : string option) :
       @++@ get_fun_info exp_catch pfun_name
       @++@ get_fun_info exp_handle pfun_name
   | FullFun (fun_name, es1, hs, tm_args, ty, es2, exp_body) ->
-      let hd_args =
-        List.map (fun rhvar -> (rhvar.name, rhvar.ty)) attrs.hvarParams
-      in
       let fun_infos, handlers = get_fun_info exp_body (Some fun_name) in
       ( {
           fun_name;
           pfun_name;
-          locals = tm_args @ hd_args @ gather_locals exp_body;
+          locals = tm_args @ gather_locals exp_body;
           handlers;
         }
         :: fun_infos,
@@ -76,6 +73,5 @@ let get_env_struct { fun_name; pfun_name; locals; handlers } : string =
   | None -> ""
   | Some pfun_name' -> spf "typedef %s_locals_t %s_env_t;\n" pfun_name' fun_name)
   ^ spf "typedef struct %s_locals_t {\n" fun_name
-  ^ spf "%s_env_t* env;\n" fun_name
   ^ jbs ^ locals ^ "} "
   ^ spf "%s_locals_t;\n" fun_name

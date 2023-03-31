@@ -1,9 +1,9 @@
 eff Exc = (TAbs () () () TInt ())
 (FullFun main () () () TInt ()
  ((Let run
-   ((FullFun g () () ((n TInt)) TInt ()
+   ((FullFun g () () ((env (TCustom g_env_t*)) (n TInt)) TInt ()
      ((Handle lexc Exc
-       ((FullFun fn1 () () () TInt ()
+       ((FullFun fn1 () () ((env (TCustom fn1_env_t*)) (jb TBuiltin)) TInt ()
          ((Int 0)
           ((loc Nowhere) (isRecursiveCall false) (topLevelFunctionName ())
            (cfDest Abort) (isOptimizedSjlj false) (isBuiltin false)

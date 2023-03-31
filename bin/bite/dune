@@ -8,6 +8,7 @@
  (name bite)
  (libraries sexplib core str)
  (modes byte exe)
+ (flags :standard -g)
  (preprocess
   (pps ppx_sexp_conv)))
 

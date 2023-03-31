@@ -84,7 +84,6 @@ int Print(int x) {
 }
 
 typedef struct main_locals_t {
-  main_env_t *env;
   int arrLen;
   void *arr;
   int iterIdx;
@@ -116,11 +115,10 @@ typedef struct fn2_locals_t {
 
 typedef main_locals_t foldLeftRec_env_t;
 typedef struct foldLeftRec_locals_t {
-  foldLeftRec_env_t *env;
   jmp_buf fn3_jb;
+  foldLeftRec_env_t *env;
   void *op_fptr;
   void *op_env;
-  void *op_jb;
   int acc;
   int next;
   bool toBreak;
@@ -132,13 +130,14 @@ typedef struct foldLeftRec_locals_t {
 typedef foldLeftRec_locals_t fn3_env_t;
 typedef struct fn3_locals_t {
   fn3_env_t *env;
+  void *jb;
 } fn3_locals_t;
 bool fn3_saved = false;
 jmp_buf fn3_jb;
 
-int fn1(void *env, void *exc_fptr, void *exc_env, void *exc_jb) {
+int fn1(fn1_env_t *env, void *exc_fptr, void *exc_env, void *exc_jb) {
   fn1_locals_t locals;
-  locals.env = (fn1_env_t *)env;
+  locals.env = env;
   locals.exc_fptr = exc_fptr;
   locals.exc_env = exc_env;
   locals.exc_jb = exc_jb;
@@ -153,27 +152,28 @@ int fn1(void *env, void *exc_fptr, void *exc_env, void *exc_jb) {
   }
 }
 
-int fn2(void *env, int a, int b) {
+int fn2(fn2_env_t *env, int a, int b) {
   fn2_locals_t locals;
-  locals.env = (fn2_env_t *)env;
+  locals.env = env;
   locals.a = a;
   locals.b = b;
 
   return ({ locals.a + locals.b; });
 }
 
-int fn3(void *env, void *jb) {
+int fn3(fn3_env_t *env, void *jb) {
   fn3_locals_t locals;
-  locals.env = (fn3_env_t *)env;
+  locals.env = env;
+  locals.jb = jb;
 
   locals.env->toBreak = true;
   jmpret = 0;
   _longjmp(jb, 1);
 }
 
-int foldLeftRec(void *env, void *op_fptr, void *op_env, int acc) {
+int foldLeftRec(foldLeftRec_env_t *env, void *op_fptr, void *op_env, int acc) {
   foldLeftRec_locals_t locals;
-  locals.env = (foldLeftRec_env_t *)env;
+  locals.env = env;
   locals.op_fptr = op_fptr;
   locals.op_env = op_env;
   locals.acc = acc;
