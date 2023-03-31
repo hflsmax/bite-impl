@@ -34,6 +34,8 @@ __asm__(".global _setjmp\n\t"
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <mprompt.h>
+
 #include "klist.h"
 
 volatile int jmpret;

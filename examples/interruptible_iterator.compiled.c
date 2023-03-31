@@ -34,6 +34,8 @@ __asm__(".global _setjmp\n\t"
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <mprompt.h>
+
 #include "klist.h"
 
 volatile int jmpret;
@@ -145,7 +147,7 @@ typedef struct fn4_locals_t {
   fn4_env_t *env;
 } fn4_locals_t;
 
-int fn1(void *env, jmp_buf jb, int x) {
+int fn1(void *env, void *jb, int x) {
   fn1_locals_t locals;
   locals.env = (fn1_env_t *)env;
   locals.x = x;
@@ -154,7 +156,7 @@ int fn1(void *env, jmp_buf jb, int x) {
   return 0;
 }
 
-int fn2(void *env, jmp_buf jb) {
+int fn2(void *env, void *jb) {
   fn2_locals_t locals;
   locals.env = (fn2_env_t *)env;
 
@@ -196,7 +198,7 @@ int iterRec(void *env, void *l, void *yield_fptr, void *yield_env,
   };
 }
 
-int fn3(void *env, jmp_buf jb, int x, void *replace_fptr, void *replace_env,
+int fn3(void *env, void *jb, int x, void *replace_fptr, void *replace_env,
         void *replace_jb, void *behead_fptr, void *behead_env,
         void *behead_jb) {
   fn3_locals_t locals;
@@ -218,7 +220,7 @@ int fn3(void *env, jmp_buf jb, int x, void *replace_fptr, void *replace_env,
   }
 }
 
-int fn4(void *env, jmp_buf jb) {
+int fn4(void *env, void *jb) {
   fn4_locals_t locals;
   locals.env = (fn4_env_t *)env;
 

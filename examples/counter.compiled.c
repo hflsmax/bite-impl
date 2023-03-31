@@ -34,6 +34,8 @@ __asm__(".global _setjmp\n\t"
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <mprompt.h>
+
 #include "klist.h"
 
 volatile int jmpret;
@@ -156,14 +158,14 @@ int f(void *env, int n, void *lget_fptr, void *lget_env, void *lget_jb,
   };
 }
 
-int fn2(void *env, jmp_buf jb) {
+int fn2(void *env, void *jb) {
   fn2_locals_t locals;
   locals.env = (fn2_env_t *)env;
 
   return locals.env->s;
 }
 
-int fn3(void *env, jmp_buf jb, int n) {
+int fn3(void *env, void *jb, int n) {
   fn3_locals_t locals;
   locals.env = (fn3_env_t *)env;
   locals.n = n;

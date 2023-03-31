@@ -34,6 +34,8 @@ __asm__(".global _setjmp\n\t"
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <mprompt.h>
+
 #include "klist.h"
 
 volatile int jmpret;
@@ -105,7 +107,7 @@ typedef struct fn1_locals_t {
 bool fn1_saved = false;
 jmp_buf fn1_jb;
 
-int fn1(void *env, jmp_buf jb) {
+int fn1(void *env, void *jb) {
   fn1_locals_t locals;
   locals.env = (fn1_env_t *)env;
 

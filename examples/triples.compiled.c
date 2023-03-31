@@ -173,7 +173,7 @@ int iterRec(void *env, int i) {
   }
 }
 
-int fn2(void *env, jmp_buf jb, void *r) {
+int fn2(void *env, void *jb, void *r) {
   fn2_locals_t locals;
   locals.env = (fn2_env_t *)env;
   locals.r = r;
@@ -183,7 +183,7 @@ int fn2(void *env, jmp_buf jb, void *r) {
   return iterRec(locals.iter_env, 1);
 }
 
-int fn2_handler_wrapper(void *env, jmp_buf jb, int n) {
+int fn2_handler_wrapper(void *env, void *jb, int n) {
   fn2_handler_wrapper_locals_t locals;
   locals.env = (fn2_handler_wrapper_env_t *)env;
   locals.n = n;
@@ -197,10 +197,8 @@ int fn2_body_wrapper(mp_prompt_t *p, void *env) {
   fn2_body_wrapper_locals_t locals;
   locals.env = (fn2_handler_wrapper_env_t *)env;
   locals.env->lch_jb = p;
-
-  fn1(locals.env->countTriples_env, 500, 127, locals.env->lch_fptr,
-      locals.env->lch_env, locals.env->lch_jb);
-  return Print(locals.env->cnt);
+  return fn1(locals.env->countTriples_env, 500, 127, locals.env->lch_fptr,
+             locals.env->lch_env, locals.env->lch_jb);
 }
 
 int main() {
@@ -209,7 +207,11 @@ int main() {
   locals.cnt = 0;
   locals.countTriples_fptr = (void *)fn1;
   locals.countTriples_env = &locals;
-  locals.lch_fptr = (void *)fn2_handler_wrapper;
-  locals.lch_env = &locals;
-  mp_prompt(fn2_body_wrapper, &locals);
+
+  ({
+    locals.lch_fptr = (void *)fn2_handler_wrapper;
+    locals.lch_env = &locals;
+    mp_prompt(fn2_body_wrapper, &locals);
+  });
+  return Print(locals.cnt);
 }

@@ -142,7 +142,7 @@ let codeGen exp : string =
       | FullFun (x, es1, hs, tm_args, ty, es2, body_exp) ->
           let code_tm_args =
             (if x <> "main" then [ "void* env" ] else [])
-            @ (if attrs.isHandler then [ "jmp_buf jb" ] else [])
+            @ (if attrs.isHandler then [ "void* jb" ] else [])
             @ List.map
                 (fun (arg_name, arg_ty) ->
                   match arg_ty with

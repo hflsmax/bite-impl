@@ -1,41 +1,8 @@
 open Syntax
 open Common
-open Sexplib.Std
-open Util
-open Pass_util
-
-let mark_handlers state ((exp, attrs) : expr) =
-  match exp with
-  | Handle (x, fname, (c, cattrs), exp_handle) ->
-      ( Handle (x, fname, (c, { cattrs with isHandler = true }), exp_handle),
-        attrs )
-  | _ -> (exp, attrs)
-
-let get_var_depth (x : name) (slink : string list list) : int =
-  let rec get_var_depth' (x : name) (slink : string list list) (depth : int) :
-      int =
-    match slink with
-    | [] -> error "Variable \"%s\" not found in static link@." x
-    | locals :: slink' ->
-        if List.mem x locals then depth else get_var_depth' x slink' (depth + 1)
-  in
-  get_var_depth' x slink 0
-
-let analyze_handlerKind (f : expr') : handlerKind =
-  match f with
-  | FullFun (_, _, _, _, _, _, body) -> (
-      match body with
-      | Resume _, _ -> TailResumptive
-      | _ ->
-          if
-            List.length
-              (gather_exp true
-                 (fun exp -> match exp with Resume _, _ -> true | _ -> false)
-                 body)
-            > 0
-          then Multishot
-          else Abortive)
-  | _ -> error "Handler is not a full function: %t@." (Print.expr f)
+open Pass_state
+open Pass_attrs
+open Pass_expr
 
 let wrap_in_main (exp : expr) : expr =
   let fun_def = FullFun ("main", [], [], [], TInt, [], exp) in
@@ -46,213 +13,6 @@ let wrap_in_main (exp : expr) : expr =
       ty = full_fun_to_tabs fun_def;
       effs = [];
     } )
-
-type pass_state = {
-  curr_func_name : string;
-  curr_func_is_tail_recursive : bool;
-  value_store : (string * string) list;
-  static_link : string list list;
-  eff_defs : f_ENV;
-  is_in_general_handler : bool;
-}
-[@@deriving sexp]
-
-let update_is_in_general_handler state ((exp, attrs) : expr) =
-  match exp with
-  | FullFun (x, es1, hs, tm_args, ty, es2, exp_body) ->
-      if
-        attrs.handlerKind = Some Multishot
-        || attrs.handlerKind = Some SingleShot
-      then { state with is_in_general_handler = true }
-      else state
-  | _ -> state
-
-let mark_resumer state ((exp, attrs) : expr) =
-  match exp with
-  | Resume (e, _) ->
-      if state.is_in_general_handler then
-        (Resume (e, Some (Var "r", default_attrs)), attrs)
-      else (Resume (e, None), attrs)
-  | _ -> (exp, attrs)
-
-(* This wrapper allows the body to be a function and takes in mp_prompt_t as the first argument *)
-let wrap_general_handler_body _ ((exp, attrs) : expr) : expr =
-  if attrs.handlerKind = Some Multishot || attrs.handlerKind = Some SingleShot
-  then
-    match exp with
-    | Handle
-        ( x,
-          fname,
-          (FullFun (fun_name, es1, hs, tm_args, ty, es2, exp_body), fattrs),
-          exp_handle ) ->
-        let new_handler =
-          FullFun (fun_name, [], [], [ ("r", TBuiltin) ], ty, [], exp_body)
-        in
-        let handler_wrapper =
-          FullFun
-            ( fun_name ^ "_handler_wrapper",
-              es1,
-              hs,
-              tm_args,
-              ty,
-              es2,
-              ( Let
-                  ( fun_name,
-                    (new_handler, fattrs),
-                    (FullApply ((Var fun_name, fattrs), [], [], []), fattrs) ),
-                fattrs ) )
-        in
-        let body_wrapper =
-          FullFun
-            ( fun_name ^ "_body_wrapper",
-              [],
-              [],
-              [],
-              attrs.ty,
-              attrs.effs,
-              exp_handle )
-        in
-        ( Handle
-            (x, fname, (handler_wrapper, fattrs), (body_wrapper, default_attrs)),
-          attrs )
-    | _ -> (exp, attrs)
-  else (exp, attrs)
-
-let record_handlerKind state ((exp, attrs) : expr) =
-  if attrs.handlerKind <> None then (exp, attrs)
-  else
-    match exp with
-    | Handle (x, fname, (f, fattrs), exp_handle) ->
-        ( Handle
-            ( x,
-              fname,
-              (f, { fattrs with handlerKind = Some (analyze_handlerKind f) }),
-              exp_handle ),
-          { attrs with handlerKind = Some (analyze_handlerKind f) } )
-    | _ -> (exp, attrs)
-
-let update_static_link state ((exp, attrs) : expr) =
-  match exp with
-  | FullFun (x, es1, hs, tm_args, ty, es2, exp_body) ->
-      let locals = (x :: List.map fst tm_args) @ List.map fst hs in
-      { state with static_link = locals :: state.static_link }
-  | Let (x, e1, e2) ->
-      {
-        state with
-        static_link =
-          (x :: List.hd state.static_link) :: List.tl state.static_link;
-      }
-  | Decl (x, e1, e2) ->
-      {
-        state with
-        static_link =
-          (x :: List.hd state.static_link) :: List.tl state.static_link;
-      }
-  | Handle (x, fname, exp_catch, exp_handle) ->
-      {
-        state with
-        static_link =
-          (x :: List.hd state.static_link) :: List.tl state.static_link;
-      }
-  | _ -> state
-
-let record_var_depth state ((exp, attrs) : expr) =
-  match exp with
-  | Var x ->
-      if attrs.isBuiltin then (exp, attrs)
-      else
-        let depth = get_var_depth x state.static_link in
-        (exp, { attrs with varDepth = depth })
-  | Raise (x, _, hvars, _) ->
-      let hvarArgs' =
-        List.map
-          (fun hvar ->
-            let depth = get_var_depth hvar.name state.static_link in
-            { hvar with depth })
-          attrs.hvarArgs
-      in
-      let depth = get_var_depth x state.static_link in
-      ( exp,
-        {
-          attrs with
-          lhsHvar = Some { (Option.get attrs.lhsHvar) with depth };
-          hvarArgs = hvarArgs';
-        } )
-  | FullApply (_, _, hvars, _) ->
-      let hvarArgs' =
-        List.map
-          (fun hvar ->
-            let depth = get_var_depth hvar.name state.static_link in
-            { hvar with depth })
-          attrs.hvarArgs
-      in
-      (exp, { attrs with hvarArgs = hvarArgs' })
-  | _ -> (exp, attrs)
-
-let check_tail_recursive state ((exp, attrs) : expr) =
-  match exp with
-  | FullFun (x, es1, hs, tm_args, ty, es2, exp_body) ->
-      (* If there is a recursive call that is not in tail position, set to false *)
-      if
-        List.length
-          (gather_exp true
-             (function
-               | FullApply ((Var x', _), _, _, _), attrs ->
-                   x = x' && not attrs.isRecursiveCall
-               | _ -> false)
-             exp_body)
-        != 0
-      then { state with curr_func_is_tail_recursive = false }
-      else { state with curr_func_is_tail_recursive = true }
-  | _ -> state
-
-let mark_optimized_sjlj state ((exp, attrs) : expr) =
-  match exp with
-  | Handle (x, fname, exp_catch, exp_handle) ->
-      if state.curr_func_is_tail_recursive then
-        (exp, { attrs with isOptimizedSjlj = true })
-      else (exp, attrs)
-  | _ -> (exp, attrs)
-
-(* If tail-resumptive, remove resume expression such that it's treated like a function *)
-let transform_tail_resumptive_handler _ ((exp, attrs) : expr) : expr =
-  ( (match exp with
-    | FullFun (x, es1, hs, tm_args, ty, es2, (exp_body, exp_body_attrs)) -> (
-        match exp_body with
-        | Resume (exp_body', r) ->
-            FullFun (x, es1, hs, tm_args, ty, es2, exp_body')
-        | _ -> exp)
-    | _ -> exp),
-    attrs )
-
-let mark_recursive_call state ((exp, attrs) : expr) : expr =
-  match exp with
-  | FullApply ((Var x, _), _, _, _) ->
-      if x = state.curr_func_name then
-        (exp, { attrs with isRecursiveCall = true })
-      else (exp, attrs)
-  | _ -> (exp, attrs)
-
-let propogate_const_fun_to_callsite state ((exp, attrs) : expr) : expr =
-  match exp with
-  | FullApply ((Var x, x_attrs), app_eargs, app_hargs, app_targs) -> (
-      match List.assoc_opt x state.value_store with
-      | Some fun_name ->
-          (exp, { attrs with topLevelFunctionName = Some fun_name })
-      | None -> (exp, attrs))
-  | Raise (x, es, hs, exps) -> (
-      match List.assoc_opt x state.value_store with
-      | Some fun_name ->
-          (exp, { attrs with topLevelFunctionName = Some fun_name })
-      | None -> (exp, attrs))
-  | _ -> (exp, attrs)
-
-let mark_builtin_call _ ((exp, attrs) : expr) : expr =
-  match exp with
-  | FullApply ((_, x_attrs), _, _, _) ->
-      if x_attrs.isBuiltin then (exp, { attrs with isBuiltin = true })
-      else (exp, attrs)
-  | _ -> (exp, attrs)
 
 (* Mark children's cf_dest according to the current cf_dest *)
 let mark_cf_dest _ ((exp, attrs) as rexp : expr) : expr =
@@ -396,15 +156,16 @@ let transform (effs_efs : f_ENV) (exp : expr) : expr =
   |> transform_exp init_state
        [
          mark_handlers;
-         record_handlerKind;
-         wrap_general_handler_body;
+         mark_handlerKind;
+         transform_general_handler;
          mark_resumer;
-         record_var_depth;
+         mark_var_depth;
          transform_tail_resumptive_handler;
          mark_cf_dest;
          mark_recursive_call;
-         propogate_const_fun_to_callsite;
+         mark_topLevelFunctionName;
          mark_builtin_call;
        ]
        [ update_static_link; update_is_in_general_handler ]
-  |> transform_exp init_state [ mark_optimized_sjlj ] [ check_tail_recursive ]
+  |> transform_exp init_state [ mark_optimized_sjlj ]
+       [ update_curr_func_is_tail_recursive ]
