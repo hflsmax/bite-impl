@@ -34,7 +34,7 @@ let rec gather_locals ((exp, attrs) : expr) : locals =
       @ List.fold_left (fun acc exp_iter -> acc @ gather_locals exp_iter) [] e2
   | Raise (_, _, _, e) ->
       List.fold_left (fun acc exp_iter -> acc @ gather_locals exp_iter) [] e
-  | Resume e -> gather_locals e
+  | Resume (e, r) -> gather_locals e
   | Seq (e1, e2) -> gather_locals e1 @ gather_locals e2
   | Var _ | Int _ | Bool _ | Deref _ -> []
 
@@ -114,6 +114,8 @@ let extra_defs arch =
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
+
+#include <mprompt.h>
 
 #include "klist.h"
 

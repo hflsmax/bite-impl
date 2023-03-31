@@ -22,7 +22,7 @@ let gather_exp include_all_lexical_scope predicate exp =
     | FullApply (exp, es, hs, exps) ->
         gather_exp' exp @ List.concat (List.map gather_exp' exps)
     | Raise (h, es, hs, exps) -> List.concat (List.map gather_exp' exps)
-    | Resume e -> gather_exp' e
+    | Resume (e, r) -> gather_exp' e
     | Seq (e1, e2) -> gather_exp' e1 @ gather_exp' e2
     | Int _ | Bool _ | Var _ -> []
   in

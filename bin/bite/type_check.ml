@@ -341,10 +341,10 @@ let rec type_of (eff_defs : f_ENV) (e_env : e_ENV) (h_env : h_ENV)
           with Not_found ->
             typing_error ~loc:attrs.loc "unknown effect name %s" fname)
       | None -> typing_error ~loc:attrs.loc "unknown handler %s" hvar)
-  | Resume e ->
+  | Resume (e, r) ->
       (* TODO: check e's type corresponds to handler's return type *)
       let e', attrs_e = type_of eff_defs e_env h_env t_env e in
-      ( Resume (e', attrs_e),
+      ( Resume ((e', attrs_e), r),
         { default_attrs with ty = attrs_e.ty; effs = attrs_e.effs } )
   | Seq (exp1, exp2) ->
       let exp1', attrs1 = type_of eff_defs e_env h_env t_env exp1 in

@@ -34,6 +34,8 @@ __asm__(".global _setjmp\n\t"
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <mprompt.h>
+
 #include "klist.h"
 
 volatile int jmpret;
@@ -83,7 +85,7 @@ int Print(int x) {
 
 typedef struct main_locals_t {
   main_env_t *env;
-  jmp_buf fn2_jb;
+  jmp_buf fn2_handler_wrapper_jb;
   int cnt;
   void *countTriples_fptr;
   void *countTriples_env;
@@ -106,10 +108,18 @@ typedef struct fn1_locals_t {
   int rc;
 } fn1_locals_t;
 
-typedef main_locals_t fn2_env_t;
+typedef main_locals_t fn2_handler_wrapper_env_t;
+typedef struct fn2_handler_wrapper_locals_t {
+  fn2_handler_wrapper_env_t *env;
+  int n;
+  void *fn2_fptr;
+  void *fn2_env;
+  void *fn2_jb;
+} fn2_handler_wrapper_locals_t;
+
+typedef fn2_handler_wrapper_locals_t fn2_env_t;
 typedef struct fn2_locals_t {
   fn2_env_t *env;
-  int n;
   void *r;
   void *iter_fptr;
   void *iter_env;
@@ -154,7 +164,7 @@ int iterRec(void *env, int i) {
   locals.env = (iterRec_env_t *)env;
   locals.i = i;
 
-  if (({ locals.env->n < locals.i; })) {
+  if (({ locals.env->env->n < locals.i; })) {
     return 0;
   } else {
 
@@ -163,20 +173,30 @@ int iterRec(void *env, int i) {
   }
 }
 
-int fn2(void *env, jmp_buf jb, int n) {
+int fn2(void *env, jmp_buf jb, void *r) {
   fn2_locals_t locals;
   locals.env = (fn2_env_t *)env;
-  locals.n = n;
+  locals.r = r;
 
-  locals.r = ReifyResumer();
   locals.iter_fptr = (void *)iterRec;
   locals.iter_env = &locals;
   return iterRec(locals.iter_env, 1);
 }
 
-int fn2_body_wrapper(void *env) {
+int fn2_handler_wrapper(void *env, jmp_buf jb, int n) {
+  fn2_handler_wrapper_locals_t locals;
+  locals.env = (fn2_handler_wrapper_env_t *)env;
+  locals.n = n;
+
+  locals.fn2_fptr = (void *)fn2;
+  locals.fn2_env = &locals;
+  return fn2(locals.fn2_env);
+}
+
+int fn2_body_wrapper(mp_prompt_t *p, void *env) {
   fn2_body_wrapper_locals_t locals;
-  locals.env = (fn2_body_wrapper_env_t *)env;
+  locals.env = (fn2_handler_wrapper_env_t *)env;
+  locals.env->lch_jb = p;
 
   fn1(locals.env->countTriples_env, 500, 127, locals.env->lch_fptr,
       locals.env->lch_env, locals.env->lch_jb);
@@ -189,7 +209,7 @@ int main() {
   locals.cnt = 0;
   locals.countTriples_fptr = (void *)fn1;
   locals.countTriples_env = &locals;
-  locals.lch_fptr = (void *)fn2;
+  locals.lch_fptr = (void *)fn2_handler_wrapper;
   locals.lch_env = &locals;
   mp_prompt(fn2_body_wrapper, &locals);
 }

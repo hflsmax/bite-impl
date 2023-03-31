@@ -26,7 +26,9 @@ let codeGen exp : string =
       LibmpromptCodeGen.is_handle exp
       && (attrs.handlerKind = Some Multishot
          || attrs.handlerKind = Some SingleShot)
-    then LibmpromptCodeGen.generalHandlerCodeGen (exp, attrs) codeGen_rec
+    then
+      LibmpromptCodeGen.generalHandlerCodeGen (exp, attrs) codeGen_rec
+        global_code
     else
       (match exp with
       | Var x ->
@@ -251,14 +253,11 @@ let codeGen exp : string =
                 handler_code
           in
           spf "%s(%s)" lhs_code (String.concat ", " args_code)
-      | Resume e ->
-          let[@warning "-partial-match"] FullApply (resumer, es, hs, [ ret ]), _
-              =
-            e
-          in
-          let resumer' = codeGen_rec resumer in
-          let ret' = codeGen_rec ret in
-          spf "mp_resume(%s, (void*)%s);" resumer' ret'
+      | Resume (e, r) ->
+          let[@warning "-partial-match"] (Some r) = r in
+          let r' = codeGen_rec r in
+          let ret' = codeGen_rec e in
+          spf "mp_resume(%s, (void*)%s);" r' ret'
       | Seq (e1, e2) ->
           let e1' = codeGen_rec e1 in
           let e2' = codeGen_rec e2 in

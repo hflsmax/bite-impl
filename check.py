@@ -27,7 +27,7 @@ def run_example(name):
         print(f"Running example {name}")
         subprocess.run(["dune", "exec", "--display", "quiet", "bite", "--", "-l", f"./examples/{name}.bite", "-o", f"./examples/{name}.compiled.c", "-oir", f"./examples/{name}.ir"], check=True)
         subprocess.run(["clang-format", "-i", f"./examples/{name}.compiled.c"], check=True)
-        subprocess.run(["clang", "-O3", "-o", f"./examples/{name}.exe", f"./examples/{name}.compiled.c"], check=True)
+        subprocess.run(["clang", "-O3", "-I", "./libmprompt/include", "-o", f"./examples/{name}.exe", f"./examples/{name}.compiled.c", "./libmprompt/src/mprompt/main.c", "./libmprompt/src/mprompt/asm/longjmp_amd64.S"], check=True)
         output = subprocess.run([f"./examples/{name}.exe"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True, text=True)
         return output.stdout.strip()
     except subprocess.CalledProcessError as e:

@@ -155,7 +155,7 @@ plain_expr:
   | RAISE hvar = VAR es = effect_args? hs = handler_args? exps = term_args
     { Raise (hvar, (Option.value es ~default:[]), (Option.value hs ~default:[]), exps) }
   | RESUME expr = expr
-    { Resume expr }
+    { Resume (expr, None) }
   | x = plain_lhs
     { x }
   | TRUE    

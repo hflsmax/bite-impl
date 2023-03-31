@@ -135,7 +135,7 @@ and expr' =
       name * effs * (hvar * fname) list * (name * ty) list * ty * effs * expr
   | FullApply of expr * effs * hvar list * expr list
   | Raise of hvar * effs * hvar list * expr list
-  | Resume of expr
+  | Resume of expr * expr option
   | Seq of expr * expr
 [@@deriving sexp]
 

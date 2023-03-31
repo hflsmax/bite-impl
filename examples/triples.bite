@@ -14,21 +14,19 @@ dcl cnt := 0 in
         end
     end in
         handle lch : Choose = fn [] {} (n : int) : int_[] is
-            let r = ReifyResumer () in
-                let iter = fun iterRec [] {} (i : int) : int_[] is
-                    if n < i then
-                        0
-                    else
-                        resume r i;
-                        (iterRec (i + 1))
-                end in
-                    iter 1
-                end
+            let iter = fun iterRec [] {} (i : int) : int_[] is
+                if n < i then
+                    0
+                else
+                    resume i;
+                    (iterRec (i + 1))
+            end in
+                iter 1
             end
         end in
-            countTriples {lch} 500 127;
-            Print (!cnt)
-        end
+            countTriples {lch} 500 127
+        end;
+        Print (!cnt)
     end
 end
 ;;

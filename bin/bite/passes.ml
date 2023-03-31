@@ -53,9 +53,29 @@ type pass_state = {
   value_store : (string * string) list;
   static_link : string list list;
   eff_defs : f_ENV;
+  is_in_general_handler : bool;
 }
 [@@deriving sexp]
 
+let update_is_in_general_handler state ((exp, attrs) : expr) =
+  match exp with
+  | FullFun (x, es1, hs, tm_args, ty, es2, exp_body) ->
+      if
+        attrs.handlerKind = Some Multishot
+        || attrs.handlerKind = Some SingleShot
+      then { state with is_in_general_handler = true }
+      else state
+  | _ -> state
+
+let mark_resumer state ((exp, attrs) : expr) =
+  match exp with
+  | Resume (e, _) ->
+      if state.is_in_general_handler then
+        (Resume (e, Some (Var "r", default_attrs)), attrs)
+      else (Resume (e, None), attrs)
+  | _ -> (exp, attrs)
+
+(* This wrapper allows the body to be a function and takes in mp_prompt_t as the first argument *)
 let wrap_general_handler_body _ ((exp, attrs) : expr) : expr =
   if attrs.handlerKind = Some Multishot || attrs.handlerKind = Some SingleShot
   then
@@ -65,7 +85,24 @@ let wrap_general_handler_body _ ((exp, attrs) : expr) : expr =
           fname,
           (FullFun (fun_name, es1, hs, tm_args, ty, es2, exp_body), fattrs),
           exp_handle ) ->
-        let wrapper =
+        let new_handler =
+          FullFun (fun_name, [], [], [ ("r", TBuiltin) ], ty, [], exp_body)
+        in
+        let handler_wrapper =
+          FullFun
+            ( fun_name ^ "_handler_wrapper",
+              es1,
+              hs,
+              tm_args,
+              ty,
+              es2,
+              ( Let
+                  ( fun_name,
+                    (new_handler, fattrs),
+                    (FullApply ((Var fun_name, fattrs), [], [], []), fattrs) ),
+                fattrs ) )
+        in
+        let body_wrapper =
           FullFun
             ( fun_name ^ "_body_wrapper",
               [],
@@ -76,10 +113,7 @@ let wrap_general_handler_body _ ((exp, attrs) : expr) : expr =
               exp_handle )
         in
         ( Handle
-            ( x,
-              fname,
-              (FullFun (fun_name, es1, hs, tm_args, ty, es2, exp_body), fattrs),
-              (wrapper, default_attrs) ),
+            (x, fname, (handler_wrapper, fattrs), (body_wrapper, default_attrs)),
           attrs )
     | _ -> (exp, attrs)
   else (exp, attrs)
@@ -185,7 +219,8 @@ let transform_tail_resumptive_handler _ ((exp, attrs) : expr) : expr =
   ( (match exp with
     | FullFun (x, es1, hs, tm_args, ty, es2, (exp_body, exp_body_attrs)) -> (
         match exp_body with
-        | Resume exp_body' -> FullFun (x, es1, hs, tm_args, ty, es2, exp_body')
+        | Resume (exp_body', r) ->
+            FullFun (x, es1, hs, tm_args, ty, es2, exp_body')
         | _ -> exp)
     | _ -> exp),
     attrs )
@@ -247,7 +282,7 @@ let mark_cf_dest _ ((exp, attrs) as rexp : expr) : expr =
         attrs )
   | Raise (x, es, hs, exps) ->
       (Raise (x, es, hs, List.map (mark Continue) exps), attrs)
-  | Resume e -> (Resume (mark attrs.cfDest e), attrs)
+  | Resume (e, r) -> (Resume (mark attrs.cfDest e, r), attrs)
   | Seq (e1, e2) -> (Seq (mark Continue e1, mark attrs.cfDest e2), attrs)
 
 (* Bottom-up AST walker *)
@@ -334,7 +369,11 @@ let transform_exp init_state exp_passes state_passes (exp : expr) : expr =
               List.map (transform_exp_rec state) exps )
       | Raise (h, es, hs, exps) ->
           Raise (h, es, hs, List.map (transform_exp_rec state) exps)
-      | Resume e -> Resume (transform_exp_rec state e)
+      | Resume (e, r) ->
+          Resume
+            ( transform_exp_rec state e,
+              if r = None then None
+              else Some (transform_exp_rec state (Option.get r)) )
       | Seq (e1, e2) ->
           Seq (transform_exp_rec state e1, transform_exp_rec state e2)
       | (Int _ | Bool _ | Var _) as e -> e),
@@ -350,6 +389,7 @@ let transform (effs_efs : f_ENV) (exp : expr) : expr =
       value_store = [];
       static_link = [];
       eff_defs = effs_efs;
+      is_in_general_handler = false;
     }
   in
   exp
@@ -358,6 +398,7 @@ let transform (effs_efs : f_ENV) (exp : expr) : expr =
          mark_handlers;
          record_handlerKind;
          wrap_general_handler_body;
+         mark_resumer;
          record_var_depth;
          transform_tail_resumptive_handler;
          mark_cf_dest;
@@ -365,5 +406,5 @@ let transform (effs_efs : f_ENV) (exp : expr) : expr =
          propogate_const_fun_to_callsite;
          mark_builtin_call;
        ]
-       [ update_static_link ]
+       [ update_static_link; update_is_in_general_handler ]
   |> transform_exp init_state [ mark_optimized_sjlj ] [ check_tail_recursive ]
