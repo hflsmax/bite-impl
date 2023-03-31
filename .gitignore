@@ -11,4 +11,3 @@ a.out
 .direnv
 *.exe
 .gdb_history
-examples/effekt/out
