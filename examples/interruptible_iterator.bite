@@ -13,7 +13,8 @@ let iter = fun iterRec [] {yield: Yield, behead: Behead} (l: Builtin) : Int_[~yi
             iterRec {yield localBehead} (IterNext l)
         end
 end in
-    dcl list := ListInit 100100100 in
+    dcl list := ListNew () in
+        ListInit !list 100100100;
         handle yield : Yield = fn [] {replace: Replace, behead: Behead} (x : Int) : Unit_[~replace, ~behead] is
             resume (
                 if x % 2 = 0 then

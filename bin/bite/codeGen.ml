@@ -36,7 +36,8 @@ let codeGen exp : string =
           if attrs.isBuiltin then x
           else
             spf "locals.%s%s"
-              (String.concat "" (List.init attrs.varDepth (fun _ -> "env->")))
+              (String.concat ""
+                 (List.init (Option.get attrs.varDepth) (fun _ -> "env->")))
               x
       | Int k -> string_of_int k
       | Bool b -> string_of_bool b

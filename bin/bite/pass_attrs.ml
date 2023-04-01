@@ -54,14 +54,15 @@ let mark_handlerKind state ((exp, attrs) : expr) =
     | _ -> (exp, attrs)
 
 let get_var_depth (x : name) (slink : string list list) : int =
-  let rec get_var_depth' (x : name) (slink : string list list) (depth : int) :
-      int =
+  let rec get_var_depth_rec (x : name) (slink : string list list) (depth : int)
+      : int =
     match slink with
     | [] -> error "Variable \"%s\" not found in static link@." x
     | locals :: slink' ->
-        if List.mem x locals then depth else get_var_depth' x slink' (depth + 1)
+        if List.mem x locals then depth
+        else get_var_depth_rec x slink' (depth + 1)
   in
-  get_var_depth' x slink 0
+  get_var_depth_rec x slink 0
 
 let mark_var_depth state ((exp, attrs) : expr) =
   match exp with
@@ -69,7 +70,7 @@ let mark_var_depth state ((exp, attrs) : expr) =
       if attrs.isBuiltin then (exp, attrs)
       else
         let depth = get_var_depth x state.static_link in
-        (exp, { attrs with varDepth = depth })
+        (exp, { attrs with varDepth = Some depth })
   | Raise (x, _, hvars, _) ->
       let hvarArgs' =
         List.map

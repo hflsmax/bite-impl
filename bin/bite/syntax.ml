@@ -37,7 +37,9 @@ let builtin_fun =
   [
     ("ArrayInit", TAbs ([], [], [ TInt ], TBuiltin, []));
     ("ArrayGet", TAbs ([], [], [ TBuiltin; TInt ], TInt, []));
-    ("ListInit", TAbs ([], [], [ TInt ], TBuiltin, []));
+    ("ListNew", TAbs ([], [], [], TBuiltin, []));
+    ("ListNewStatic", TAbs ([], [], [], TBuiltin, []));
+    ("ListInit", TAbs ([], [], [ TBuiltin; TInt ], TBuiltin, []));
     ("ListAppend", TAbs ([], [], [ TBuiltin; TBuiltin ], TUnit, []));
     ("ListPopFirstElement", TAbs ([], [], [ TBuiltin ], TBuiltin, []));
     ("ListRemoveFirstElement", TAbs ([], [], [ TBuiltin ], TUnit, []));
@@ -67,7 +69,7 @@ type attrs = {
   cfDest : cf_dest;
   isOptimizedSjlj : bool;
   isBuiltin : bool;
-  varDepth : int;
+  varDepth : int option;
   ty : ty;
   effs : effs;
   hvarParams : richHvar list; (* Used in FullFun *)
@@ -88,7 +90,7 @@ let default_attrs =
     isBuiltin = false;
     isOptimizedSjlj = false;
     cfDest = Continue;
-    varDepth = -1;
+    varDepth = None;
     ty = TInt;
     effs = [];
     hvarParams = [];

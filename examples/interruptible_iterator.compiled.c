@@ -206,7 +206,9 @@ int main() {
 
   locals.iter_fptr = (void *)iterRec;
   locals.iter_env = &locals;
-  locals.list = ListInit(100100100);
+  locals.list = ListNew();
+
+  ListInit(locals.list, 100100100);
   locals.yield_fptr = (void *)fn3;
   locals.yield_env = &locals;
   locals.behead_fptr = (void *)fn4;

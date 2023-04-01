@@ -17,7 +17,8 @@ typedef struct Iterator {
 } Iterator;
 
 // Function prototypes
-LinkedList* ListInit(int n);
+LinkedList* ListNew();
+LinkedList* ListInit(LinkedList* list, int n);
 void ListAppend(LinkedList* list, void* data);
 void* ListPopFirstElement(LinkedList* list);
 void ListRemoveFirstElement(LinkedList* list);
@@ -31,8 +32,16 @@ int IterGetInt(Iterator* iter);
 void IterRemoveNext(Iterator* iter);
 
 // Function implementations
-LinkedList* ListInit(int n) {
+#define ListNewStatic() (&((LinkedList){.head = NULL, .tail = NULL}))
+
+LinkedList* ListNew() {
     LinkedList* list = (LinkedList*)malloc(sizeof(LinkedList));
+    list->head = NULL;
+    list->tail = NULL;
+    return list;
+}
+
+LinkedList* ListInit(LinkedList* list, int n) {
     list->head = NULL;
     list->tail = NULL;
 
