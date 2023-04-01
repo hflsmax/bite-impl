@@ -11,8 +11,8 @@ let codeGen_hvar (hvar : richHvar) =
 
 let can_be_returned exp =
   match exp with
-  | Var _ | Int _ | Bool _ | Times _ | Plus _ | Minus _ | Equal _ | Less _
-  | Deref _ | FullApply _ | Raise _ ->
+  | Var _ | Int _ | Bool _ | Unit | Times _ | Plus _ | Minus _ | Equal _
+  | Less _ | Deref _ | FullApply _ | Raise _ ->
       true
   | Assign _ | If _ | Let _ | Decl _ | Handle _ | FullFun _ | Resume _ | Seq _
     ->
@@ -31,6 +31,7 @@ let codeGen exp : string =
         global_code
     else
       (match exp with
+      | Unit -> ""
       | Var x ->
           if attrs.isBuiltin then x
           else

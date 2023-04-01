@@ -36,7 +36,7 @@ let rec gather_locals ((exp, attrs) : expr) : locals =
       List.fold_left (fun acc exp_iter -> acc @ gather_locals exp_iter) [] e
   | Resume (e, r) -> gather_locals e
   | Seq (e1, e2) -> gather_locals e1 @ gather_locals e2
-  | Var _ | Int _ | Bool _ | Deref _ -> []
+  | Var _ | Int _ | Bool _ | Unit | Deref _ -> []
 
 let rec ty_to_string ty : string =
   match ty with
@@ -46,6 +46,7 @@ let rec ty_to_string ty : string =
   | TMut ty -> ty_to_string ty
   | TAbs _ -> "closure_t"
   | TCustom s -> s
+  | TUnit -> "void"
 
 let tabs_to_string ty is_handler : string =
   match ty with
@@ -71,7 +72,7 @@ let extra_defs arch =
 
 #include <mprompt.h>
 
-#include "klist.h"
+#include "linkedList.h"
 
 volatile int jmpret;
 
@@ -83,49 +84,6 @@ void* ArrayInit(int size) {
 
 int ArrayGet(void* arr, int index) {
     return ((int*)arr)[index];
-}
-
-void noop(void* _) {}
-KLIST_INIT(int_list, int, noop)
-
-void* ListInit(int n) {
-  klist_t(int_list)* list = (void*)kl_init(int_list);
-  for (int i = 0; i < n; i++) {
-    *kl_pushp(int_list, list) = i;
-  }
-  return list;
-}
-
-void ListPush(void* list, int i) {
-  *kl_pushp(int_list, (klist_t(int_list)*)list) = i;
-}
-
-void ListShift(void* list) {
-  kl_shift(int_list, (klist_t(int_list)*)list);
-}
-
-void* ListGetIter(void* list) {
-  return kl_begin((klist_t(int_list)*)list);
-}
-
-void IterRemoveNext(void* iter) {
-  kl_remove_next(int_list, iter);
-}
-
-bool IterHasNext(void* iter) {
-  return ((kliter_t(int_list)*)iter)->next != NULL;
-}
-
-void* IterNext(void* iter) {
-  return ((kliter_t(int_list)*)iter)->next;
-}
-
-void IterSet(void* iter, int val) {
-  ((kliter_t(int_list)*)iter)->data = val;
-}
-
-int IterGet(void* iter) {
-  return ((kliter_t(int_list)*)iter)->data;
 }
 
 int Print(int x) {

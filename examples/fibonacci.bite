@@ -1,5 +1,5 @@
 let fibonacci =
-    fun fibonacciRec [] {} (n : int) : int_[] is
+    fun fibonacciRec [] {} (n : Int) : Int_[] is
         if n = 0 then
             0
         else if n = 1 then

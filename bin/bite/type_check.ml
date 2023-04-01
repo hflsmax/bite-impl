@@ -39,22 +39,6 @@ let hvar_to_rich_hvar eff_defs h_env name =
   { name; fname; ty; depth = -1 }
 
 let default_attrs = Syntax.default_attrs
-
-let type_of_builtin = function
-  | ArrayInit -> TAbs ([], [], [ TInt ], TBuiltin, [])
-  | ArrayGet -> TAbs ([], [], [ TBuiltin; TInt ], TInt, [])
-  | ListInit -> TAbs ([], [], [ TInt ], TBuiltin, [])
-  | ListPush -> TAbs ([], [], [ TBuiltin; TInt ], TInt, [])
-  | ListShift -> TAbs ([], [], [ TBuiltin ], TInt, [])
-  | ListGetIter -> TAbs ([], [], [ TBuiltin ], TBuiltin, [])
-  | IterRemoveNext -> TAbs ([], [], [ TBuiltin ], TInt, [])
-  | IterHasNext -> TAbs ([], [], [ TBuiltin ], TBool, [])
-  | IterNext -> TAbs ([], [], [ TBuiltin ], TBuiltin, [])
-  | IterSet -> TAbs ([], [], [ TBuiltin; TInt ], TInt, [])
-  | IterGet -> TAbs ([], [], [ TBuiltin ], TInt, [])
-  | Print -> TAbs ([], [], [ TInt ], TInt, [])
-  | ReifyResumer -> TAbs ([], [], [], TBuiltin, [])
-
 let fn_index = ref 0
 
 let rec type_of (eff_defs : f_ENV) (e_env : e_ENV) (h_env : h_ENV)
@@ -66,16 +50,11 @@ let rec type_of (eff_defs : f_ENV) (e_env : e_ENV) (h_env : h_ENV)
           try (Var x, { default_attrs with ty = List.assoc x t_env })
           with Not_found ->
             typing_error ~loc:attrs.loc "unknown variable %s" x)
-      | Some b ->
-          ( Var x,
-            {
-              default_attrs with
-              ty = type_of_builtin b;
-              effs = [];
-              isBuiltin = true;
-            } ))
+      | Some ty ->
+          (Var x, { default_attrs with ty; effs = []; isBuiltin = true }))
   | Int i -> (Int i, { default_attrs with ty = TInt; effs = [] })
   | Bool b -> (Bool b, { default_attrs with ty = TBool; effs = [] })
+  | Unit -> (Unit, { default_attrs with ty = TUnit; effs = [] })
   | Times (exp1, exp2) ->
       let exp1', attrs1 = type_of eff_defs e_env h_env t_env exp1 in
       let exp2', attrs2 = type_of eff_defs e_env h_env t_env exp2 in

@@ -1,7 +1,7 @@
-eff Choose : ∀[].∀{}.(int) -> int_[];;
+eff Choose : ∀[].∀{}.(Int) -> Int_[];;
 
 dcl cnt := 0 in
-    let countTriples = fn [] {lch: Choose} (n: int, s: int) : int_[~lch] is
+    let countTriples = fn [] {lch: Choose} (n: Int, s: Int) : Int_[~lch] is
         let ra = raise lch {} n in
             let rb = raise lch {} (ra - 1) in
                 let rc = raise lch {} (rb - 1) in
@@ -13,8 +13,8 @@ dcl cnt := 0 in
             end
         end
     end in
-        handle lch : Choose = fn [] {} (n : int) : int_[] is
-            let iter = fun iterRec [] {} (i : int) : int_[] is
+        handle lch : Choose = fn [] {} (n : Int) : Int_[] is
+            let iter = fun iterRec [] {} (i : Int) : Int_[] is
                 if n < i then
                     0
                 else

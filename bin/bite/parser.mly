@@ -3,6 +3,7 @@
   open Util
 %}
 
+%token TUNIT
 %token TINT
 %token TBOOL
 %token ARROW
@@ -10,6 +11,7 @@
 %token <Syntax.name> VAR
 %token <int> INT
 %token UNIT
+%token NOTHING
 %token TRUE FALSE
 %token PLUS
 %token MINUS
@@ -73,7 +75,7 @@ tm_param:
     { (x, t) }
 
 tm_params:
-  | UNIT
+  | NOTHING
     { [] }
   | LPAREN args = tm_param+ RPAREN
     { args }
@@ -141,7 +143,7 @@ plain_term_arg:
     { e }
 
 term_args:
-  | UNIT
+  | NOTHING
     { [] }
   | args = term_arg+
     { args }
@@ -164,6 +166,8 @@ plain_expr:
     { Bool false }
   | n = INT
     { Int n }
+  | UNIT
+    { Unit }
   | MINUS n = INT
     { Int (-n) }
   | BANG x = expr
@@ -193,7 +197,7 @@ plain_expr:
     { Seq (e1, e2) }
 
 tys:
-  | UNIT
+  | NOTHING
     { [] }
   | LPAREN ts = ty+ RPAREN
     { ts }
@@ -203,6 +207,8 @@ ty:
     { TBool }
   | COMMA? TINT
     { TInt }
+  | COMMA? TUNIT
+    { TUnit }
   | COMMA? TBUILTIN
     { TBuiltin }
   | COMMA? LPAREN t = ty RPAREN

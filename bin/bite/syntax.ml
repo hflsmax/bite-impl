@@ -23,6 +23,7 @@ type ty =
   | TAbs of effs * (hvar * fname) list * tys * ty * effs
   | TMut of ty
   | TCustom of string
+  | TUnit
 [@@deriving sexp]
 
 and tys = ty list [@@deriving sexp]
@@ -32,37 +33,24 @@ type e_ENV = effs [@@deriving sexp]
 type h_ENV = (hvar * fname) list [@@deriving sexp]
 type t_ENV = (name * ty) list [@@deriving sexp]
 
-type builtin_fun =
-  | ArrayInit
-  | ArrayGet
-  | ListInit
-  | ListPush
-  | ListShift
-  | ListGetIter
-  | IterRemoveNext
-  | IterHasNext
-  | IterNext
-  | IterSet
-  | IterGet
-  | Print
-  | ReifyResumer
-[@@deriving sexp]
-
 let builtin_fun =
   [
-    ("ArrayInit", ArrayInit);
-    ("ArrayGet", ArrayGet);
-    ("ListInit", ListInit);
-    ("ListPush", ListPush);
-    ("ListShift", ListShift);
-    ("ListGetIter", ListGetIter);
-    ("IterRemoveNext", IterRemoveNext);
-    ("IterHasNext", IterHasNext);
-    ("IterNext", IterNext);
-    ("IterSet", IterSet);
-    ("IterGet", IterGet);
-    ("Print", Print);
-    ("ReifyResumer", ReifyResumer);
+    ("ArrayInit", TAbs ([], [], [ TInt ], TBuiltin, []));
+    ("ArrayGet", TAbs ([], [], [ TBuiltin; TInt ], TInt, []));
+    ("ListInit", TAbs ([], [], [ TInt ], TBuiltin, []));
+    ("ListAppend", TAbs ([], [], [ TBuiltin; TBuiltin ], TUnit, []));
+    ("ListPopFirstElement", TAbs ([], [], [ TBuiltin ], TBuiltin, []));
+    ("ListRemoveFirstElement", TAbs ([], [], [ TBuiltin ], TUnit, []));
+    ("ListGetIter", TAbs ([], [], [ TBuiltin ], TBuiltin, []));
+    ("IterHasNext", TAbs ([], [], [ TBuiltin ], TBool, []));
+    ("IterNext", TAbs ([], [], [ TBuiltin ], TBuiltin, []));
+    ("IterSet", TAbs ([], [], [ TBuiltin; TBuiltin ], TUnit, []));
+    ("IterGet", TAbs ([], [], [ TBuiltin ], TBuiltin, []));
+    ("IterSetInt", TAbs ([], [], [ TBuiltin; TInt ], TUnit, []));
+    ("IterGetInt", TAbs ([], [], [ TBuiltin ], TInt, []));
+    ("IterRemoveNext", TAbs ([], [], [ TBuiltin ], TUnit, []));
+    ("Print", TAbs ([], [], [ TInt ], TInt, []));
+    ("ReifyResumer", TAbs ([], [], [], TBuiltin, []));
   ]
 
 (* Control-flow destination *)
@@ -121,6 +109,7 @@ and expr' =
   | Var of name
   | Int of int
   | Bool of bool
+  | Unit
   | Times of expr * expr
   | Plus of expr * expr
   | Minus of expr * expr

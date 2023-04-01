@@ -1,8 +1,8 @@
-eff Exc : ∀[].∀{}.() -> int_[];;
+eff Exc : ∀[].∀{}.() -> Int_[];;
 
 let run =
-    fun g [] {} (n : int) : int_[] is
-        handle lexc : Exc = fn [] {} () : int_[] is 0 end in
+    fun g [] {} (n : Int) : Int_[] is
+        handle lexc : Exc = fn [] {} () : Int_[] is 0 end in
             if n = 0 then
                 raise lexc ()
             else

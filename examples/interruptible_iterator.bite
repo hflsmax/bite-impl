@@ -1,20 +1,20 @@
-eff Replace : ∀[].∀{}.(int) -> int_[];;
-eff Behead : ∀[].∀{}.() -> int_[];;
-eff Yield : ∀[].∀{replace: Replace, behead: Behead}.(int) -> int_[~replace, ~behead];;
+eff Replace : ∀[].∀{}.(Int) -> Unit_[];;
+eff Behead : ∀[].∀{}.() -> Unit_[];;
+eff Yield : ∀[].∀{replace: Replace, behead: Behead}.(Int) -> Unit_[~replace, ~behead];;
 
-let iter = fun iterRec [] {yield: Yield, behead: Behead} (l: builtin) : int_[~yield, ~behead] is
-    handle replace : Replace = fn [] {} (x : int) : int_[] is resume (IterSet l x; 0) end in
-        raise yield {replace behead} (IterGet l)
+let iter = fun iterRec [] {yield: Yield, behead: Behead} (l: Builtin) : Int_[~yield, ~behead] is
+    handle replace : Replace = fn [] {} (x : Int) : Unit_[] is resume (IterSetInt l x) end in
+        raise yield {replace behead} (IterGetInt l)
     end;
     if IterHasNext l then
         0
     else
-        handle localBehead : Behead = fn [] {} () : int_[] is resume (IterRemoveNext l; 0) end in
+        handle localBehead : Behead = fn [] {} () : Unit_[] is resume (IterRemoveNext l) end in
             iterRec {yield localBehead} (IterNext l)
         end
 end in
     dcl list := ListInit 100100100 in
-        handle yield : Yield = fn [] {replace: Replace, behead: Behead} (x : int) : int_[~replace, ~behead] is
+        handle yield : Yield = fn [] {replace: Replace, behead: Behead} (x : Int) : Unit_[~replace, ~behead] is
             resume (
                 if x < 0 then
                     raise behead ()
@@ -22,7 +22,7 @@ end in
                     raise replace (x * 2)
             )
         end in
-            handle behead : Behead = fn [] {} () : int_[] is resume (ListShift !list; 0) end in
+            handle behead : Behead = fn [] {} () : Unit_[] is resume (ListRemoveFirstElement !list) end in
                 Print (iter {yield behead} !list)
             end
         end

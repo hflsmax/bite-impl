@@ -36,7 +36,7 @@ __asm__(".global _setjmp\n\t"
 
 #include <mprompt.h>
 
-#include "klist.h"
+#include "linkedList.h"
 
 volatile int jmpret;
 
@@ -46,37 +46,6 @@ typedef struct main_env_t {
 void *ArrayInit(int size) { return malloc(size * sizeof(int)); }
 
 int ArrayGet(void *arr, int index) { return ((int *)arr)[index]; }
-
-void noop(void *_) {}
-KLIST_INIT(int_list, int, noop)
-
-void *ListInit(int n) {
-  klist_t(int_list) *list = (void *)kl_init(int_list);
-  for (int i = 0; i < n; i++) {
-    *kl_pushp(int_list, list) = i;
-  }
-  return list;
-}
-
-void ListPush(void *list, int i) {
-  *kl_pushp(int_list, (klist_t(int_list) *)list) = i;
-}
-
-void ListShift(void *list) { kl_shift(int_list, (klist_t(int_list) *)list); }
-
-void *ListGetIter(void *list) { return kl_begin((klist_t(int_list) *)list); }
-
-void IterRemoveNext(void *iter) { kl_remove_next(int_list, iter); }
-
-bool IterHasNext(void *iter) {
-  return ((kliter_t(int_list) *)iter)->next != NULL;
-}
-
-void *IterNext(void *iter) { return ((kliter_t(int_list) *)iter)->next; }
-
-void IterSet(void *iter, int val) { ((kliter_t(int_list) *)iter)->data = val; }
-
-int IterGet(void *iter) { return ((kliter_t(int_list) *)iter)->data; }
 
 int Print(int x) {
   printf("%d\n", x);
@@ -150,23 +119,21 @@ typedef struct fn4_locals_t {
   void *jb;
 } fn4_locals_t;
 
-int fn1(fn1_env_t *env, void *jb, int x) {
+void fn1(fn1_env_t *env, void *jb, int x) {
   fn1_locals_t locals;
   locals.env = env;
   locals.jb = jb;
   locals.x = x;
 
-  IterSet(locals.env->l, locals.x);
-  return 0;
+  return IterSetInt(locals.env->l, locals.x);
 }
 
-int fn2(fn2_env_t *env, void *jb) {
+void fn2(fn2_env_t *env, void *jb) {
   fn2_locals_t locals;
   locals.env = env;
   locals.jb = jb;
 
-  IterRemoveNext(locals.env->l);
-  return 0;
+  return IterRemoveNext(locals.env->l);
 }
 
 int iterRec(iterRec_env_t *env, void *l, void *yield_fptr, void *yield_env,
@@ -185,9 +152,9 @@ int iterRec(iterRec_env_t *env, void *l, void *yield_fptr, void *yield_env,
   ({
     locals.replace_fptr = (void *)fn1;
     locals.replace_env = &locals;
-    ((int (*)(void *, void *, int, void *, void *, void *, void *, void *,
-              void *))locals.yield_fptr)(
-        locals.yield_env, locals.yield_jb, IterGet(locals.l),
+    ((void (*)(void *, void *, int, void *, void *, void *, void *, void *,
+               void *))locals.yield_fptr)(
+        locals.yield_env, locals.yield_jb, IterGetInt(locals.l),
         locals.replace_fptr, locals.replace_env, locals.replace_jb,
         locals.behead_fptr, locals.behead_env, locals.behead_jb);
   });
@@ -203,9 +170,9 @@ int iterRec(iterRec_env_t *env, void *l, void *yield_fptr, void *yield_env,
   };
 }
 
-int fn3(fn3_env_t *env, void *jb, int x, void *replace_fptr, void *replace_env,
-        void *replace_jb, void *behead_fptr, void *behead_env,
-        void *behead_jb) {
+void fn3(fn3_env_t *env, void *jb, int x, void *replace_fptr, void *replace_env,
+         void *replace_jb, void *behead_fptr, void *behead_env,
+         void *behead_jb) {
   fn3_locals_t locals;
   locals.env = env;
   locals.jb = jb;
@@ -218,21 +185,20 @@ int fn3(fn3_env_t *env, void *jb, int x, void *replace_fptr, void *replace_env,
   locals.behead_jb = behead_jb;
 
   if (({ locals.x < 0; })) {
-    return ((int (*)(void *, void *))locals.behead_fptr)(locals.behead_env,
-                                                         locals.behead_jb);
+    return ((void (*)(void *, void *))locals.behead_fptr)(locals.behead_env,
+                                                          locals.behead_jb);
   } else {
-    return ((int (*)(void *, void *, int))locals.replace_fptr)(
+    return ((void (*)(void *, void *, int))locals.replace_fptr)(
         locals.replace_env, locals.replace_jb, ({ locals.x * 2; }));
   }
 }
 
-int fn4(fn4_env_t *env, void *jb) {
+void fn4(fn4_env_t *env, void *jb) {
   fn4_locals_t locals;
   locals.env = env;
   locals.jb = jb;
 
-  ListShift(locals.env->list);
-  return 0;
+  return ListRemoveFirstElement(locals.env->list);
 }
 
 int main() {

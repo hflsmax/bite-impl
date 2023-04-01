@@ -55,7 +55,7 @@ let rec get_fun_info ((exp, attrs) : expr) (pfun_name : string option) :
         ([], []) exps
   | Resume (e, r) -> get_fun_info e pfun_name
   | Seq (e1, e2) -> get_fun_info e1 pfun_name @++@ get_fun_info e2 pfun_name
-  | Int _ | Bool _ -> ([], [])
+  | Int _ | Bool _ | Unit -> ([], [])
 
 let local_to_struct_field (x, ty) : string =
   match ty with

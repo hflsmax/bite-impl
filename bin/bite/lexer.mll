@@ -9,9 +9,11 @@ rule token = parse
   | whitespace { token lexbuf }
   | '\n'            { Lexing.new_line lexbuf; token lexbuf }
   | ['0'-'9']+      { INT (int_of_string(Lexing.lexeme lexbuf)) }
-  | "int"           { TINT }
-  | "bool"          { TBOOL }
-  | "builtin"       { TBUILTIN }
+  | "unit"          { UNIT }
+  | "Int"           { TINT }
+  | "Bool"          { TBOOL }
+  | "Unit"          { TUNIT }
+  | "Builtin"       { TBUILTIN }
   | "true"          { TRUE }
   | "false"         { FALSE }
   | "fun"           { FUN }
@@ -43,7 +45,7 @@ rule token = parse
   | ':'             { COLON }
   | '('             { LPAREN }
   | ')'             { RPAREN }
-  | "()"            { UNIT }
+  | "()"            { NOTHING }
   | '['             { LBRACKET }
   | ']'             { RBRACKET }
   | '{'             { LBRACE }

@@ -24,7 +24,7 @@ let gather_exp include_all_lexical_scope predicate exp =
     | Raise (h, es, hs, exps) -> List.concat (List.map gather_exp' exps)
     | Resume (e, r) -> gather_exp' e
     | Seq (e1, e2) -> gather_exp' e1 @ gather_exp' e2
-    | Int _ | Bool _ | Var _ -> []
+    | Int _ | Bool _ | Unit | Var _ -> []
   in
   gather_exp' exp
 
@@ -72,4 +72,4 @@ let rec gather_free_vars ((exp, attrs) : expr) : locals =
   | Seq (e1, e2) -> gather_free_vars e1 @ gather_free_vars e2
   | Deref x -> gather_free_vars x
   | Var x -> [ (x, attrs.ty) ]
-  | Int _ | Bool _ -> [] |> List.sort_uniq compare
+  | Int _ | Bool _ | Unit -> [] |> List.sort_uniq compare

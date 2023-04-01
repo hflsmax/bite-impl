@@ -18,7 +18,7 @@ let wrap_in_main (exp : expr) : expr =
 let mark_cf_dest _ ((exp, attrs) as rexp : expr) : expr =
   let mark cf_dest (exp, attrs) = (exp, { attrs with cfDest = cf_dest }) in
   match exp with
-  | Var _ | Int _ | Bool _ -> rexp
+  | Var _ | Int _ | Bool _ | Unit -> rexp
   | Times (e1, e2) -> (Times (mark Continue e1, mark Continue e2), attrs)
   | Plus (e1, e2) -> (Plus (mark Continue e1, mark Continue e2), attrs)
   | Minus (e1, e2) -> (Minus (mark Continue e1, mark Continue e2), attrs)
@@ -136,7 +136,7 @@ let transform_exp init_state exp_passes state_passes (exp : expr) : expr =
               else Some (transform_exp_rec state (Option.get r)) )
       | Seq (e1, e2) ->
           Seq (transform_exp_rec state e1, transform_exp_rec state e2)
-      | (Int _ | Bool _ | Var _) as e -> e),
+      | (Int _ | Bool _ | Unit | Var _) as e -> e),
       attrs_pre )
   in
   transform_exp_rec init_state exp

@@ -36,7 +36,7 @@ __asm__(".global _setjmp\n\t"
 
 #include <mprompt.h>
 
-#include "klist.h"
+#include "linkedList.h"
 
 volatile int jmpret;
 
@@ -58,11 +58,11 @@ void *ListInit(int n) {
   return list;
 }
 
-void ListPush(void *list, int i) {
+void ListAppend(void *list, int i) {
   *kl_pushp(int_list, (klist_t(int_list) *)list) = i;
 }
 
-void ListShift(void *list) { kl_shift(int_list, (klist_t(int_list) *)list); }
+void ListPopFirstElement(void *list) { kl_shift(int_list, (klist_t(int_list) *)list); }
 
 void *ListGetIter(void *list) { return kl_begin((klist_t(int_list) *)list); }
 
