@@ -13,10 +13,8 @@
 %token UNIT
 %token NOTHING
 %token TRUE FALSE
-%token PLUS
-%token MINUS
-%token TIMES
-%token EQUAL LESS
+%token PLUS MINUS TIMES DIV MOD
+%token EQUAL LESS GREATER LEQ GEQ NEQ
 %token IF THEN ELSE
 %token FUN FN IS
 %token RAISE RESUME
@@ -44,9 +42,9 @@
 %left SEMI
 %nonassoc RESUME
 %nonassoc ASSIGN
-%nonassoc EQUAL LESS
+%nonassoc EQUAL LESS GREATER LEQ GEQ NEQ
 %left PLUS MINUS
-%left TIMES
+%left TIMES DIV MOD
 %nonassoc BANG
 
 %%
@@ -173,15 +171,27 @@ plain_expr:
   | BANG x = expr
     { Deref x }
   | e1 = expr PLUS e2 = expr	
-    { Plus (e1, e2) }
+    { AOP ("+", e1, e2) }
   | e1 = expr MINUS e2 = expr
-    { Minus (e1, e2) }
+    { AOP ("-", e1, e2) }
   | e1 = expr TIMES e2 = expr
-    { Times (e1, e2) }
+    { AOP ("*", e1, e2) }
+  | e1 = expr DIV e2 = expr
+    { AOP ("/", e1, e2) }
+  | e1 = expr MOD e2 = expr
+    { AOP ("%", e1, e2) }
   | e1 = expr EQUAL e2 = expr
-    { Equal (e1, e2) }
+    { BOP ("==", e1, e2) }
   | e1 = expr LESS e2 = expr
-    { Less (e1, e2) }
+    { BOP ("<", e1, e2) }
+  | e1 = expr GREATER e2 = expr
+    { BOP (">", e1, e2) }
+  | e1 = expr LEQ e2 = expr
+    { BOP ("<=", e1, e2) }
+  | e1 = expr GEQ e2 = expr
+    { BOP (">=", e1, e2) }
+  | e1 = expr NEQ e2 = expr
+    { BOP ("!=", e1, e2) }
   | x = var ASSIGN e = expr
     { Assign (x, e) }
   | IF e1 = expr THEN e2 = expr ELSE e3 = expr 

@@ -40,7 +40,7 @@ eff NoSuchElement = (TAbs () () () TInt ())
             (exc_jb TBuiltin))
            TInt ((HVar exc))
            ((If
-             ((Less
+             ((BOP <
                ((Deref
                  ((Var iterIdx)
                   ((loc Nowhere) (isRecursiveCall false)
@@ -77,7 +77,7 @@ eff NoSuchElement = (TAbs () () () TInt ())
                    (ty (TMut TInt)) (effs ()) (hvarParams ()) (hvarArgs ())
                    (lhsHvar ()) (bindHvar ()) (handlerKind ())
                    (isHandler false) (freeVars ())))
-                 ((Plus
+                 ((AOP +
                    ((Deref
                      ((Var iterIdx)
                       ((loc Nowhere) (isRecursiveCall false)
@@ -127,7 +127,7 @@ eff NoSuchElement = (TAbs () () () TInt ())
                     (ty TBuiltin) (effs ()) (hvarParams ()) (hvarArgs ())
                     (lhsHvar ()) (bindHvar ()) (handlerKind ())
                     (isHandler false) (freeVars ())))
-                  ((Minus
+                  ((AOP -
                     ((Deref
                       ((Var iterIdx)
                        ((loc Nowhere) (isRecursiveCall false)
@@ -201,7 +201,7 @@ eff NoSuchElement = (TAbs () () () TInt ())
          ((Let add
            ((FullFun fn2 () () ((env (TCustom fn2_env_t*)) (a TInt) (b TInt))
              TInt ()
-             ((Plus
+             ((AOP +
                ((Var a)
                 ((loc Nowhere) (isRecursiveCall false)
                  (topLevelFunctionName ()) (cfDest Continue)

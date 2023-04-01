@@ -110,11 +110,8 @@ and expr' =
   | Int of int
   | Bool of bool
   | Unit
-  | Times of expr * expr
-  | Plus of expr * expr
-  | Minus of expr * expr
-  | Equal of expr * expr
-  | Less of expr * expr
+  | AOP of string * expr * expr
+  | BOP of string * expr * expr
   (* NOTE: the first component of Assign and Deref must be a Var. We choose to use the type "expr" instead of "name"
      because we want to annotate them with depth, like a Var *)
   | Assign of expr * expr

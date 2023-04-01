@@ -3,7 +3,7 @@
    ((FullFun fibonacciRec () ()
      ((env (TCustom fibonacciRec_env_t*)) (n TInt)) TInt ()
      ((If
-       ((Equal
+       ((BOP ==
          ((Var n)
           ((loc Nowhere) (isRecursiveCall false) (topLevelFunctionName ())
            (cfDest Continue) (isOptimizedSjlj false) (isBuiltin false)
@@ -28,7 +28,7 @@
          (lhsHvar ()) (bindHvar ()) (handlerKind ()) (isHandler false)
          (freeVars ())))
        ((If
-         ((Equal
+         ((BOP ==
            ((Var n)
             ((loc Nowhere) (isRecursiveCall false) (topLevelFunctionName ())
              (cfDest Continue) (isOptimizedSjlj false) (isBuiltin false)
@@ -52,7 +52,7 @@
            (varDepth -1) (ty TInt) (effs ()) (hvarParams ()) (hvarArgs ())
            (lhsHvar ()) (bindHvar ()) (handlerKind ()) (isHandler false)
            (freeVars ())))
-         ((Plus
+         ((AOP +
            ((FullApply
              ((Var fibonacciRec)
               ((loc Nowhere) (isRecursiveCall false)
@@ -62,7 +62,7 @@
                (hvarArgs ()) (lhsHvar ()) (bindHvar ()) (handlerKind ())
                (isHandler false) (freeVars ())))
              () ()
-             (((Minus
+             (((AOP -
                 ((Var n)
                  ((loc Nowhere) (isRecursiveCall false)
                   (topLevelFunctionName ()) (cfDest Continue)
@@ -97,7 +97,7 @@
                (hvarArgs ()) (lhsHvar ()) (bindHvar ()) (handlerKind ())
                (isHandler false) (freeVars ())))
              () ()
-             (((Minus
+             (((AOP -
                 ((Var n)
                  ((loc Nowhere) (isRecursiveCall false)
                   (topLevelFunctionName ()) (cfDest Continue)

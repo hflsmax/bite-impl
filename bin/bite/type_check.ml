@@ -55,50 +55,23 @@ let rec type_of (eff_defs : f_ENV) (e_env : e_ENV) (h_env : h_ENV)
   | Int i -> (Int i, { default_attrs with ty = TInt; effs = [] })
   | Bool b -> (Bool b, { default_attrs with ty = TBool; effs = [] })
   | Unit -> (Unit, { default_attrs with ty = TUnit; effs = [] })
-  | Times (exp1, exp2) ->
+  | AOP (op, exp1, exp2) ->
       let exp1', attrs1 = type_of eff_defs e_env h_env t_env exp1 in
       let exp2', attrs2 = type_of eff_defs e_env h_env t_env exp2 in
       if attrs1.ty <> TInt || attrs2.ty <> TInt then
         typing_error ~loc:attrs.loc
-          "In a times exp: lhs type is %t, rhs type is %t" (Print.ty attrs1.ty)
+          "In an aop exp: lhs type is %t, rhs type is %t" (Print.ty attrs1.ty)
           (Print.ty attrs2.ty);
-      ( Times ((exp1', attrs1), (exp2', attrs2)),
+      ( AOP (op, (exp1', attrs1), (exp2', attrs2)),
         { default_attrs with ty = TInt; effs = attrs1.effs @ attrs2.effs } )
-  | Plus (exp1, exp2) ->
+  | BOP (op, exp1, exp2) ->
       let exp1', attrs1 = type_of eff_defs e_env h_env t_env exp1 in
       let exp2', attrs2 = type_of eff_defs e_env h_env t_env exp2 in
       if attrs1.ty <> TInt || attrs2.ty <> TInt then
         typing_error ~loc:attrs.loc
-          "In a plus exp: lhs type is %t, rhs type is %t" (Print.ty attrs1.ty)
+          "In a bop exp: lhs type is %t, rhs type is %t" (Print.ty attrs1.ty)
           (Print.ty attrs2.ty);
-      ( Plus ((exp1', attrs1), (exp2', attrs2)),
-        { default_attrs with ty = TInt; effs = attrs1.effs @ attrs2.effs } )
-  | Minus (exp1, exp2) ->
-      let exp1', attrs1 = type_of eff_defs e_env h_env t_env exp1 in
-      let exp2', attrs2 = type_of eff_defs e_env h_env t_env exp2 in
-      if attrs1.ty <> TInt || attrs2.ty <> TInt then
-        typing_error ~loc:attrs.loc
-          "In a minus exp: lhs type is %t, rhs type is %t" (Print.ty attrs1.ty)
-          (Print.ty attrs2.ty);
-      ( Minus ((exp1', attrs1), (exp2', attrs2)),
-        { default_attrs with ty = TInt; effs = attrs1.effs @ attrs2.effs } )
-  | Equal (exp1, exp2) ->
-      let exp1', attrs1 = type_of eff_defs e_env h_env t_env exp1 in
-      let exp2', attrs2 = type_of eff_defs e_env h_env t_env exp2 in
-      if attrs1.ty <> TInt || attrs2.ty <> TInt then
-        typing_error ~loc:attrs.loc
-          "In an equal exp: lhs type is %t, rhs type is %t" (Print.ty attrs1.ty)
-          (Print.ty attrs2.ty);
-      ( Equal ((exp1', attrs1), (exp2', attrs2)),
-        { default_attrs with ty = TBool; effs = attrs1.effs @ attrs2.effs } )
-  | Less (exp1, exp2) ->
-      let exp1', attrs1 = type_of eff_defs e_env h_env t_env exp1 in
-      let exp2', attrs2 = type_of eff_defs e_env h_env t_env exp2 in
-      if attrs1.ty <> TInt || attrs2.ty <> TInt then
-        typing_error ~loc:attrs.loc
-          "In an equal exp: lhs type is %t, rhs type is %t" (Print.ty attrs1.ty)
-          (Print.ty attrs2.ty);
-      ( Less ((exp1', attrs1), (exp2', attrs2)),
+      ( BOP (op, (exp1', attrs1), (exp2', attrs2)),
         { default_attrs with ty = TBool; effs = attrs1.effs @ attrs2.effs } )
   | If (exp1, exp2, exp3) ->
       let exp1', attrs1 = type_of eff_defs e_env h_env t_env exp1 in

@@ -30,7 +30,7 @@ eff Choose = (TAbs () () (TInt) TInt ())
            (bindHvar ()) (handlerKind ()) (isHandler false) (freeVars ())))
          ((Let rb
            ((Raise lch () ()
-             (((Minus
+             (((AOP -
                 ((Var ra)
                  ((loc Nowhere) (isRecursiveCall false)
                   (topLevelFunctionName ()) (cfDest Continue)
@@ -61,7 +61,7 @@ eff Choose = (TAbs () () (TInt) TInt ())
              (bindHvar ()) (handlerKind ()) (isHandler false) (freeVars ())))
            ((Let rc
              ((Raise lch () ()
-               (((Minus
+               (((AOP -
                   ((Var rb)
                    ((loc Nowhere) (isRecursiveCall false)
                     (topLevelFunctionName ()) (cfDest Continue)
@@ -92,9 +92,9 @@ eff Choose = (TAbs () () (TInt) TInt ())
                (bindHvar ()) (handlerKind ()) (isHandler false)
                (freeVars ())))
              ((If
-               ((Equal
-                 ((Plus
-                   ((Plus
+               ((BOP ==
+                 ((AOP +
+                   ((AOP +
                      ((Var ra)
                       ((loc Nowhere) (isRecursiveCall false)
                        (topLevelFunctionName ()) (cfDest Continue)
@@ -149,7 +149,7 @@ eff Choose = (TAbs () () (TInt) TInt ())
                    (ty (TMut TInt)) (effs ()) (hvarParams ()) (hvarArgs ())
                    (lhsHvar ()) (bindHvar ()) (handlerKind ())
                    (isHandler false) (freeVars ())))
-                 ((Plus
+                 ((AOP +
                    ((Deref
                      ((Var cnt)
                       ((loc Nowhere) (isRecursiveCall false)
@@ -238,7 +238,7 @@ eff Choose = (TAbs () () (TInt) TInt ())
                  ((FullFun iterRec () ()
                    ((env (TCustom iterRec_env_t*)) (i TInt)) TInt ()
                    ((If
-                     ((Less
+                     ((BOP <
                        ((Var n)
                         ((loc Nowhere) (isRecursiveCall false)
                          (topLevelFunctionName ()) (cfDest Continue)
@@ -298,7 +298,7 @@ eff Choose = (TAbs () () (TInt) TInt ())
                            (lhsHvar ()) (bindHvar ()) (handlerKind ())
                            (isHandler false) (freeVars ())))
                          () ()
-                         (((Plus
+                         (((AOP +
                             ((Var i)
                              ((loc Nowhere) (isRecursiveCall false)
                               (topLevelFunctionName ()) (cfDest Continue)

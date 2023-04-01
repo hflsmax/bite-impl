@@ -17,7 +17,7 @@ eff Fset = (TAbs () () (TInt) TInt ())
           (((name lget) (fname Fget) (ty (TAbs () () () TInt ())) (depth 0))))
          (bindHvar ()) (handlerKind ()) (isHandler false) (freeVars ())))
        ((If
-         ((Equal
+         ((BOP ==
            ((Var i)
             ((loc Nowhere) (isRecursiveCall false) (topLevelFunctionName ())
              (cfDest Continue) (isOptimizedSjlj false) (isBuiltin false)
@@ -43,7 +43,7 @@ eff Fset = (TAbs () () (TInt) TInt ())
            (freeVars ())))
          ((Seq
            ((Raise lset () ()
-             (((Minus
+             (((AOP -
                 ((Var i)
                  ((loc Nowhere) (isRecursiveCall false)
                   (topLevelFunctionName ()) (cfDest Continue)
@@ -84,7 +84,7 @@ eff Fset = (TAbs () () (TInt) TInt ())
                (bindHvar ()) (handlerKind ()) (isHandler false)
                (freeVars ())))
              () (lget lset)
-             (((Plus
+             (((AOP +
                 ((Var n)
                  ((loc Nowhere) (isRecursiveCall false)
                   (topLevelFunctionName ()) (cfDest Continue)

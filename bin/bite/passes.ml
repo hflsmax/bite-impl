@@ -19,11 +19,8 @@ let mark_cf_dest _ ((exp, attrs) as rexp : expr) : expr =
   let mark cf_dest (exp, attrs) = (exp, { attrs with cfDest = cf_dest }) in
   match exp with
   | Var _ | Int _ | Bool _ | Unit -> rexp
-  | Times (e1, e2) -> (Times (mark Continue e1, mark Continue e2), attrs)
-  | Plus (e1, e2) -> (Plus (mark Continue e1, mark Continue e2), attrs)
-  | Minus (e1, e2) -> (Minus (mark Continue e1, mark Continue e2), attrs)
-  | Equal (e1, e2) -> (Equal (mark Continue e1, mark Continue e2), attrs)
-  | Less (e1, e2) -> (Less (mark Continue e1, mark Continue e2), attrs)
+  | AOP (op, e1, e2) -> (AOP (op, mark Continue e1, mark Continue e2), attrs)
+  | BOP (op, e1, e2) -> (BOP (op, mark Continue e1, mark Continue e2), attrs)
   | Deref e -> (Deref (mark Continue e), attrs)
   | Assign (e1, e2) -> (Assign (mark Continue e1, mark Continue e2), attrs)
   | If (e1, e2, e3) ->
@@ -56,16 +53,10 @@ let transform_exp init_state exp_passes state_passes (exp : expr) : expr =
       List.fold_left (fun state pass -> pass state rexp) state state_passes
     in
     ( (match exp_pre with
-      | Times (e1, e2) ->
-          Times (transform_exp_rec state e1, transform_exp_rec state e2)
-      | Plus (e1, e2) ->
-          Plus (transform_exp_rec state e1, transform_exp_rec state e2)
-      | Minus (e1, e2) ->
-          Minus (transform_exp_rec state e1, transform_exp_rec state e2)
-      | Equal (e1, e2) ->
-          Equal (transform_exp_rec state e1, transform_exp_rec state e2)
-      | Less (e1, e2) ->
-          Less (transform_exp_rec state e1, transform_exp_rec state e2)
+      | AOP (op, e1, e2) ->
+          AOP (op, transform_exp_rec state e1, transform_exp_rec state e2)
+      | BOP (op, e1, e2) ->
+          BOP (op, transform_exp_rec state e1, transform_exp_rec state e2)
       | Assign (e1, e2) ->
           Assign (transform_exp_rec state e1, transform_exp_rec state e2)
       | Deref e -> Deref (transform_exp_rec state e)

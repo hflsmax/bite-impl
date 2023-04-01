@@ -184,7 +184,7 @@ void fn3(fn3_env_t *env, void *jb, int x, void *replace_fptr, void *replace_env,
   locals.behead_env = behead_env;
   locals.behead_jb = behead_jb;
 
-  if (({ locals.x < 0; })) {
+  if (({ ({ locals.x % 2; }) == 0; })) {
     return ((void (*)(void *, void *))locals.behead_fptr)(locals.behead_env,
                                                           locals.behead_jb);
   } else {

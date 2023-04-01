@@ -14,12 +14,7 @@ let full_fun_to_tabs (exp : expr') : ty =
 *)
 let rec gather_locals ((exp, attrs) : expr) : locals =
   match exp with
-  | Times (e1, e2)
-  | Plus (e1, e2)
-  | Minus (e1, e2)
-  | Equal (e1, e2)
-  | Less (e1, e2) ->
-      gather_locals e1 @ gather_locals e2
+  | AOP (_, e1, e2) | BOP (_, e1, e2) -> gather_locals e1 @ gather_locals e2
   | Assign (x, e) -> gather_locals e
   | If (e1, e2, e3) -> gather_locals e1 @ gather_locals e2 @ gather_locals e3
   | Let (x, e1, e2) -> ((x, (snd e1).ty) :: gather_locals e1) @ gather_locals e2

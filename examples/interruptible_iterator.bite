@@ -16,7 +16,7 @@ end in
     dcl list := ListInit 100100100 in
         handle yield : Yield = fn [] {replace: Replace, behead: Behead} (x : Int) : Unit_[~replace, ~behead] is
             resume (
-                if x < 0 then
+                if x % 2 = 0 then
                     raise behead ()
                 else
                     raise replace (x * 2)

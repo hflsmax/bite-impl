@@ -11,8 +11,8 @@ let codeGen_hvar (hvar : richHvar) =
 
 let can_be_returned exp =
   match exp with
-  | Var _ | Int _ | Bool _ | Unit | Times _ | Plus _ | Minus _ | Equal _
-  | Less _ | Deref _ | FullApply _ | Raise _ ->
+  | Var _ | Int _ | Bool _ | Unit | AOP _ | BOP _ | Deref _ | FullApply _
+  | Raise _ ->
       true
   | Assign _ | If _ | Let _ | Decl _ | Handle _ | FullFun _ | Resume _ | Seq _
     ->
@@ -40,26 +40,14 @@ let codeGen exp : string =
               x
       | Int k -> string_of_int k
       | Bool b -> string_of_bool b
-      | Times (e1, e2) ->
+      | AOP (op, e1, e2) ->
           let e1' = codeGen_rec e1 in
           let e2' = codeGen_rec e2 in
-          spf "({%s * %s;})" e1' e2'
-      | Plus (e1, e2) ->
+          spf "({%s %s %s;})" e1' op e2'
+      | BOP (op, e1, e2) ->
           let e1' = codeGen_rec e1 in
           let e2' = codeGen_rec e2 in
-          spf "({%s + %s;})" e1' e2'
-      | Minus (e1, e2) ->
-          let e1' = codeGen_rec e1 in
-          let e2' = codeGen_rec e2 in
-          spf "({%s - %s;})" e1' e2'
-      | Equal (e1, e2) ->
-          let e1' = codeGen_rec e1 in
-          let e2' = codeGen_rec e2 in
-          spf "({%s == %s;})" e1' e2'
-      | Less (e1, e2) ->
-          let e1' = codeGen_rec e1 in
-          let e2' = codeGen_rec e2 in
-          spf "({%s < %s;})" e1' e2'
+          spf "({%s %s %s;})" e1' op e2'
       | Deref e ->
           let e' = codeGen_rec e in
           e'

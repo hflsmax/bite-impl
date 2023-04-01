@@ -277,11 +277,25 @@ eff Yield = (TAbs () ((replace Replace) (behead Behead)) (TInt) TUnit
           (behead_jb TBuiltin))
          TUnit ((HVar replace) (HVar behead))
          ((If
-           ((Less
-             ((Var x)
+           ((BOP ==
+             ((AOP %
+               ((Var x)
+                ((loc Nowhere) (isRecursiveCall false)
+                 (topLevelFunctionName ()) (cfDest Continue)
+                 (isOptimizedSjlj false) (isBuiltin false) (varDepth 0)
+                 (ty TInt) (effs ()) (hvarParams ()) (hvarArgs ())
+                 (lhsHvar ()) (bindHvar ()) (handlerKind ())
+                 (isHandler false) (freeVars ())))
+               ((Int 2)
+                ((loc Nowhere) (isRecursiveCall false)
+                 (topLevelFunctionName ()) (cfDest Continue)
+                 (isOptimizedSjlj false) (isBuiltin false) (varDepth -1)
+                 (ty TInt) (effs ()) (hvarParams ()) (hvarArgs ())
+                 (lhsHvar ()) (bindHvar ()) (handlerKind ())
+                 (isHandler false) (freeVars ()))))
               ((loc Nowhere) (isRecursiveCall false)
                (topLevelFunctionName ()) (cfDest Continue)
-               (isOptimizedSjlj false) (isBuiltin false) (varDepth 0)
+               (isOptimizedSjlj false) (isBuiltin false) (varDepth -1)
                (ty TInt) (effs ()) (hvarParams ()) (hvarArgs ()) (lhsHvar ())
                (bindHvar ()) (handlerKind ()) (isHandler false)
                (freeVars ())))
@@ -307,7 +321,7 @@ eff Yield = (TAbs () ((replace Replace) (behead Behead)) (TInt) TUnit
                 (depth 0))))
              (bindHvar ()) (handlerKind ()) (isHandler false) (freeVars ())))
            ((Raise replace () ()
-             (((Times
+             (((AOP *
                 ((Var x)
                  ((loc Nowhere) (isRecursiveCall false)
                   (topLevelFunctionName ()) (cfDest Continue)

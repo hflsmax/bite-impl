@@ -5,11 +5,7 @@ let gather_exp include_all_lexical_scope predicate exp =
     (if predicate (exp, attrs) then [ exp ] else [])
     @
     match exp with
-    | Times (e1, e2) -> gather_exp' e1 @ gather_exp' e2
-    | Plus (e1, e2) -> gather_exp' e1 @ gather_exp' e2
-    | Minus (e1, e2) -> gather_exp' e1 @ gather_exp' e2
-    | Equal (e1, e2) -> gather_exp' e1 @ gather_exp' e2
-    | Less (e1, e2) -> gather_exp' e1 @ gather_exp' e2
+    | AOP (_, e1, e2) | BOP (_, e1, e2) -> gather_exp' e1 @ gather_exp' e2
     | Assign (e1, e2) -> gather_exp' e1 @ gather_exp' e2
     | Deref e -> gather_exp' e
     | If (e1, e2, e3) -> gather_exp' e1 @ gather_exp' e2 @ gather_exp' e3
@@ -37,11 +33,7 @@ let rec gather_free_vars ((exp, attrs) : expr) : locals =
     List.filter (fun (name', _) -> not (List.mem name' names)) locals
   in
   match exp with
-  | Times (e1, e2)
-  | Plus (e1, e2)
-  | Minus (e1, e2)
-  | Equal (e1, e2)
-  | Less (e1, e2) ->
+  | AOP (_, e1, e2) | BOP (_, e1, e2) ->
       gather_free_vars e1 @ gather_free_vars e2
   | Assign (x, e) ->
       let[@warning "-partial-match"] Var name, attrs = x in

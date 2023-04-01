@@ -15,11 +15,8 @@ let rec get_fun_info ((exp, attrs) : expr) (pfun_name : string option) :
   let ( @++@ ) (l1, l2) (l1', l2') = (l1 @ l1', l2 @ l2') in
   match exp with
   | Var x -> ([], [])
-  | Times (e1, e2) -> get_fun_info e1 pfun_name @++@ get_fun_info e2 pfun_name
-  | Plus (e1, e2) -> get_fun_info e1 pfun_name @++@ get_fun_info e2 pfun_name
-  | Minus (e1, e2) -> get_fun_info e1 pfun_name @++@ get_fun_info e2 pfun_name
-  | Equal (e1, e2) -> get_fun_info e1 pfun_name @++@ get_fun_info e2 pfun_name
-  | Less (e1, e2) -> get_fun_info e1 pfun_name @++@ get_fun_info e2 pfun_name
+  | AOP (_, e1, e2) | BOP (_, e1, e2) ->
+      get_fun_info e1 pfun_name @++@ get_fun_info e2 pfun_name
   | Assign (e1, e2) -> get_fun_info e1 pfun_name @++@ get_fun_info e2 pfun_name
   | Deref e -> get_fun_info e pfun_name
   | If (e1, e2, e3) ->

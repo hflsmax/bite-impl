@@ -40,7 +40,11 @@ rule token = parse
   | ";;"            { SEMISEMI }
   | ";"             { SEMI }
   | '='             { EQUAL }
-  | '<'             { LESS }
+  | "<"             { LESS }
+  | '>'             { GREATER }
+  | "<="            { LEQ }
+  | ">="            { GEQ }
+  | "!="            { NEQ }
   | "->"            { ARROW }
   | ':'             { COLON }
   | '('             { LPAREN }
@@ -53,6 +57,8 @@ rule token = parse
   | '+'             { PLUS }
   | '-'             { MINUS }
   | '*'             { TIMES }
+  | '/'             { DIV }
+  | "%"             { MOD }
   | var             { VAR (Lexing.lexeme lexbuf) }
   | eof             { EOF }
 
