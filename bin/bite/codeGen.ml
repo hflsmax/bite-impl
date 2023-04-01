@@ -76,9 +76,11 @@ let codeGen exp : string =
           let e1' = codeGen_rec e1 in
           let e2' = codeGen_rec e2 in
           match e1 with
-          | FullFun (fun_name, _, _, _, _, _, _), _ ->
+          | FullFun (fun_name, _, _, _, _, _, _), fattrs ->
               spf "locals.%s_fptr = (void*)%s;\n" x fun_name
-              ^ spf "locals.%s_env = &locals;\n" x
+              ^ (if List.length fattrs.freeVars > 0 then
+                 spf "locals.%s_env = &locals;\n" x
+                else "")
               ^ e2' ^ "\n"
           | _ -> spf "locals.%s = %s;\n%s;" x e1' e2')
       | Decl (x, e1, e2) ->
@@ -86,8 +88,8 @@ let codeGen exp : string =
           let e2' = codeGen_rec e2 in
           spf "locals.%s = %s;\n%s" x e1' e2'
       | Handle (handler_var_name, fname, exp_catch, exp_handle) ->
-          let[@warning "-partial-match"] FullFun (fun_name, _, _, _, _, _, _), _
-              =
+          let[@warning "-partial-match"] ( FullFun (fun_name, _, _, _, _, _, _),
+                                           fattrs ) =
             exp_catch
           in
           let _ = codeGen_rec exp_catch in
@@ -136,7 +138,9 @@ let codeGen exp : string =
           in
           (if attrs.cfDest = Continue then "({" else "")
           ^ spf "locals.%s_fptr = (void*)%s;\n" handler_var_name fun_name
-          ^ spf "locals.%s_env = &locals;\n" handler_var_name
+          ^ (if List.length fattrs.freeVars > 0 then
+             spf "locals.%s_env = &locals;\n" handler_var_name
+            else "")
           ^ exp_handle_code
           ^ if attrs.cfDest = Continue then ";})" else ""
       | FullFun (x, es1, hs, tm_args, ty, es2, body_exp) ->

@@ -88,6 +88,7 @@ type attrs = {
   bindHvar : richHvar option; (* Used in Handle *)
   handlerKind : handlerKind option; (* Used in Handle *)
   isHandler : bool; (* Used in FullFun *)
+  freeVars : (name * ty) list; (* Used in FullFun *)
 }
 [@@deriving sexp]
 
@@ -108,6 +109,7 @@ let default_attrs =
     bindHvar = None;
     handlerKind = None;
     isHandler = false;
+    freeVars = [];
   }
 
 let locate ?(loc = Nowhere) x = (x, { default_attrs with loc })

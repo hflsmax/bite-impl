@@ -3,6 +3,12 @@ open Pass_state
 open Pass_util
 open Util
 
+let mark_freeVars state ((exp, attrs) : expr) =
+  match exp with
+  | FullFun (x, _, _, _, _, _, _) ->
+      (exp, { attrs with freeVars = gather_free_vars (exp, attrs) })
+  | _ -> (exp, attrs)
+
 let mark_handlers state ((exp, attrs) : expr) =
   match exp with
   | Handle (x, fname, (c, cattrs), exp_handle) ->
