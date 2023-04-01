@@ -131,8 +131,7 @@ int main() {
   main_locals_t locals;
 
   locals.factorial_fptr = (void *)factorialRec;
-  locals.factorial_env = &locals;
   locals.factorialTail_fptr = (void *)fn1;
   locals.factorialTail_env = &locals;
-  return Print(fn1(locals.factorialTail_env, 33));
+  return Print(fn1(locals.factorialTail_env, 100100100));
 }

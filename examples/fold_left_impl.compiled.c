@@ -212,7 +212,6 @@ int main() {
   locals.iterNext_fptr = (void *)fn1;
   locals.iterNext_env = &locals;
   locals.add_fptr = (void *)fn2;
-  locals.add_env = &locals;
   locals.foldLeft_fptr = (void *)foldLeftRec;
   locals.foldLeft_env = &locals;
   return Print(

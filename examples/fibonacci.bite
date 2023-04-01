@@ -8,6 +8,6 @@ let fibonacci =
             fibonacciRec (n - 1) + fibonacciRec (n - 2)
     end
 in
-    Print (fibonacci 30)
+    Print (fibonacci 42)
 end
 ;;

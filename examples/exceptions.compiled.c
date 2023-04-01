@@ -122,7 +122,6 @@ int g(g_env_t *env, int n) {
   locals.n = n;
 
   locals.lexc_fptr = (void *)fn1;
-  locals.lexc_env = &locals;
   locals.lexc_jb = &fn1_jb;
 
   if (fn1_saved || _setjmp(locals.lexc_jb) == 0) {
@@ -141,6 +140,5 @@ int main() {
   main_locals_t locals;
 
   locals.run_fptr = (void *)g;
-  locals.run_env = &locals;
   return Print(g(locals.run_env, 100100100));
 }

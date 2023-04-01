@@ -6,6 +6,6 @@ let factorial =
             n * factorialRec (n - 1)
     end
 in
-    Print (factorial 33)
+    Print (factorial 100100100)
 end
 ;;

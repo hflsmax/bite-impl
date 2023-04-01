@@ -7,7 +7,7 @@ let factorial =
     end
 in
     let factorialTail = fn [] {} (n : int) : int_[] is factorial n 1 end in
-        Print (factorialTail 33)
+        Print (factorialTail 100100100)
     end
 end
 ;;

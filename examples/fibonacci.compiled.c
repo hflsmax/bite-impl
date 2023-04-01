@@ -118,6 +118,5 @@ int main() {
   main_locals_t locals;
 
   locals.fibonacci_fptr = (void *)fibonacciRec;
-  locals.fibonacci_env = &locals;
-  return Print(fibonacciRec(locals.fibonacci_env, 30));
+  return Print(fibonacciRec(locals.fibonacci_env, 42));
 }
