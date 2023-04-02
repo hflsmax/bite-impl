@@ -121,10 +121,11 @@ let rec type_of (eff_defs : f_ENV) (e_env : e_ENV) (h_env : h_ENV)
           ty = TAbs (es1, hs, ty_args, ty, es2);
           effs = [];
           hvarParams =
-            List.map
-              (fun (name, fname) ->
-                { name; fname; ty = List.assoc fname eff_defs; depth = -1 })
-              hs;
+            Some
+              (List.map
+                 (fun (name, fname) ->
+                   { name; fname; ty = List.assoc fname eff_defs; depth = -1 })
+                 hs);
         } )
   | Assign (exp_v, exp) -> (
       match fst exp_v with
@@ -162,20 +163,20 @@ let rec type_of (eff_defs : f_ENV) (e_env : e_ENV) (h_env : h_ENV)
           with Not_found ->
             typing_error ~loc:attrs.loc "unknown variable %s" x)
       | _ -> typing_error ~loc:attrs.loc "Operand to deref must be a variable")
-  | Let (x, exp1, exp2) ->
+  | Let (x, isTop, exp1, exp2) ->
       let exp1', attrs1 = type_of eff_defs e_env h_env t_env exp1 in
       let exp2', attrs2 =
         type_of eff_defs e_env h_env ((x, attrs1.ty) :: t_env) exp2
       in
-      ( Let (x, (exp1', attrs1), (exp2', attrs2)),
+      ( Let (x, isTop, (exp1', attrs1), (exp2', attrs2)),
         { default_attrs with ty = attrs2.ty; effs = attrs1.effs @ attrs2.effs }
       )
-  | Decl (x, exp1, exp2) ->
+  | Decl (x, isTop, exp1, exp2) ->
       let exp1', attrs1 = type_of eff_defs e_env h_env t_env exp1 in
       let exp2', attrs2 =
         type_of eff_defs e_env h_env ((x, TMut attrs1.ty) :: t_env) exp2
       in
-      ( Decl (x, (exp1', attrs1), (exp2', attrs2)),
+      ( Decl (x, isTop, (exp1', attrs1), (exp2', attrs2)),
         { default_attrs with ty = attrs1.ty; effs = attrs1.effs @ attrs2.effs }
       )
   | Handle (x, fname, exp_catch, exp_handle) -> (
@@ -240,7 +241,7 @@ let rec type_of (eff_defs : f_ENV) (e_env : e_ENV) (h_env : h_ENV)
               default_attrs with
               ty = t';
               effs = es2' @ attrs1.effs @ List.concat ess;
-              hvarArgs = List.map (hvar_to_rich_hvar eff_defs h_env) hs;
+              hvarArgs = Some (List.map (hvar_to_rich_hvar eff_defs h_env) hs);
             } )
       | TBuiltin ->
           let exps_list = List.map (type_of eff_defs e_env h_env t_env) exps in
@@ -284,7 +285,8 @@ let rec type_of (eff_defs : f_ENV) (e_env : e_ENV) (h_env : h_ENV)
                     default_attrs with
                     ty = t';
                     effs = (HVar hvar :: es2') @ List.concat ess;
-                    hvarArgs = List.map (hvar_to_rich_hvar eff_defs h_env) hs;
+                    hvarArgs =
+                      Some (List.map (hvar_to_rich_hvar eff_defs h_env) hs);
                     lhsHvar = Some (hvar_to_rich_hvar eff_defs h_env hvar);
                   } )
             | _ ->

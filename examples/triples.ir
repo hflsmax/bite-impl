@@ -1,18 +1,18 @@
 eff Choose = (TAbs () () (TInt) TInt ())
 (FullFun main () () () TInt ()
- ((Decl cnt
+ ((Decl cnt false
    ((Int 0)
     ((loc Nowhere) (isRecursiveCall false) (topLevelFunctionName ())
      (cfDest Continue) (isOptimizedSjlj false) (isBuiltin false)
      (varDepth ()) (ty TInt) (effs ()) (hvarParams ()) (hvarArgs ())
      (lhsHvar ()) (bindHvar ()) (handlerKind ()) (isHandler false)
      (freeVars ())))
-   ((Let countTriples
+   ((Let countTriples false
      ((FullFun fn1 () ()
        ((env (TCustom fn1_env_t*)) (n TInt) (s TInt) (lch_fptr TBuiltin)
         (lch_env TBuiltin) (lch_jb TBuiltin))
        TInt ((HVar lch))
-       ((Let ra
+       ((Let ra false
          ((Raise lch () ()
            (((Var n)
              ((loc Nowhere) (isRecursiveCall false) (topLevelFunctionName ())
@@ -28,7 +28,7 @@ eff Choose = (TAbs () () (TInt) TInt ())
             (((name lch) (fname Choose) (ty (TAbs () () (TInt) TInt ()))
               (depth 0))))
            (bindHvar ()) (handlerKind ()) (isHandler false) (freeVars ())))
-         ((Let rb
+         ((Let rb false
            ((Raise lch () ()
              (((AOP -
                 ((Var ra)
@@ -59,7 +59,7 @@ eff Choose = (TAbs () () (TInt) TInt ())
               (((name lch) (fname Choose) (ty (TAbs () () (TInt) TInt ()))
                 (depth 0))))
              (bindHvar ()) (handlerKind ()) (isHandler false) (freeVars ())))
-           ((Let rc
+           ((Let rc false
              ((Raise lch () ()
                (((AOP -
                   ((Var rb)
@@ -231,11 +231,11 @@ eff Choose = (TAbs () () (TInt) TInt ())
            ((env (TCustom fn2_handler_wrapper_env_t*)) (jb TBuiltin)
             (n TInt))
            TInt ()
-           ((Let fn2
+           ((Let fn2 false
              ((FullFun fn2 () ()
                ((env (TCustom fn2_env_t*)) (jb TBuiltin) (r TBuiltin)) TInt
                ()
-               ((Let iter
+               ((Let iter false
                  ((FullFun iterRec () ()
                    ((env (TCustom iterRec_env_t*)) (i TInt)) TInt ()
                    ((If

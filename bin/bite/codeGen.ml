@@ -20,6 +20,7 @@ let can_be_returned exp =
 
 (* Compile an expression to a top-level and a list of functions *)
 let codeGen exp : string =
+  let fun_decls = ref "" in
   let global_code = ref "" in
   let rec codeGen_rec ((exp, attrs) : expr) : string =
     if
@@ -34,6 +35,7 @@ let codeGen exp : string =
       | Unit -> ""
       | Var x ->
           if attrs.isBuiltin then x
+          else if Option.get attrs.varDepth = -1 then x
           else
             spf "locals.%s%s"
               (String.concat ""
@@ -62,21 +64,35 @@ let codeGen exp : string =
           let e3' = codeGen_rec e3 in
           if attrs.cfDest = Continue then spf "(%s ? %s : %s)" e1' e2' e3'
           else spf "if (%s) {\n%s;\n} else {\n%s;\n}" e1' e2' e3'
-      | Let (x, e1, e2) -> (
+      | Let (x, isTop, e1, e2) -> (
           let e1' = codeGen_rec e1 in
           let e2' = codeGen_rec e2 in
-          match e1 with
-          | FullFun (fun_name, _, _, _, _, _, _), fattrs ->
-              spf "locals.%s_fptr = (void*)%s;\n" x fun_name
-              ^ (if List.length fattrs.freeVars > 0 then
-                 spf "locals.%s_env = &locals;\n" x
-                else "")
-              ^ e2' ^ "\n"
-          | _ -> spf "locals.%s = %s;\n%s;" x e1' e2')
-      | Decl (x, e1, e2) ->
+          if isTop then (
+            global_code :=
+              (match e1 with
+              | FullFun (fun_name, _, _, _, _, _, _), _ ->
+                  spf "const void* %s_fptr = (void*)%s;\n" x fun_name
+                  ^ spf "const void* %s_env = NULL;\n" x
+              | _ -> spf "const %s %s = %s;\n" (ty_to_string (snd e1).ty) x e1')
+              ^ !global_code;
+            e2')
+          else
+            match e1 with
+            | FullFun (fun_name, _, _, _, _, _, _), fattrs ->
+                spf "locals.%s_fptr = (void*)%s;\n" x fun_name
+                ^ (if List.length fattrs.freeVars > 0 then
+                   spf "locals.%s_env = &locals;\n" x
+                  else "")
+                ^ e2' ^ "\n"
+            | _ -> spf "locals.%s = %s;\n%s;" x e1' e2')
+      | Decl (x, isTop, e1, e2) ->
           let e1' = codeGen_rec e1 in
           let e2' = codeGen_rec e2 in
-          spf "locals.%s = %s;\n%s" x e1' e2'
+          if isTop then (
+            global_code :=
+              spf "%s %s = %s;\n" (ty_to_string attrs.ty) x e1' ^ !global_code;
+            e2')
+          else spf "locals.%s = %s;\n%s" x e1' e2'
       | Handle (handler_var_name, fname, exp_catch, exp_handle) ->
           let[@warning "-partial-match"] ( FullFun (fun_name, _, _, _, _, _, _),
                                            fattrs ) =
@@ -147,11 +163,12 @@ let codeGen exp : string =
               |> String.concat "")
           in
           let code_body = codeGen_rec body_exp in
-          let this_fun =
-            spf "%s %s(%s)\n{\n%s\n%s\n}\n" (ty_to_string ty) x
+          let fun_decl =
+            spf "%s %s(%s)\n" (ty_to_string ty) x
               (String.concat ", " code_tm_args)
-              code_init code_body
           in
+          let this_fun = spf "%s{\n%s\n%s\n}\n" fun_decl code_init code_body in
+          fun_decls := !fun_decls ^ fun_decl ^ ";\n";
           global_code := !global_code ^ "\n" ^ this_fun ^ "\n";
           "CURRENTLY ONLY SUPPORT FUNCTIONS ASSIGNED TO A VARIABLE OR A HANDLER"
       | FullApply (((lhs_name, lhs_attrs) as lhs), es, hs, exps) ->
@@ -169,7 +186,7 @@ let codeGen exp : string =
             List.map
               (fun h ->
                 h |> codeGen_hvar |> fun x -> spf "%s_fptr, %s_env, %s_jb" x x x)
-              attrs.hvarArgs
+              (Option.get attrs.hvarArgs)
           in
           let args_code =
             if attrs.isBuiltin then exps' @ handler_args
@@ -204,7 +221,7 @@ let codeGen exp : string =
             List.map
               (fun h ->
                 h |> codeGen_hvar |> fun x -> spf "%s_fptr, %s_env, %s_jb" x x x)
-              attrs.hvarArgs
+              (Option.get attrs.hvarArgs)
           in
           let args_code =
             ((handler_code ^ "_env") :: (handler_code ^ "_jb") :: exps')
@@ -239,4 +256,4 @@ let codeGen exp : string =
       else code
   in
   let _ = codeGen_rec exp in
-  !global_code
+  !fun_decls ^ !global_code

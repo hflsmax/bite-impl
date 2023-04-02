@@ -6,7 +6,7 @@ type pass_state = {
   curr_func_name : string;
   curr_func_is_tail_recursive : bool;
   value_store : (string * string) list;
-  static_link : string list list;
+  static_link : (string * bool) list list; (* name, isTop *)
   eff_defs : f_ENV;
   is_in_general_handler : bool;
 }
@@ -26,24 +26,27 @@ let update_static_link state ((exp, attrs) : expr) =
   match exp with
   | FullFun (x, es1, hs, tm_args, ty, es2, exp_body) ->
       let locals = (x :: List.map fst tm_args) @ List.map fst hs in
-      { state with static_link = locals :: state.static_link }
-  | Let (x, e1, e2) ->
       {
         state with
-        static_link =
-          (x :: List.hd state.static_link) :: List.tl state.static_link;
+        static_link = List.map (fun x -> (x, false)) locals :: state.static_link;
       }
-  | Decl (x, e1, e2) ->
+  | Let (x, isTop, e1, e2) ->
       {
         state with
         static_link =
-          (x :: List.hd state.static_link) :: List.tl state.static_link;
+          ((x, isTop) :: List.hd state.static_link) :: List.tl state.static_link;
+      }
+  | Decl (x, isTop, e1, e2) ->
+      {
+        state with
+        static_link =
+          ((x, isTop) :: List.hd state.static_link) :: List.tl state.static_link;
       }
   | Handle (x, fname, exp_catch, exp_handle) ->
       {
         state with
         static_link =
-          (x :: List.hd state.static_link) :: List.tl state.static_link;
+          ((x, false) :: List.hd state.static_link) :: List.tl state.static_link;
       }
   | _ -> state
 

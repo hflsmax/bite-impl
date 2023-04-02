@@ -35,6 +35,7 @@ type t_ENV = (name * ty) list [@@deriving sexp]
 
 let builtin_fun =
   [
+    ("ArrayInitStatic", TAbs ([], [], [ TInt ], TBuiltin, []));
     ("ArrayInit", TAbs ([], [], [ TInt ], TBuiltin, []));
     ("ArrayGet", TAbs ([], [], [ TBuiltin; TInt ], TInt, []));
     ("ListNew", TAbs ([], [], [], TBuiltin, []));
@@ -72,8 +73,8 @@ type attrs = {
   varDepth : int option;
   ty : ty;
   effs : effs;
-  hvarParams : richHvar list; (* Used in FullFun *)
-  hvarArgs : richHvar list; (* Used in FullApply and Raise *)
+  hvarParams : richHvar list option; (* Used in FullFun *)
+  hvarArgs : richHvar list option; (* Used in FullApply and Raise *)
   lhsHvar : richHvar option; (* Used in Raise *)
   bindHvar : richHvar option; (* Used in Handle *)
   handlerKind : handlerKind option; (* Used in Handle *)
@@ -93,8 +94,8 @@ let default_attrs =
     varDepth = None;
     ty = TInt;
     effs = [];
-    hvarParams = [];
-    hvarArgs = [];
+    hvarParams = None;
+    hvarArgs = None;
     lhsHvar = None;
     bindHvar = None;
     handlerKind = None;
@@ -119,8 +120,8 @@ and expr' =
   | Assign of expr * expr
   | Deref of expr
   | If of expr * expr * expr
-  | Let of name * expr * expr
-  | Decl of name * expr * expr
+  | Let of name * bool * expr * expr
+  | Decl of name * bool * expr * expr
   | Handle of name * fname * expr * expr
   | FullFun of
       name * effs * (hvar * fname) list * (name * ty) list * ty * effs * expr

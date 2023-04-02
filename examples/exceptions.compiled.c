@@ -43,6 +43,8 @@ volatile int jmpret;
 typedef struct main_env_t {
 } main_env_t;
 
+#define ArrayInitStatic(size) (&((int[size]){0}))
+
 void *ArrayInit(int size) { return malloc(size * sizeof(int)); }
 
 int ArrayGet(void *arr, int index) { return ((int *)arr)[index]; }
@@ -53,9 +55,6 @@ int Print(int x) {
 }
 
 typedef struct main_locals_t {
-  void *run_fptr;
-  void *run_env;
-  void *run_jb;
 } main_locals_t;
 
 typedef main_locals_t g_env_t;
@@ -73,6 +72,11 @@ typedef struct fn1_locals_t {
   fn1_env_t *env;
   void *jb;
 } fn1_locals_t;
+int fn1(fn1_env_t *env, void *jb);
+int g(g_env_t *env, int n);
+int main();
+const void *run_fptr = (void *)g;
+const void *run_env = NULL;
 bool fn1_saved = false;
 jmp_buf fn1_jb;
 
@@ -108,6 +112,5 @@ int g(g_env_t *env, int n) {
 int main() {
   main_locals_t locals;
 
-  locals.run_fptr = (void *)g;
-  return Print(g(locals.run_env, 100100100));
+  return Print(g(run_env, 100100100));
 }

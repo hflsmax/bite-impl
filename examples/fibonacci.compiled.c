@@ -43,6 +43,8 @@ volatile int jmpret;
 typedef struct main_env_t {
 } main_env_t;
 
+#define ArrayInitStatic(size) (&((int[size]){0}))
+
 void *ArrayInit(int size) { return malloc(size * sizeof(int)); }
 
 int ArrayGet(void *arr, int index) { return ((int *)arr)[index]; }
@@ -53,9 +55,6 @@ int Print(int x) {
 }
 
 typedef struct main_locals_t {
-  void *fibonacci_fptr;
-  void *fibonacci_env;
-  void *fibonacci_jb;
 } main_locals_t;
 
 typedef main_locals_t fibonacciRec_env_t;
@@ -63,6 +62,10 @@ typedef struct fibonacciRec_locals_t {
   fibonacciRec_env_t *env;
   int n;
 } fibonacciRec_locals_t;
+int fibonacciRec(fibonacciRec_env_t *env, int n);
+int main();
+const void *fibonacci_fptr = (void *)fibonacciRec;
+const void *fibonacci_env = NULL;
 
 int fibonacciRec(fibonacciRec_env_t *env, int n) {
   fibonacciRec_locals_t locals;
@@ -86,6 +89,5 @@ int fibonacciRec(fibonacciRec_env_t *env, int n) {
 int main() {
   main_locals_t locals;
 
-  locals.fibonacci_fptr = (void *)fibonacciRec;
-  return Print(fibonacciRec(locals.fibonacci_env, 42));
+  return Print(fibonacciRec(fibonacci_env, 42));
 }

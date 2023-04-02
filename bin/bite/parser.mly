@@ -30,6 +30,7 @@
 %token SEMI
 %token SEMISEMI
 %token EOF
+%token POW
 
 %start file
 %type <Syntax.command list> file
@@ -196,10 +197,14 @@ plain_expr:
     { Assign (x, e) }
   | IF e1 = expr THEN e2 = expr ELSE e3 = expr 
     { If (e1, e2, e3) }
-  | LET x = VAR EQUAL e1 = expr IN e2 = expr END
-    { Let (x, e1, e2) }
-  | DECL x = VAR ASSIGN e1 = expr IN e2 = expr END
-    { Decl (x, e1, e2) }
+  | LET p = POW? x = VAR EQUAL e1 = expr IN e2 = expr END
+    { match p with
+      | None -> Let (x, false, e1, e2)
+      | Some _ -> Let (x, true, e1, e2) }
+  | DECL p = POW? x = VAR ASSIGN e1 = expr IN e2 = expr END
+    { match p with
+      | None -> Decl (x, false, e1, e2)
+      | Some _ -> Decl (x, true, e1, e2) }
   | HANDLE x = VAR COLON fname = VAR EQUAL e1 = lambda IN e2 = expr END
     { let [@warning "-partial-match"] (FullFun _, _) = e1 in
       Handle (x, fname, e1, e2) }

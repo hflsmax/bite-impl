@@ -1,6 +1,6 @@
 eff Exc : ∀[].∀{}.() -> Int_[];;
 
-let run =
+let^ run =
     fun g [] {} (n : Int) : Int_[] is
         handle lexc : Exc = fn [] {} () : Int_[] is 0 end in
             if n = 0 then

@@ -25,8 +25,10 @@ let mark_cf_dest _ ((exp, attrs) as rexp : expr) : expr =
   | Assign (e1, e2) -> (Assign (mark Continue e1, mark Continue e2), attrs)
   | If (e1, e2, e3) ->
       (If (mark Continue e1, mark attrs.cfDest e2, mark attrs.cfDest e3), attrs)
-  | Let (x, e1, e2) -> (Let (x, mark Continue e1, mark attrs.cfDest e2), attrs)
-  | Decl (x, e1, e2) -> (Decl (x, mark Continue e1, mark attrs.cfDest e2), attrs)
+  | Let (x, isTop, e1, e2) ->
+      (Let (x, isTop, mark Continue e1, mark attrs.cfDest e2), attrs)
+  | Decl (x, isTop, e1, e2) ->
+      (Decl (x, isTop, mark Continue e1, mark attrs.cfDest e2), attrs)
   | Handle (x, fname, e1, e2) ->
       (Handle (x, fname, mark Continue e1, mark attrs.cfDest e2), attrs)
   | FullFun (x, es1, hs, tm_args, ty, es2, e) ->
@@ -65,7 +67,7 @@ let transform_exp init_state exp_passes state_passes (exp : expr) : expr =
             ( transform_exp_rec state e1,
               transform_exp_rec state e2,
               transform_exp_rec state e3 )
-      | Let (x, e1, e2) ->
+      | Let (x, isTop, e1, e2) ->
           let e1' = transform_exp_rec state e1 in
           let new_state_for_e2 =
             match e1 with
@@ -74,9 +76,9 @@ let transform_exp init_state exp_passes state_passes (exp : expr) : expr =
             | _ -> state
           in
           let e2' = transform_exp_rec new_state_for_e2 e2 in
-          Let (x, e1', e2')
-      | Decl (x, e1, e2) ->
-          Decl (x, transform_exp_rec state e1, transform_exp_rec state e2)
+          Let (x, isTop, e1', e2')
+      | Decl (x, isTop, e1, e2) ->
+          Decl (x, isTop, transform_exp_rec state e1, transform_exp_rec state e2)
       | Handle (x, h, exp_catch, exp_handle) ->
           let[@warning "-partial-match"] ( FullFun
                                              ( fun_name,

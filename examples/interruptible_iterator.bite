@@ -2,7 +2,7 @@ eff Replace : ∀[].∀{}.(Int) -> Unit_[];;
 eff Behead : ∀[].∀{}.() -> Unit_[];;
 eff Yield : ∀[].∀{replace: Replace, behead: Behead}.(Int) -> Unit_[~replace, ~behead];;
 
-let iter = fun iterRec [] {yield: Yield, behead: Behead} (l: Builtin) : Int_[~yield, ~behead] is
+let^ iter = fun iterRec [] {yield: Yield, behead: Behead} (l: Builtin) : Int_[~yield, ~behead] is
     handle replace : Replace = fn [] {} (x : Int) : Unit_[] is resume (IterSetInt l x) end in
         raise yield {replace behead} (IterGetInt l)
     end;
@@ -13,7 +13,7 @@ let iter = fun iterRec [] {yield: Yield, behead: Behead} (l: Builtin) : Int_[~yi
             iterRec {yield localBehead} (IterNext l)
         end
 end in
-    dcl list := ListNew () in
+    dcl^ list := ListNewStatic () in
         ListInit !list 100100100;
         handle yield : Yield = fn [] {replace: Replace, behead: Behead} (x : Int) : Unit_[~replace, ~behead] is
             resume (

@@ -59,6 +59,7 @@ rule token = parse
   | '*'             { TIMES }
   | '/'             { DIV }
   | "%"             { MOD }
+  | "^"             { POW }
   | var             { VAR (Lexing.lexeme lexbuf) }
   | eof             { EOF }
 

@@ -1,7 +1,7 @@
 eff Fget : ∀[].∀{}.() -> Int_[];;
 eff Fset : ∀[].∀{}.(Int) -> Int_[];;
 
-let counter =
+let^ counter =
   fun f [] {lget : Fget, lset : Fset} (n : Int) : Int_[~lget, ~lset] is
     let i = raise lget () in
       if i = 0 then 
@@ -11,7 +11,7 @@ let counter =
     end
   end
 in 
-  let run =
+  let^ run =
     fn [] {} (n : Int) : Int_[] is
       dcl s := n in
         handle lget : Fget = fn [] {} () : Int_[] is resume (!s) end in

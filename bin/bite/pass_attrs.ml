@@ -53,14 +53,15 @@ let mark_handlerKind state ((exp, attrs) : expr) =
           { attrs with handlerKind = Some (analyze_handlerKind f) } )
     | _ -> (exp, attrs)
 
-let get_var_depth (x : name) (slink : string list list) : int =
-  let rec get_var_depth_rec (x : name) (slink : string list list) (depth : int)
-      : int =
+let get_var_depth (x : name) (slink : (string * bool) list list) : int =
+  let rec get_var_depth_rec (x : name) (slink : (string * bool) list list)
+      (depth : int) : int =
     match slink with
     | [] -> error "Variable \"%s\" not found in static link@." x
-    | locals :: slink' ->
-        if List.mem x locals then depth
-        else get_var_depth_rec x slink' (depth + 1)
+    | locals :: slink' -> (
+        match List.assoc_opt x locals with
+        | Some isTop -> if isTop then -1 else depth
+        | None -> get_var_depth_rec x slink' (depth + 1))
   in
   get_var_depth_rec x slink 0
 
@@ -77,14 +78,14 @@ let mark_var_depth state ((exp, attrs) : expr) =
           (fun hvar ->
             let depth = get_var_depth hvar.name state.static_link in
             { hvar with depth })
-          attrs.hvarArgs
+          (Option.get attrs.hvarArgs)
       in
       let depth = get_var_depth x state.static_link in
       ( exp,
         {
           attrs with
           lhsHvar = Some { (Option.get attrs.lhsHvar) with depth };
-          hvarArgs = hvarArgs';
+          hvarArgs = Some hvarArgs';
         } )
   | FullApply (_, _, hvars, _) ->
       let hvarArgs' =
@@ -92,9 +93,9 @@ let mark_var_depth state ((exp, attrs) : expr) =
           (fun hvar ->
             let depth = get_var_depth hvar.name state.static_link in
             { hvar with depth })
-          attrs.hvarArgs
+          (Option.get attrs.hvarArgs)
       in
-      (exp, { attrs with hvarArgs = hvarArgs' })
+      (exp, { attrs with hvarArgs = Some hvarArgs' })
   | _ -> (exp, attrs)
 
 let mark_optimized_sjlj state ((exp, attrs) : expr) =

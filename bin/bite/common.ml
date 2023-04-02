@@ -17,9 +17,12 @@ let rec gather_locals ((exp, attrs) : expr) : locals =
   | AOP (_, e1, e2) | BOP (_, e1, e2) -> gather_locals e1 @ gather_locals e2
   | Assign (x, e) -> gather_locals e
   | If (e1, e2, e3) -> gather_locals e1 @ gather_locals e2 @ gather_locals e3
-  | Let (x, e1, e2) -> ((x, (snd e1).ty) :: gather_locals e1) @ gather_locals e2
-  | Decl (x, e1, e2) ->
-      ((x, (snd e1).ty) :: gather_locals e1) @ gather_locals e2
+  | Let (x, isTop, e1, e2) ->
+      if isTop then gather_locals e1 @ gather_locals e2
+      else ((x, (snd e1).ty) :: gather_locals e1) @ gather_locals e2
+  | Decl (x, isTop, e1, e2) ->
+      if isTop then gather_locals e1 @ gather_locals e2
+      else ((x, (snd e1).ty) :: gather_locals e1) @ gather_locals e2
   | Handle (x, _, catch_exp, handle_exp) ->
       ((x, (snd catch_exp).ty) :: gather_locals catch_exp)
       @ gather_locals handle_exp
@@ -72,6 +75,8 @@ let extra_defs arch =
 volatile int jmpret;
 
 typedef struct main_env_t {} main_env_t;
+
+#define ArrayInitStatic(size) (&((int[size]){0}))
 
 void* ArrayInit(int size) {
     return malloc(size * sizeof(int));

@@ -1,10 +1,10 @@
 eff NoSuchElement : ∀[].∀{}.() -> Int_[];;
 
-let arrLen = 100100100 in
-let arr = ArrayInit arrLen in
+let^ arrLen = 100100100 in
+let^ arr = ArrayInitStatic arrLen in
 
-dcl iterIdx := 0 in
-let iterNext = fn [] {exc : NoSuchElement} () : Int_[~exc] is 
+dcl^ iterIdx := 0 in
+let^ iterNext = fn [] {exc : NoSuchElement} () : Int_[~exc] is 
     if !iterIdx < arrLen then
         iterIdx := !iterIdx + 1;
         ArrayGet arr (!iterIdx - 1)
@@ -12,9 +12,9 @@ let iterNext = fn [] {exc : NoSuchElement} () : Int_[~exc] is
         raise exc ()
 end in
 
-let add = fn [] {} (a : Int, b : Int) : Int_[] is a + b end in
+let^ add = fn [] {} (a : Int, b : Int) : Int_[] is a + b end in
 
-let foldLeft =
+let^ foldLeft =
     fun foldLeftRec [] {} (op : ∀[].∀{}.(Int, Int) -> Int_[], acc : Int) : Int_[] is
         dcl next := 0 in
         dcl toBreak := false in

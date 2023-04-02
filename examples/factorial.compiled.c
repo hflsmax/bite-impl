@@ -43,6 +43,8 @@ volatile int jmpret;
 typedef struct main_env_t {
 } main_env_t;
 
+#define ArrayInitStatic(size) (&((int[size]){0}))
+
 void *ArrayInit(int size) { return malloc(size * sizeof(int)); }
 
 int ArrayGet(void *arr, int index) { return ((int *)arr)[index]; }
@@ -53,9 +55,6 @@ int Print(int x) {
 }
 
 typedef struct main_locals_t {
-  void *factorial_fptr;
-  void *factorial_env;
-  void *factorial_jb;
 } main_locals_t;
 
 typedef main_locals_t factorialRec_env_t;
@@ -63,6 +62,10 @@ typedef struct factorialRec_locals_t {
   factorialRec_env_t *env;
   int n;
 } factorialRec_locals_t;
+int factorialRec(factorialRec_env_t *env, int n);
+int main();
+const void *factorial_fptr = (void *)factorialRec;
+const void *factorial_env = NULL;
 
 int factorialRec(factorialRec_env_t *env, int n) {
   factorialRec_locals_t locals;
@@ -79,6 +82,5 @@ int factorialRec(factorialRec_env_t *env, int n) {
 int main() {
   main_locals_t locals;
 
-  locals.factorial_fptr = (void *)factorialRec;
-  return Print(factorialRec(locals.factorial_env, 100100100));
+  return Print(factorialRec(factorial_env, 100100100));
 }

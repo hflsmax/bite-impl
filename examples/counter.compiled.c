@@ -43,6 +43,8 @@ volatile int jmpret;
 typedef struct main_env_t {
 } main_env_t;
 
+#define ArrayInitStatic(size) (&((int[size]){0}))
+
 void *ArrayInit(int size) { return malloc(size * sizeof(int)); }
 
 int ArrayGet(void *arr, int index) { return ((int *)arr)[index]; }
@@ -53,12 +55,6 @@ int Print(int x) {
 }
 
 typedef struct main_locals_t {
-  void *counter_fptr;
-  void *counter_env;
-  void *counter_jb;
-  void *run_fptr;
-  void *run_env;
-  void *run_jb;
 } main_locals_t;
 
 typedef main_locals_t f_env_t;
@@ -101,6 +97,16 @@ typedef struct fn3_locals_t {
   void *jb;
   int n;
 } fn3_locals_t;
+int f(f_env_t *env, int n, void *lget_fptr, void *lget_env, void *lget_jb,
+      void *lset_fptr, void *lset_env, void *lset_jb);
+int fn2(fn2_env_t *env, void *jb);
+int fn3(fn3_env_t *env, void *jb, int n);
+int fn1(fn1_env_t *env, int n);
+int main();
+const void *counter_fptr = (void *)f;
+const void *counter_env = NULL;
+const void *run_fptr = (void *)fn1;
+const void *run_env = NULL;
 
 int f(f_env_t *env, int n, void *lget_fptr, void *lget_env, void *lget_jb,
       void *lset_fptr, void *lset_env, void *lset_jb) {
@@ -155,16 +161,12 @@ int fn1(fn1_env_t *env, int n) {
   locals.lget_env = &locals;
   locals.lset_fptr = (void *)fn3;
   locals.lset_env = &locals;
-  return f(locals.env->counter_env, 0, locals.lget_fptr, locals.lget_env,
-           locals.lget_jb, locals.lset_fptr, locals.lset_env, locals.lset_jb);
+  return f(counter_env, 0, locals.lget_fptr, locals.lget_env, locals.lget_jb,
+           locals.lset_fptr, locals.lset_env, locals.lset_jb);
 }
 
 int main() {
   main_locals_t locals;
 
-  locals.counter_fptr = (void *)f;
-  locals.counter_env = &locals;
-  locals.run_fptr = (void *)fn1;
-  locals.run_env = &locals;
-  return Print(fn1(locals.run_env, 100100100));
+  return Print(fn1(run_env, 100100100));
 }

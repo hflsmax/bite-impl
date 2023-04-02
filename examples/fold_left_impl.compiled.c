@@ -43,6 +43,8 @@ volatile int jmpret;
 typedef struct main_env_t {
 } main_env_t;
 
+#define ArrayInitStatic(size) (&((int[size]){0}))
+
 void *ArrayInit(int size) { return malloc(size * sizeof(int)); }
 
 int ArrayGet(void *arr, int index) { return ((int *)arr)[index]; }
@@ -53,18 +55,6 @@ int Print(int x) {
 }
 
 typedef struct main_locals_t {
-  int arrLen;
-  void *arr;
-  int iterIdx;
-  void *iterNext_fptr;
-  void *iterNext_env;
-  void *iterNext_jb;
-  void *add_fptr;
-  void *add_env;
-  void *add_jb;
-  void *foldLeft_fptr;
-  void *foldLeft_env;
-  void *foldLeft_jb;
 } main_locals_t;
 
 typedef main_locals_t fn1_env_t;
@@ -101,6 +91,20 @@ typedef struct fn3_locals_t {
   fn3_env_t *env;
   void *jb;
 } fn3_locals_t;
+int fn1(fn1_env_t *env, void *exc_fptr, void *exc_env, void *exc_jb);
+int fn2(fn2_env_t *env, int a, int b);
+int fn3(fn3_env_t *env, void *jb);
+int foldLeftRec(foldLeftRec_env_t *env, void *op_fptr, void *op_env, int acc);
+int main();
+const int arrLen = 100100100;
+const void *arr = ArrayInitStatic(arrLen);
+int iterIdx = 0;
+const void *iterNext_fptr = (void *)fn1;
+const void *iterNext_env = NULL;
+const void *add_fptr = (void *)fn2;
+const void *add_env = NULL;
+const void *foldLeft_fptr = (void *)foldLeftRec;
+const void *foldLeft_env = NULL;
 bool fn3_saved = false;
 jmp_buf fn3_jb;
 
@@ -111,10 +115,10 @@ int fn1(fn1_env_t *env, void *exc_fptr, void *exc_env, void *exc_jb) {
   locals.exc_env = exc_env;
   locals.exc_jb = exc_jb;
 
-  if (({ locals.env->iterIdx < locals.env->arrLen; })) {
+  if (({ iterIdx < arrLen; })) {
 
-    locals.env->iterIdx = ({ locals.env->iterIdx + 1; });
-    return ArrayGet(locals.env->arr, ({ locals.env->iterIdx - 1; }));
+    iterIdx = ({ iterIdx + 1; });
+    return ArrayGet(arr, ({ iterIdx - 1; }));
   } else {
     return ((int (*)(void *, void *))locals.exc_fptr)(locals.exc_env,
                                                       locals.exc_jb);
@@ -157,8 +161,8 @@ int foldLeftRec(foldLeftRec_env_t *env, void *op_fptr, void *op_env, int acc) {
 
     (fn3_saved || _setjmp(locals.exc_jb) == 0 ? ({
       fn3_saved = true;
-      locals.next = fn1(locals.env->iterNext_env, locals.exc_fptr,
-                        locals.exc_env, locals.exc_jb);
+      locals.next =
+          fn1(iterNext_env, locals.exc_fptr, locals.exc_env, locals.exc_jb);
     })
                                               : ({ jmpret; }));
   });
@@ -175,14 +179,5 @@ int foldLeftRec(foldLeftRec_env_t *env, void *op_fptr, void *op_env, int acc) {
 int main() {
   main_locals_t locals;
 
-  locals.arrLen = 100100100;
-  locals.arr = ArrayInit(locals.arrLen);
-  locals.iterIdx = 0;
-  locals.iterNext_fptr = (void *)fn1;
-  locals.iterNext_env = &locals;
-  locals.add_fptr = (void *)fn2;
-  locals.foldLeft_fptr = (void *)foldLeftRec;
-  locals.foldLeft_env = &locals;
-  return Print(
-      foldLeftRec(locals.foldLeft_env, locals.add_fptr, locals.add_env, 0));
+  return Print(foldLeftRec(foldLeft_env, add_fptr, add_env, 0));
 }

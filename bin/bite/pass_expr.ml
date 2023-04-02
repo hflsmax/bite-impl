@@ -23,6 +23,7 @@ let transform_general_handler _ ((exp, attrs) : expr) : expr =
               es2,
               ( Let
                   ( fun_name,
+                    false,
                     (new_handler, fattrs),
                     (FullApply ((Var fun_name, fattrs), [], [], []), fattrs) ),
                 fattrs ) )

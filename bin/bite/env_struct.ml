@@ -22,8 +22,10 @@ let rec get_fun_info ((exp, attrs) : expr) (pfun_name : string option) :
   | If (e1, e2, e3) ->
       get_fun_info e1 pfun_name @++@ get_fun_info e2 pfun_name
       @++@ get_fun_info e3 pfun_name
-  | Let (x, e1, e2) -> get_fun_info e1 pfun_name @++@ get_fun_info e2 pfun_name
-  | Decl (x, e1, e2) -> get_fun_info e1 pfun_name @++@ get_fun_info e2 pfun_name
+  | Let (x, _, e1, e2) ->
+      get_fun_info e1 pfun_name @++@ get_fun_info e2 pfun_name
+  | Decl (x, _, e1, e2) ->
+      get_fun_info e1 pfun_name @++@ get_fun_info e2 pfun_name
   | Handle (x, fname, exp_catch, exp_handle) ->
       let[@warning "-partial-match"] FullFun (fun_name, _, _, _, _, _, _), _ =
         exp_catch

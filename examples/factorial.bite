@@ -1,4 +1,4 @@
-let factorial =
+let^ factorial =
     fun factorialRec [] {} (n : Int) : Int_[] is
         if n = 0 then
             1

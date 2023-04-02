@@ -43,6 +43,8 @@ volatile int jmpret;
 typedef struct main_env_t {
 } main_env_t;
 
+#define ArrayInitStatic(size) (&((int[size]){0}))
+
 void *ArrayInit(int size) { return malloc(size * sizeof(int)); }
 
 int ArrayGet(void *arr, int index) { return ((int *)arr)[index]; }
@@ -55,10 +57,6 @@ int Print(int x) {
 typedef struct main_locals_t {
   jmp_buf fn3_jb;
   jmp_buf fn4_jb;
-  void *iter_fptr;
-  void *iter_env;
-  void *iter_jb;
-  void *list;
   void *yield_fptr;
   void *yield_env;
   void *yield_jb;
@@ -118,6 +116,19 @@ typedef struct fn4_locals_t {
   fn4_env_t *env;
   void *jb;
 } fn4_locals_t;
+void fn1(fn1_env_t *env, void *jb, int x);
+void fn2(fn2_env_t *env, void *jb);
+int iterRec(iterRec_env_t *env, void *l, void *yield_fptr, void *yield_env,
+            void *yield_jb, void *behead_fptr, void *behead_env,
+            void *behead_jb);
+void fn3(fn3_env_t *env, void *jb, int x, void *replace_fptr, void *replace_env,
+         void *replace_jb, void *behead_fptr, void *behead_env,
+         void *behead_jb);
+void fn4(fn4_env_t *env, void *jb);
+int main();
+const void *iter_fptr = (void *)iterRec;
+const void *iter_env = NULL;
+void *list = ListNewStatic();
 
 void fn1(fn1_env_t *env, void *jb, int x) {
   fn1_locals_t locals;
@@ -198,22 +209,18 @@ void fn4(fn4_env_t *env, void *jb) {
   locals.env = env;
   locals.jb = jb;
 
-  return ListRemoveFirstElement(locals.env->list);
+  return ListRemoveFirstElement(list);
 }
 
 int main() {
   main_locals_t locals;
 
-  locals.iter_fptr = (void *)iterRec;
-  locals.iter_env = &locals;
-  locals.list = ListNew();
-
-  ListInit(locals.list, 100100100);
+  ListInit(list, 100100100);
   locals.yield_fptr = (void *)fn3;
   locals.yield_env = &locals;
   locals.behead_fptr = (void *)fn4;
   locals.behead_env = &locals;
-  return Print(iterRec(locals.iter_env, locals.list, locals.yield_fptr,
-                       locals.yield_env, locals.yield_jb, locals.behead_fptr,
-                       locals.behead_env, locals.behead_jb));
+  return Print(iterRec(iter_env, list, locals.yield_fptr, locals.yield_env,
+                       locals.yield_jb, locals.behead_fptr, locals.behead_env,
+                       locals.behead_jb));
 }
