@@ -2,12 +2,15 @@
 
 open Syntax
 open Common
+
+[@@@ocaml.warning "-unused-open"]
+
 open Util
 
-let codeGen_hvar (hvar : richHvar) =
-  spf "locals.%s%s"
-    (String.concat "" (List.init hvar.depth (fun _ -> "env->")))
-    hvar.name
+let codeGen_var (v : string) (depth : int) =
+  if depth = -1 then v
+  else
+    spf "locals.%s%s" (String.concat "" (List.init depth (fun _ -> "env->"))) v
 
 let can_be_returned exp =
   match exp with
@@ -15,7 +18,7 @@ let can_be_returned exp =
   | Raise _ ->
       true
   | Assign _ | If _ | Let _ | Decl _ | Handle _ | FullFun _ | Resume _ | Seq _
-    ->
+  | Aux _ ->
       false
 
 (* Compile an expression to a top-level and a list of functions *)
@@ -32,15 +35,15 @@ let codeGen exp : string =
         global_code
     else
       (match exp with
+      | Aux auxF -> (
+          match auxF with
+          | ReifyEnvironment -> "&locals"
+          | ReifyContext -> "NULL"
+          | _ -> failwith "Aux not implemented")
       | Unit -> ""
       | Var x ->
           if attrs.isBuiltin then x
-          else if Option.get attrs.varDepth = -1 then x
-          else
-            spf "locals.%s%s"
-              (String.concat ""
-                 (List.init (Option.get attrs.varDepth) (fun _ -> "env->")))
-              x
+          else codeGen_var x (Option.get attrs.varDepth)
       | Int k -> string_of_int k
       | Bool b -> string_of_bool b
       | AOP (op, e1, e2) ->
@@ -70,21 +73,20 @@ let codeGen exp : string =
           if isTop then (
             global_code :=
               (match e1 with
-              | FullFun (fun_name, _, _, _, _, _, _), _ ->
-                  spf "const void* %s_fptr = (void*)%s;\n" x fun_name
-                  ^ spf "const void* %s_env = NULL;\n" x
-              | _ -> spf "const %s %s = %s;\n" (ty_to_string (snd e1).ty) x e1')
+              | FullFun (fun_name, _, _, _, _, _, _), _ -> spf "void* %s;\n" x
+              | _ -> spf "%s %s;\n" (ty_to_string (snd e1).ty) x)
               ^ !global_code;
-            e2')
+            (if attrs.isDeclareOnly then "" else spf "%s = %s;\n" x e1') ^ e2')
           else
             match e1 with
             | FullFun (fun_name, _, _, _, _, _, _), fattrs ->
-                spf "locals.%s_fptr = (void*)%s;\n" x fun_name
-                ^ (if List.length fattrs.freeVars > 0 then
-                   spf "locals.%s_env = &locals;\n" x
-                  else "")
+                (if attrs.isDeclareOnly then ""
+                else spf "locals.%s = (void*)%s;\n" x fun_name)
                 ^ e2' ^ "\n"
-            | _ -> spf "locals.%s = %s;\n%s;" x e1' e2')
+            | _ ->
+                (if attrs.isDeclareOnly then ""
+                else spf "locals.%s = %s;\n" x e1')
+                ^ e2')
       | Decl (x, isTop, e1, e2) ->
           let e1' = codeGen_rec e1 in
           let e2' = codeGen_rec e2 in
@@ -143,10 +145,6 @@ let codeGen exp : string =
             | Multishot | SingleShot -> exp_handle_code
           in
           (if attrs.cfDest = Continue then "({" else "")
-          ^ spf "locals.%s_fptr = (void*)%s;\n" handler_var_name fun_name
-          ^ (if List.length fattrs.freeVars > 0 then
-             spf "locals.%s_env = &locals;\n" handler_var_name
-            else "")
           ^ exp_handle_code
           ^ if attrs.cfDest = Continue then ";})" else ""
       | FullFun (x, es1, hs, tm_args, ty, es2, body_exp) ->
@@ -173,7 +171,7 @@ let codeGen exp : string =
           "CURRENTLY ONLY SUPPORT FUNCTIONS ASSIGNED TO A VARIABLE OR A HANDLER"
       | FullApply (((lhs_name, lhs_attrs) as lhs), es, hs, exps) ->
           let lhs' = codeGen_rec lhs in
-          let exps' =
+          let args_code =
             List.map
               (fun ((exp, attrs) as rexp) ->
                 let exp_code = codeGen_rec rexp in
@@ -182,60 +180,12 @@ let codeGen exp : string =
                 | _ -> exp_code)
               exps
           in
-          let handler_args =
-            List.map
-              (fun h ->
-                h |> codeGen_hvar |> fun x -> spf "%s_fptr, %s_env, %s_jb" x x x)
-              (Option.get attrs.hvarArgs)
-          in
-          let args_code =
-            if attrs.isBuiltin then exps' @ handler_args
-            else if attrs.isRecursiveCall then
-              ("locals.env" :: exps') @ handler_args
-            else ((lhs' ^ "_env") :: exps') @ handler_args
-          in
           let lhs_code =
-            if attrs.isBuiltin then
-              let[@warning "-partial-match"] (Var x) = lhs_name in
-              x
-            else if Option.is_some attrs.topLevelFunctionName then
-              Option.get attrs.topLevelFunctionName
-            else (
-              print_info "lhs_ty: %t@." (Print.ty lhs_attrs.ty);
-              print_info "lhs_name: %t@." (Print.expr lhs_name);
-              spf "((%s)%s_fptr)" (tabs_to_string lhs_attrs.ty false) lhs')
+            if attrs.isTopCall || attrs.isBuiltin then lhs'
+            else spf "((%s)%s)" (tabs_to_string lhs_attrs.ty false) lhs'
           in
           spf "%s(%s)" lhs_code (String.concat ", " args_code)
-      | Raise (h, es, hs, exps) ->
-          let exps' =
-            List.map
-              (fun ((exp, attrs) as rexp) ->
-                let exp_code = codeGen_rec rexp in
-                match attrs.ty with
-                | TAbs _ -> spf "%s_fptr, %s_env" exp_code exp_code
-                | _ -> exp_code)
-              exps
-          in
-          let handler_code = codeGen_hvar (Option.get attrs.lhsHvar) in
-          let handler_args =
-            List.map
-              (fun h ->
-                h |> codeGen_hvar |> fun x -> spf "%s_fptr, %s_env, %s_jb" x x x)
-              (Option.get attrs.hvarArgs)
-          in
-          let args_code =
-            ((handler_code ^ "_env") :: (handler_code ^ "_jb") :: exps')
-            @ handler_args
-          in
-          let lhs_code =
-            if Option.is_some attrs.topLevelFunctionName then
-              Option.get attrs.topLevelFunctionName
-            else
-              spf "((%s)%s_fptr)"
-                (tabs_to_string (Option.get attrs.lhsHvar).ty true)
-                handler_code
-          in
-          spf "%s(%s)" lhs_code (String.concat ", " args_code)
+      | Raise (h, es, hs, exps) -> "ALL RAISE SHOULD HAVE BECOME FULLAPPLY"
       | Resume (e, r) ->
           let[@warning "-partial-match"] (Some r) = r in
           let r' = codeGen_rec r in

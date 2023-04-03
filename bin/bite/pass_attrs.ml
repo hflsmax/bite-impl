@@ -1,12 +1,20 @@
 open Syntax
 open Pass_state
 open Pass_util
+
+[@@@ocaml.warning "-unused-open"]
+
 open Util
 
 let mark_freeVars state ((exp, attrs) : expr) =
   match exp with
-  | FullFun (x, _, _, _, _, _, _) ->
-      (exp, { attrs with freeVars = gather_free_vars (exp, attrs) })
+  | FullFun (x, _, _, _, _, _, body) ->
+      ( exp,
+        {
+          attrs with
+          freeVars = gather_free_vars (exp, attrs);
+          freeVarsOfBody = gather_free_vars body;
+        } )
   | _ -> (exp, attrs)
 
 let mark_handlers state ((exp, attrs) : expr) =
@@ -53,49 +61,65 @@ let mark_handlerKind state ((exp, attrs) : expr) =
           { attrs with handlerKind = Some (analyze_handlerKind f) } )
     | _ -> (exp, attrs)
 
-let get_var_depth (x : name) (slink : (string * bool) list list) : int =
+let mark_var_depth state ((exp, attrs) : expr) =
   let rec get_var_depth_rec (x : name) (slink : (string * bool) list list)
-      (depth : int) : int =
+      (depth : int) : int option =
     match slink with
-    | [] -> error "Variable \"%s\" not found in static link@." x
+    | [] ->
+        if List.mem x state.func_names then (
+          print_string ".is func_name.";
+          Some (-1))
+        else None
     | locals :: slink' -> (
         match List.assoc_opt x locals with
-        | Some isTop -> if isTop then -1 else depth
+        | Some isTop ->
+            if isTop then (
+              print_string ".is top.";
+              Some (-1))
+            else Some depth
         | None -> get_var_depth_rec x slink' (depth + 1))
   in
-  get_var_depth_rec x slink 0
-
-let mark_var_depth state ((exp, attrs) : expr) =
   match exp with
-  | Var x ->
+  | Var x -> (
+      Util.print_info "@.@.Marking var depth for %s@.slink:%t@." x
+        (Print.static_link state.static_link);
       if attrs.isBuiltin then (exp, attrs)
       else
-        let depth = get_var_depth x state.static_link in
-        (exp, { attrs with varDepth = Some depth })
-  | Raise (x, _, hvars, _) ->
-      let hvarArgs' =
-        List.map
-          (fun hvar ->
-            let depth = get_var_depth hvar.name state.static_link in
-            { hvar with depth })
-          (Option.get attrs.hvarArgs)
-      in
-      let depth = get_var_depth x state.static_link in
-      ( exp,
-        {
-          attrs with
-          lhsHvar = Some { (Option.get attrs.lhsHvar) with depth };
-          hvarArgs = Some hvarArgs';
-        } )
-  | FullApply (_, _, hvars, _) ->
-      let hvarArgs' =
-        List.map
-          (fun hvar ->
-            let depth = get_var_depth hvar.name state.static_link in
-            { hvar with depth })
-          (Option.get attrs.hvarArgs)
-      in
-      (exp, { attrs with hvarArgs = Some hvarArgs' })
+        match get_var_depth_rec x state.static_link 0 with
+        | Some depth ->
+            Util.print_info "Marking var depth for %s as %d@." x depth;
+            (exp, { attrs with varDepth = Some depth })
+        | None ->
+            error "Variable %s not found in static link %t@." x
+              (Print.static_link state.static_link)
+              ~loc:attrs.loc)
+  (* | Raise (x, _, hvars, _) ->
+         let hvarArgs' =
+           List.map
+             (fun hvar ->
+               Util.print_info "Marking var depth for %s@." hvar.name;
+               let depth = get_var_depth hvar.name state.static_link in
+               { hvar with depth })
+             (Option.get attrs.hvarArgs)
+         in
+         Util.print_info "Marking var depth for %s@." x;
+         let depth = get_var_depth x state.static_link in
+         ( exp,
+           {
+             attrs with
+             lhsHvar = Some { (Option.get attrs.lhsHvar) with depth };
+             hvarArgs = Some hvarArgs';
+           } )
+     | FullApply (_, _, hvars, _) ->
+         let hvarArgs' =
+           List.map
+             (fun hvar ->
+               Util.print_info "Marking var depth for %s@. in%t@." hvar.name (Print.expr exp);
+               let depth = get_var_depth hvar.name state.static_link in
+               { hvar with depth })
+             (Option.get attrs.hvarArgs)
+         in
+         (exp, { attrs with hvarArgs = Some hvarArgs' }) *)
   | _ -> (exp, attrs)
 
 let mark_optimized_sjlj state ((exp, attrs) : expr) =
@@ -114,23 +138,23 @@ let mark_recursive_call state ((exp, attrs) : expr) : expr =
       else (exp, attrs)
   | _ -> (exp, attrs)
 
-let mark_topLevelFunctionName state ((exp, attrs) : expr) : expr =
-  match exp with
-  | FullApply ((Var x, x_attrs), app_eargs, app_hargs, app_targs) -> (
-      match List.assoc_opt x state.value_store with
-      | Some fun_name ->
-          (exp, { attrs with topLevelFunctionName = Some fun_name })
-      | None -> (exp, attrs))
-  | Raise (x, es, hs, exps) -> (
-      match List.assoc_opt x state.value_store with
-      | Some fun_name ->
-          (exp, { attrs with topLevelFunctionName = Some fun_name })
-      | None -> (exp, attrs))
-  | _ -> (exp, attrs)
-
 let mark_builtin_call _ ((exp, attrs) : expr) : expr =
   match exp with
   | FullApply ((_, x_attrs), _, _, _) ->
       if x_attrs.isBuiltin then (exp, { attrs with isBuiltin = true })
       else (exp, attrs)
+  | _ -> (exp, attrs)
+
+let mark_unnecessary_reify state ((exp, attrs) : expr) : expr =
+  match exp with
+  | Let (x, isTop, ((FullFun _, fattrs) as fexpr), e2) ->
+      let mark_rec (exp, attrs) =
+        ( exp,
+          match exp with
+          | Let (x, isTop, ((Aux ReifyEnvironment, _) as rexpr), e2) ->
+              { attrs with isDeclareOnly = fattrs.freeVars = [] }
+          | Let (x, isTop, ((Aux ReifyContext, _) as rexpr), e2) -> attrs
+          | _ -> attrs )
+      in
+      (Let (x, isTop, fexpr, mark_rec e2), attrs)
   | _ -> (exp, attrs)

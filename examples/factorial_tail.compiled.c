@@ -55,6 +55,8 @@ int Print(int x) {
 }
 
 typedef struct main_locals_t {
+  void *factorial_fptr;
+  void *factorialTail_fptr;
 } main_locals_t;
 
 typedef main_locals_t factorialRec_env_t;
@@ -64,18 +66,16 @@ typedef struct factorialRec_locals_t {
   int acc;
 } factorialRec_locals_t;
 
-typedef main_locals_t fn1_env_t;
-typedef struct fn1_locals_t {
-  fn1_env_t *env;
+typedef main_locals_t factorialTail_1_env_t;
+typedef struct factorialTail_1_locals_t {
+  factorialTail_1_env_t *env;
   int n;
-} fn1_locals_t;
+} factorialTail_1_locals_t;
 int factorialRec(factorialRec_env_t *env, int n, int acc);
-int fn1(fn1_env_t *env, int n);
+int factorialTail_1(factorialTail_1_env_t *env, int n);
 int main();
-const void *factorial_fptr = (void *)factorialRec;
-const void *factorial_env = NULL;
-const void *factorialTail_fptr = (void *)fn1;
-const void *factorialTail_env = NULL;
+void *factorial_env;
+void *factorialTail_env;
 
 int factorialRec(factorialRec_env_t *env, int n, int acc) {
   factorialRec_locals_t locals;
@@ -91,8 +91,8 @@ int factorialRec(factorialRec_env_t *env, int n, int acc) {
   }
 }
 
-int fn1(fn1_env_t *env, int n) {
-  fn1_locals_t locals;
+int factorialTail_1(factorialTail_1_env_t *env, int n) {
+  factorialTail_1_locals_t locals;
   locals.env = env;
   locals.n = n;
 
@@ -102,5 +102,7 @@ int fn1(fn1_env_t *env, int n) {
 int main() {
   main_locals_t locals;
 
-  return Print(fn1(factorialTail_env, 100100100));
+  locals.factorial_fptr = (void *)factorialRec;
+  locals.factorialTail_fptr = (void *)factorialTail_1;
+  return Print(factorialTail_1(factorialTail_env, 100100100));
 }

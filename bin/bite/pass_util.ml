@@ -1,5 +1,9 @@
 open Syntax
 
+[@@@ocaml.warning "-unused-open"]
+
+open Util
+
 let gather_exp include_all_lexical_scope predicate exp =
   let rec gather_exp' (exp, attrs) =
     (if predicate (exp, attrs) then [ exp ] else [])
@@ -20,13 +24,13 @@ let gather_exp include_all_lexical_scope predicate exp =
     | Raise (h, es, hs, exps) -> List.concat (List.map gather_exp' exps)
     | Resume (e, r) -> gather_exp' e
     | Seq (e1, e2) -> gather_exp' e1 @ gather_exp' e2
-    | Int _ | Bool _ | Unit | Var _ -> []
+    | Int _ | Bool _ | Aux _ | Unit | Var _ -> []
   in
   gather_exp' exp
 
 (* Gather all free variables in an expression. It's computed by finding all used variables that are not bound *)
 (* if rich hvars are not populated, the type of hvar will be TUnit *)
-let rec gather_free_vars ((exp, attrs) : expr) : locals =
+let rec gather_free_vars ?(exclude_names = []) ((exp, attrs) : expr) : locals =
   let exclude name locals =
     List.filter (fun (name', _) -> name <> name') locals
   in
@@ -50,23 +54,29 @@ let rec gather_free_vars ((exp, attrs) : expr) : locals =
       let tparams' = List.map fst tparams in
       exclude_all ((x :: hparams') @ tparams') (gather_free_vars body)
   | FullApply (lhs, _, hvars, targs) ->
-      let hvars =
-        List.map (fun rh -> (rh.name, rh.ty)) (Option.get attrs.hvarArgs)
-      in
-      gather_free_vars lhs @ hvars
+      gather_free_vars lhs
       @ List.fold_left
           (fun acc exp_iter -> acc @ gather_free_vars exp_iter)
           [] targs
   | Raise (name, _, hargs, targs) ->
-      let hvars =
-        List.map (fun rh -> (rh.name, rh.ty)) (Option.get attrs.hvarArgs)
-      in
-      (((Option.get attrs.lhsHvar).name, (Option.get attrs.lhsHvar).ty) :: hvars)
-      @ List.fold_left
-          (fun acc exp_iter -> acc @ gather_free_vars exp_iter)
-          [] targs
+      List.fold_left
+        (fun acc exp_iter -> acc @ gather_free_vars exp_iter)
+        [] targs
   | Resume (e, _) -> gather_free_vars e
   | Seq (e1, e2) -> gather_free_vars e1 @ gather_free_vars e2
   | Deref x -> gather_free_vars x
-  | Var x -> [ (x, attrs.ty) ]
-  | Int _ | Bool _ | Unit -> [] |> List.sort_uniq compare
+  | Var x ->
+      if
+        attrs.isBuiltin || List.mem x exclude_names
+        || Option.get attrs.varDepth = -1
+      then []
+      else [ (x, attrs.ty) ]
+  | Int _ | Bool _ | Unit | Aux _ -> [] |> List.sort_uniq compare
+
+let get_all_func_names exp =
+  gather_exp true
+    (fun (exp, _) -> match exp with FullFun _ -> true | _ -> false)
+    exp
+  |> List.map
+       (fun [@warning "-partial-match"] (FullFun (name, _, _, _, _, _, _)) ->
+         name)

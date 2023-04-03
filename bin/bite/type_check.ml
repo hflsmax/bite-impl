@@ -1,6 +1,9 @@
 (** Type checking. *)
 
 open Syntax
+
+[@@@ocaml.warning "-unused-open"]
+
 open Util
 
 let typing_error ~loc = error ~kind:"Type error" ~loc
@@ -39,11 +42,12 @@ let hvar_to_rich_hvar eff_defs h_env name =
   { name; fname; ty; depth = -1 }
 
 let default_attrs = Syntax.default_attrs
-let fn_index = ref 0
 
 let rec type_of (eff_defs : f_ENV) (e_env : e_ENV) (h_env : h_ENV)
     (t_env : t_ENV) (e, attrs) : expr =
   match e with
+  | Aux _ ->
+      typing_error ~loc:attrs.loc "auxiliary should not be used in source code"
   | Var x -> (
       match List.assoc_opt x builtin_fun with
       | None -> (
@@ -90,12 +94,6 @@ let rec type_of (eff_defs : f_ENV) (e_env : e_ENV) (h_env : h_ENV)
           effs = attrs1.effs @ attrs2.effs @ attrs2.effs;
         } )
   | FullFun (x, es1, hs, tm_args, ty, es2, exp_body) ->
-      let x =
-        if x = "" then (
-          fn_index := !fn_index + 1;
-          "fn" ^ string_of_int !fn_index)
-        else x
-      in
       let ty_args = List.map snd tm_args in
       let new_e_env = es1 @ e_env in
       let new_h_env = hs @ h_env in
@@ -139,7 +137,7 @@ let rec type_of (eff_defs : f_ENV) (e_env : e_ENV) (h_env : h_ENV)
                   typing_error ~loc:attrs.loc
                     "This expression can't be type checked";
                 ( Assign ((exp_v', attrs_v), (exp', attrs_e)),
-                  { default_attrs with ty = attrs_e.ty; effs = attrs_e.effs } )
+                  { default_attrs with ty = TUnit; effs = attrs_e.effs } )
             | _ ->
                 typing_error ~loc:attrs.loc
                   "LHS of assignment must be of mutable type"
@@ -165,6 +163,9 @@ let rec type_of (eff_defs : f_ENV) (e_env : e_ENV) (h_env : h_ENV)
       | _ -> typing_error ~loc:attrs.loc "Operand to deref must be a variable")
   | Let (x, isTop, exp1, exp2) ->
       let exp1', attrs1 = type_of eff_defs e_env h_env t_env exp1 in
+
+      print_info "let %s : %t = %t@.@." x (Print.ty attrs1.ty)
+        (Print.expr (fst exp1));
       let exp2', attrs2 =
         type_of eff_defs e_env h_env ((x, attrs1.ty) :: t_env) exp2
       in

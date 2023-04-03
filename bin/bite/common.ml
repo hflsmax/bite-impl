@@ -34,7 +34,7 @@ let rec gather_locals ((exp, attrs) : expr) : locals =
       List.fold_left (fun acc exp_iter -> acc @ gather_locals exp_iter) [] e
   | Resume (e, r) -> gather_locals e
   | Seq (e1, e2) -> gather_locals e1 @ gather_locals e2
-  | Var _ | Int _ | Bool _ | Unit | Deref _ -> []
+  | Var _ | Int _ | Bool _ | Aux _ | Unit | Deref _ -> []
 
 let rec ty_to_string ty : string =
   match ty with
@@ -42,23 +42,15 @@ let rec ty_to_string ty : string =
   | TInt -> "int"
   | TBool -> "bool"
   | TMut ty -> ty_to_string ty
-  | TAbs _ -> "closure_t"
+  | TAbs _ -> "void*"
   | TCustom s -> s
   | TUnit -> "void"
 
 let tabs_to_string ty is_handler : string =
   match ty with
   | TAbs (es1, hs, ty_args, ty, es2) ->
-      (* The first parameter is the env pointer. *)
-      let ty_args =
-        ("void*" :: (if is_handler then [ "void*" ] else []))
-        @ List.map (fun ty_arg -> ty_to_string ty_arg) ty_args
-      in
-      let handler_ty_args =
-        List.init (List.length hs) (fun _ -> "void*, void*, void*")
-      in
-      Printf.sprintf "%s(*)(%s)" (ty_to_string ty)
-        (String.concat ", " (ty_args @ handler_ty_args))
+      let ty_args = List.map (fun ty_arg -> ty_to_string ty_arg) ty_args in
+      spf "%s(*)(%s)" (ty_to_string ty) (String.concat ", " ty_args)
   | _ -> failwith "tabs_to_string: can only be called on TAbs"
 
 let extra_defs arch =

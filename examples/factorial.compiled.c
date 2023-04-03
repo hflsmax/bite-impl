@@ -55,6 +55,7 @@ int Print(int x) {
 }
 
 typedef struct main_locals_t {
+  void *factorial_fptr;
 } main_locals_t;
 
 typedef main_locals_t factorialRec_env_t;
@@ -64,8 +65,7 @@ typedef struct factorialRec_locals_t {
 } factorialRec_locals_t;
 int factorialRec(factorialRec_env_t *env, int n);
 int main();
-const void *factorial_fptr = (void *)factorialRec;
-const void *factorial_env = NULL;
+void *factorial_env;
 
 int factorialRec(factorialRec_env_t *env, int n) {
   factorialRec_locals_t locals;
@@ -82,5 +82,6 @@ int factorialRec(factorialRec_env_t *env, int n) {
 int main() {
   main_locals_t locals;
 
+  locals.factorial_fptr = (void *)factorialRec;
   return Print(factorialRec(factorial_env, 100100100));
 }

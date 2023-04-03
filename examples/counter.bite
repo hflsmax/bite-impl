@@ -1,5 +1,5 @@
 eff Fget : ∀[].∀{}.() -> Int_[];;
-eff Fset : ∀[].∀{}.(Int) -> Int_[];;
+eff Fset : ∀[].∀{}.(Int) -> Unit_[];;
 
 let^ counter =
   fun f [] {lget : Fget, lset : Fset} (n : Int) : Int_[~lget, ~lset] is
@@ -15,7 +15,7 @@ in
     fn [] {} (n : Int) : Int_[] is
       dcl s := n in
         handle lget : Fget = fn [] {} () : Int_[] is resume (!s) end in
-          handle lset : Fset = fn [] {} (n : Int) : Int_[] is resume (s := n) end in
+          handle lset : Fset = fn [] {} (n : Int) : Unit_[] is resume (s := n) end in
             counter {lget lset} 0
           end
         end

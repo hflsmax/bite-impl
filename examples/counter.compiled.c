@@ -55,6 +55,8 @@ int Print(int x) {
 }
 
 typedef struct main_locals_t {
+  void *counter_fptr;
+  void *run_fptr;
 } main_locals_t;
 
 typedef main_locals_t f_env_t;
@@ -70,11 +72,9 @@ typedef struct f_locals_t {
   int i;
 } f_locals_t;
 
-typedef main_locals_t fn1_env_t;
-typedef struct fn1_locals_t {
-  jmp_buf fn2_jb;
-  jmp_buf fn3_jb;
-  fn1_env_t *env;
+typedef main_locals_t run_1_env_t;
+typedef struct run_1_locals_t {
+  run_1_env_t *env;
   int n;
   int s;
   void *lget_fptr;
@@ -83,30 +83,28 @@ typedef struct fn1_locals_t {
   void *lset_fptr;
   void *lset_env;
   void *lset_jb;
-} fn1_locals_t;
+} run_1_locals_t;
 
-typedef fn1_locals_t fn2_env_t;
-typedef struct fn2_locals_t {
-  fn2_env_t *env;
+typedef run_1_locals_t lget_2_env_t;
+typedef struct lget_2_locals_t {
+  lget_2_env_t *env;
   void *jb;
-} fn2_locals_t;
+} lget_2_locals_t;
 
-typedef fn1_locals_t fn3_env_t;
-typedef struct fn3_locals_t {
-  fn3_env_t *env;
+typedef run_1_locals_t lset_3_env_t;
+typedef struct lset_3_locals_t {
+  lset_3_env_t *env;
   void *jb;
   int n;
-} fn3_locals_t;
+} lset_3_locals_t;
 int f(f_env_t *env, int n, void *lget_fptr, void *lget_env, void *lget_jb,
       void *lset_fptr, void *lset_env, void *lset_jb);
-int fn2(fn2_env_t *env, void *jb);
-int fn3(fn3_env_t *env, void *jb, int n);
-int fn1(fn1_env_t *env, int n);
+int lget_2(lget_2_env_t *env, void *jb);
+void lset_3(lset_3_env_t *env, void *jb, int n);
+int run_1(run_1_env_t *env, int n);
 int main();
-const void *counter_fptr = (void *)f;
-const void *counter_env = NULL;
-const void *run_fptr = (void *)fn1;
-const void *run_env = NULL;
+void *counter_env;
+void *run_env;
 
 int f(f_env_t *env, int n, void *lget_fptr, void *lget_env, void *lget_jb,
       void *lset_fptr, void *lset_env, void *lset_jb) {
@@ -126,24 +124,24 @@ int f(f_env_t *env, int n, void *lget_fptr, void *lget_env, void *lget_jb,
     return locals.n;
   } else {
 
-    ((int (*)(void *, void *, int))locals.lset_fptr)(
+    ((void (*)(void *, void *, int))locals.lset_fptr)(
         locals.lset_env, locals.lset_jb, ({ locals.i - 1; }));
     __attribute__((musttail)) return f(
         locals.env, ({ locals.n + 1; }), locals.lget_fptr, locals.lget_env,
         locals.lget_jb, locals.lset_fptr, locals.lset_env, locals.lset_jb);
-  };
+  }
 }
 
-int fn2(fn2_env_t *env, void *jb) {
-  fn2_locals_t locals;
+int lget_2(lget_2_env_t *env, void *jb) {
+  lget_2_locals_t locals;
   locals.env = env;
   locals.jb = jb;
 
   return locals.env->s;
 }
 
-int fn3(fn3_env_t *env, void *jb, int n) {
-  fn3_locals_t locals;
+void lset_3(lset_3_env_t *env, void *jb, int n) {
+  lset_3_locals_t locals;
   locals.env = env;
   locals.jb = jb;
   locals.n = n;
@@ -151,16 +149,18 @@ int fn3(fn3_env_t *env, void *jb, int n) {
   locals.env->s = locals.n;
 }
 
-int fn1(fn1_env_t *env, int n) {
-  fn1_locals_t locals;
+int run_1(run_1_env_t *env, int n) {
+  run_1_locals_t locals;
   locals.env = env;
   locals.n = n;
 
   locals.s = locals.n;
-  locals.lget_fptr = (void *)fn2;
+  locals.lget_fptr = (void *)lget_2;
   locals.lget_env = &locals;
-  locals.lset_fptr = (void *)fn3;
+  locals.lget_jb = NULL;
+  locals.lset_fptr = (void *)lset_3;
   locals.lset_env = &locals;
+  locals.lset_jb = NULL;
   return f(counter_env, 0, locals.lget_fptr, locals.lget_env, locals.lget_jb,
            locals.lset_fptr, locals.lset_env, locals.lset_jb);
 }
@@ -168,5 +168,7 @@ int fn1(fn1_env_t *env, int n) {
 int main() {
   main_locals_t locals;
 
-  return Print(fn1(run_env, 100100100));
+  locals.counter_fptr = (void *)f;
+  locals.run_fptr = (void *)run_1;
+  return Print(run_1(run_env, 100100100));
 }

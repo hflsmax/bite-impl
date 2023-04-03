@@ -55,8 +55,7 @@ int Print(int x) {
 }
 
 typedef struct main_locals_t {
-  jmp_buf yield_3_jb;
-  jmp_buf behead_4_jb;
+  void *iter_fptr;
   void *yield_fptr;
   void *yield_env;
   void *yield_jb;
@@ -67,8 +66,6 @@ typedef struct main_locals_t {
 
 typedef main_locals_t iterRec_env_t;
 typedef struct iterRec_locals_t {
-  jmp_buf replace_2_jb;
-  jmp_buf localBehead_1_jb;
   iterRec_env_t *env;
   void *l;
   void *yield_fptr;
@@ -126,8 +123,7 @@ void yield_3(yield_3_env_t *env, void *jb, int x, void *replace_fptr,
              void *behead_env, void *behead_jb);
 void behead_4(behead_4_env_t *env, void *jb);
 int main();
-const void *iter_fptr = (void *)iterRec;
-const void *iter_env = NULL;
+void *iter_env;
 void *list = ListNewStatic();
 
 void replace_2(replace_2_env_t *env, void *jb, int x) {
@@ -160,20 +156,20 @@ int iterRec(iterRec_env_t *env, void *l, void *yield_fptr, void *yield_env,
   locals.behead_env = behead_env;
   locals.behead_jb = behead_jb;
 
-  ({
-    locals.replace_fptr = (void *)replace_2;
-    locals.replace_env = &locals;
-    ((void (*)(void *, void *, int, void *, void *, void *, void *, void *,
-               void *))locals.yield_fptr)(
-        locals.yield_env, locals.yield_jb, IterGetInt(locals.l),
-        locals.replace_fptr, locals.replace_env, locals.replace_jb,
-        locals.behead_fptr, locals.behead_env, locals.behead_jb);
-  });
+  locals.replace_fptr = (void *)replace_2;
+  locals.replace_env = &locals;
+  locals.replace_jb = NULL;
+  ((void (*)(void *, void *, int, void *, void *, void *, void *, void *,
+             void *))locals.yield_fptr)(
+      locals.yield_env, locals.yield_jb, IterGetInt(locals.l),
+      locals.replace_fptr, locals.replace_env, locals.replace_jb,
+      locals.behead_fptr, locals.behead_env, locals.behead_jb);
   if (IterHasNext(locals.l)) {
     return 0;
   } else {
     locals.localBehead_fptr = (void *)localBehead_1;
     locals.localBehead_env = &locals;
+    locals.localBehead_jb = NULL;
     __attribute__((musttail)) return iterRec(
         locals.env, IterNext(locals.l), locals.yield_fptr, locals.yield_env,
         locals.yield_jb, locals.localBehead_fptr, locals.localBehead_env,
@@ -215,11 +211,13 @@ void behead_4(behead_4_env_t *env, void *jb) {
 int main() {
   main_locals_t locals;
 
+  locals.iter_fptr = (void *)iterRec;
+
   ListInit(list, 100100100);
   locals.yield_fptr = (void *)yield_3;
-  locals.yield_env = &locals;
+  locals.yield_jb = NULL;
   locals.behead_fptr = (void *)behead_4;
-  locals.behead_env = &locals;
+  locals.behead_jb = NULL;
   return Print(iterRec(iter_env, list, locals.yield_fptr, locals.yield_env,
                        locals.yield_jb, locals.behead_fptr, locals.behead_env,
                        locals.behead_jb));

@@ -55,26 +55,28 @@ int Print(int x) {
 }
 
 typedef struct main_locals_t {
+  void *iterNext_fptr;
+  void *add_fptr;
+  void *foldLeft_fptr;
 } main_locals_t;
 
-typedef main_locals_t fn1_env_t;
-typedef struct fn1_locals_t {
-  fn1_env_t *env;
+typedef main_locals_t iterNext_1_env_t;
+typedef struct iterNext_1_locals_t {
+  iterNext_1_env_t *env;
   void *exc_fptr;
   void *exc_env;
   void *exc_jb;
-} fn1_locals_t;
+} iterNext_1_locals_t;
 
-typedef main_locals_t fn2_env_t;
-typedef struct fn2_locals_t {
-  fn2_env_t *env;
+typedef main_locals_t add_2_env_t;
+typedef struct add_2_locals_t {
+  add_2_env_t *env;
   int a;
   int b;
-} fn2_locals_t;
+} add_2_locals_t;
 
 typedef main_locals_t foldLeftRec_env_t;
 typedef struct foldLeftRec_locals_t {
-  jmp_buf fn3_jb;
   foldLeftRec_env_t *env;
   void *op_fptr;
   void *op_env;
@@ -86,30 +88,27 @@ typedef struct foldLeftRec_locals_t {
   void *exc_jb;
 } foldLeftRec_locals_t;
 
-typedef foldLeftRec_locals_t fn3_env_t;
-typedef struct fn3_locals_t {
-  fn3_env_t *env;
+typedef foldLeftRec_locals_t exc_3_env_t;
+typedef struct exc_3_locals_t {
+  exc_3_env_t *env;
   void *jb;
-} fn3_locals_t;
-int fn1(fn1_env_t *env, void *exc_fptr, void *exc_env, void *exc_jb);
-int fn2(fn2_env_t *env, int a, int b);
-int fn3(fn3_env_t *env, void *jb);
+} exc_3_locals_t;
+int iterNext_1(iterNext_1_env_t *env, void *exc_fptr, void *exc_env,
+               void *exc_jb);
+int add_2(add_2_env_t *env, int a, int b);
+int exc_3(exc_3_env_t *env, void *jb);
 int foldLeftRec(foldLeftRec_env_t *env, void *op_fptr, void *op_env, int acc);
 int main();
-const int arrLen = 100100100;
-const void *arr = ArrayInitStatic(arrLen);
+int arrLen;
+void *arr;
 int iterIdx = 0;
-const void *iterNext_fptr = (void *)fn1;
-const void *iterNext_env = NULL;
-const void *add_fptr = (void *)fn2;
-const void *add_env = NULL;
-const void *foldLeft_fptr = (void *)foldLeftRec;
-const void *foldLeft_env = NULL;
-bool fn3_saved = false;
-jmp_buf fn3_jb;
+void *iterNext_env;
+void *add_env;
+void *foldLeft_env;
 
-int fn1(fn1_env_t *env, void *exc_fptr, void *exc_env, void *exc_jb) {
-  fn1_locals_t locals;
+int iterNext_1(iterNext_1_env_t *env, void *exc_fptr, void *exc_env,
+               void *exc_jb) {
+  iterNext_1_locals_t locals;
   locals.env = env;
   locals.exc_fptr = exc_fptr;
   locals.exc_env = exc_env;
@@ -125,8 +124,8 @@ int fn1(fn1_env_t *env, void *exc_fptr, void *exc_env, void *exc_jb) {
   }
 }
 
-int fn2(fn2_env_t *env, int a, int b) {
-  fn2_locals_t locals;
+int add_2(add_2_env_t *env, int a, int b) {
+  add_2_locals_t locals;
   locals.env = env;
   locals.a = a;
   locals.b = b;
@@ -134,14 +133,13 @@ int fn2(fn2_env_t *env, int a, int b) {
   return ({ locals.a + locals.b; });
 }
 
-int fn3(fn3_env_t *env, void *jb) {
-  fn3_locals_t locals;
+int exc_3(exc_3_env_t *env, void *jb) {
+  exc_3_locals_t locals;
   locals.env = env;
   locals.jb = jb;
 
   locals.env->toBreak = true;
-  jmpret = 0;
-  _longjmp(jb, 1);
+  return 0;
 }
 
 int foldLeftRec(foldLeftRec_env_t *env, void *op_fptr, void *op_env, int acc) {
@@ -154,18 +152,11 @@ int foldLeftRec(foldLeftRec_env_t *env, void *op_fptr, void *op_env, int acc) {
   locals.next = 0;
   locals.toBreak = false;
 
-  ({
-    locals.exc_fptr = (void *)fn3;
-    locals.exc_env = &locals;
-    locals.exc_jb = &fn3_jb;
-
-    (fn3_saved || _setjmp(locals.exc_jb) == 0 ? ({
-      fn3_saved = true;
-      locals.next =
-          fn1(iterNext_env, locals.exc_fptr, locals.exc_env, locals.exc_jb);
-    })
-                                              : ({ jmpret; }));
-  });
+  locals.exc_fptr = (void *)exc_3;
+  locals.exc_env = &locals;
+  locals.exc_jb = NULL;
+  locals.next =
+      iterNext_1(iterNext_env, locals.exc_fptr, locals.exc_env, locals.exc_jb);
   if (locals.toBreak) {
     return locals.acc;
   } else {
@@ -179,5 +170,11 @@ int foldLeftRec(foldLeftRec_env_t *env, void *op_fptr, void *op_env, int acc) {
 int main() {
   main_locals_t locals;
 
-  return Print(foldLeftRec(foldLeft_env, add_fptr, add_env, 0));
+  arrLen = 100100100;
+  arr = ArrayInit(arrLen);
+  locals.iterNext_fptr = (void *)iterNext_1;
+  iterNext_env = &locals;
+  locals.add_fptr = (void *)add_2;
+  locals.foldLeft_fptr = (void *)foldLeftRec;
+  return Print(foldLeftRec(foldLeft_env, locals.add_fptr, add_env, 0));
 }

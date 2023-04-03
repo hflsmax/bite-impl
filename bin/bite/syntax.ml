@@ -53,7 +53,6 @@ let builtin_fun =
     ("IterGetInt", TAbs ([], [], [ TBuiltin ], TInt, []));
     ("IterRemoveNext", TAbs ([], [], [ TBuiltin ], TUnit, []));
     ("Print", TAbs ([], [], [ TInt ], TInt, []));
-    ("ReifyResumer", TAbs ([], [], [], TBuiltin, []));
   ]
 
 (* Control-flow destination *)
@@ -65,11 +64,12 @@ type richHvar = { name : name; fname : fname; ty : ty; depth : int }
 
 type attrs = {
   loc : location;
-  isRecursiveCall : bool;
-  topLevelFunctionName : string option;
+  isRecursiveCall : bool; (* Used in FullApply *)
+  isTopCall : bool; (* Used in FullApply *)
   cfDest : cf_dest;
   isOptimizedSjlj : bool;
   isBuiltin : bool;
+  isDeclareOnly : bool; (* Used in Let *)
   varDepth : int option;
   ty : ty;
   effs : effs;
@@ -80,6 +80,7 @@ type attrs = {
   handlerKind : handlerKind option; (* Used in Handle *)
   isHandler : bool; (* Used in FullFun *)
   freeVars : (name * ty) list; (* Used in FullFun *)
+  freeVarsOfBody : (name * ty) list; (* Used in FullFun *)
 }
 [@@deriving sexp]
 
@@ -87,9 +88,10 @@ let default_attrs =
   {
     loc = Nowhere;
     isRecursiveCall = false;
-    topLevelFunctionName = None;
+    isTopCall = false;
     isBuiltin = false;
     isOptimizedSjlj = false;
+    isDeclareOnly = false;
     cfDest = Continue;
     varDepth = None;
     ty = TInt;
@@ -101,9 +103,17 @@ let default_attrs =
     handlerKind = None;
     isHandler = false;
     freeVars = [];
+    freeVarsOfBody = [];
   }
 
 let locate ?(loc = Nowhere) x = (x, { default_attrs with loc })
+
+type auxFunction =
+  | ReifyResumer
+  | ReifyEnvironment (* Environment of closure *)
+  | ReifyContext (* Evaluation Context *)
+  | ReifyContinuation
+[@@deriving sexp]
 
 (* Expressions *)
 type expr = expr' * attrs
@@ -129,6 +139,7 @@ and expr' =
   | Raise of hvar * effs * hvar list * expr list
   | Resume of expr * expr option
   | Seq of expr * expr
+  | Aux of auxFunction
 [@@deriving sexp]
 
 (* Toplevel commands *)
@@ -138,4 +149,4 @@ type command =
   | Decl_eff of fname * ty
 
 type locals = (name * ty) list [@@deriving sexp]
-type static_link = locals list [@@deriving sexp]
+type static_link = (name * bool) list list [@@deriving sexp]

@@ -4,6 +4,10 @@ open Pass_state
 open Pass_attrs
 open Pass_expr
 
+[@@@ocaml.warning "-unused-open"]
+
+open Util
+
 let wrap_in_main (exp : expr) : expr =
   let fun_def = FullFun ("main", [], [], [], TInt, [], exp) in
   ( fun_def,
@@ -18,7 +22,7 @@ let wrap_in_main (exp : expr) : expr =
 let mark_cf_dest _ ((exp, attrs) as rexp : expr) : expr =
   let mark cf_dest (exp, attrs) = (exp, { attrs with cfDest = cf_dest }) in
   match exp with
-  | Var _ | Int _ | Bool _ | Unit -> rexp
+  | Var _ | Int _ | Bool _ | Unit | Aux _ -> rexp
   | AOP (op, e1, e2) -> (AOP (op, mark Continue e1, mark Continue e2), attrs)
   | BOP (op, e1, e2) -> (BOP (op, mark Continue e1, mark Continue e2), attrs)
   | Deref e -> (Deref (mark Continue e), attrs)
@@ -129,14 +133,20 @@ let transform_exp init_state exp_passes state_passes (exp : expr) : expr =
               else Some (transform_exp_rec state (Option.get r)) )
       | Seq (e1, e2) ->
           Seq (transform_exp_rec state e1, transform_exp_rec state e2)
-      | (Int _ | Bool _ | Unit | Var _) as e -> e),
+      | (Int _ | Bool _ | Unit | Var _ | Aux _) as e -> e),
       attrs_pre )
   in
   transform_exp_rec init_state exp
 
+let print_and_forward exp =
+  Util.print_info "Transformed expression: --------@.%t@.--------@."
+    (Print.expr (fst exp));
+  exp
+
 let transform (effs_efs : f_ENV) (exp : expr) : expr =
   let init_state =
     {
+      func_names = [];
       curr_func_name = "";
       curr_func_is_tail_recursive = false;
       value_store = [];
@@ -148,21 +158,50 @@ let transform (effs_efs : f_ENV) (exp : expr) : expr =
   exp
   |> transform_exp init_state
        [
+         transform_nameless_function;
+         mark_builtin_call;
+         mark_recursive_call;
          mark_handlers;
-         mark_handlerKind;
+       ]
+       []
+  |> fun exp ->
+  transform_exp
+    { init_state with func_names = Pass_util.get_all_func_names exp }
+    [
+      (* depends on mark_handlers; *)
+      expand_hvar_and_funarg;
+      add_jb_arg_for_handler;
+      add_env_arg_for_fun;
+      transform_topCall;
+    ]
+    [] exp
+  |> transform_exp
+       { init_state with func_names = Pass_util.get_all_func_names exp }
+       [ mark_var_depth ] [ update_static_link ]
+  |> transform_exp
+       { init_state with func_names = Pass_util.get_all_func_names exp }
+       [
+         (* depends on expand_hvar_and_funarg *) mark_freeVars; mark_handlerKind;
+       ]
+       []
+  |> transform_exp
+       { init_state with func_names = Pass_util.get_all_func_names exp }
+       [
+         (* depends on mark_freeVars and mark_handlerKind *)
+         mark_unnecessary_reify;
+       ]
+       []
+  (* |> print_and_forward *)
+  |> transform_exp
+       { init_state with func_names = Pass_util.get_all_func_names exp }
+       [
          transform_general_handler;
          mark_resumer;
-         mark_var_depth;
          transform_tail_resumptive_handler;
          mark_cf_dest;
-         mark_recursive_call;
-         mark_topLevelFunctionName;
-         mark_builtin_call;
-         expand_hvar_and_funarg;
-         add_jb_arg_for_handler;
-         add_env_arg_for_fun;
-         mark_freeVars;
        ]
-       [ update_static_link; update_is_in_general_handler ]
-  |> transform_exp init_state [ mark_optimized_sjlj ]
+       [ update_is_in_general_handler ]
+  |> transform_exp
+       { init_state with func_names = Pass_util.get_all_func_names exp }
+       [ mark_optimized_sjlj ]
        [ update_curr_func_is_tail_recursive ]

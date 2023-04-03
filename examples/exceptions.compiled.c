@@ -55,11 +55,11 @@ int Print(int x) {
 }
 
 typedef struct main_locals_t {
+  void *run_fptr;
 } main_locals_t;
 
 typedef main_locals_t g_env_t;
 typedef struct g_locals_t {
-  jmp_buf fn1_jb;
   g_env_t *env;
   int n;
   void *lexc_fptr;
@@ -67,26 +67,22 @@ typedef struct g_locals_t {
   void *lexc_jb;
 } g_locals_t;
 
-typedef g_locals_t fn1_env_t;
-typedef struct fn1_locals_t {
-  fn1_env_t *env;
+typedef g_locals_t lexc_1_env_t;
+typedef struct lexc_1_locals_t {
+  lexc_1_env_t *env;
   void *jb;
-} fn1_locals_t;
-int fn1(fn1_env_t *env, void *jb);
+} lexc_1_locals_t;
+int lexc_1(lexc_1_env_t *env, void *jb);
 int g(g_env_t *env, int n);
 int main();
-const void *run_fptr = (void *)g;
-const void *run_env = NULL;
-bool fn1_saved = false;
-jmp_buf fn1_jb;
+void *run_env;
 
-int fn1(fn1_env_t *env, void *jb) {
-  fn1_locals_t locals;
+int lexc_1(lexc_1_env_t *env, void *jb) {
+  lexc_1_locals_t locals;
   locals.env = env;
   locals.jb = jb;
 
-  jmpret = 0;
-  _longjmp(jb, 1);
+  return 0;
 }
 
 int g(g_env_t *env, int n) {
@@ -94,23 +90,18 @@ int g(g_env_t *env, int n) {
   locals.env = env;
   locals.n = n;
 
-  locals.lexc_fptr = (void *)fn1;
-  locals.lexc_jb = &fn1_jb;
-
-  if (fn1_saved || _setjmp(locals.lexc_jb) == 0) {
-    fn1_saved = true;
-    if (({ locals.n == 0; })) {
-      return fn1(locals.lexc_env, locals.lexc_jb);
-    } else {
-      __attribute__((musttail)) return g(locals.env, ({ locals.n - 1; }));
-    };
+  locals.lexc_fptr = (void *)lexc_1;
+  locals.lexc_jb = NULL;
+  if (({ locals.n == 0; })) {
+    return lexc_1(locals.lexc_env, locals.lexc_jb);
   } else {
-    return jmpret;
+    __attribute__((musttail)) return g(locals.env, ({ locals.n - 1; }));
   }
 }
 
 int main() {
   main_locals_t locals;
 
+  locals.run_fptr = (void *)g;
   return Print(g(run_env, 100100100));
 }

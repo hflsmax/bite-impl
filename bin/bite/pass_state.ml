@@ -2,7 +2,12 @@ open Syntax
 open Sexplib.Std
 open Pass_util
 
+[@@@ocaml.warning "-unused-open"]
+
+open Util
+
 type pass_state = {
+  func_names : string list;
   curr_func_name : string;
   curr_func_is_tail_recursive : bool;
   value_store : (string * string) list;
@@ -24,11 +29,13 @@ let update_is_in_general_handler state ((exp, attrs) : expr) =
 
 let update_static_link state ((exp, attrs) : expr) =
   match exp with
-  | FullFun (x, es1, hs, tm_args, ty, es2, exp_body) ->
-      let locals = (x :: List.map fst tm_args) @ List.map fst hs in
+  | FullFun (fun_name, es1, hs, tm_args, ty, es2, exp_body) ->
+      let locals = List.map fst tm_args @ List.map fst hs in
       {
         state with
-        static_link = List.map (fun x -> (x, false)) locals :: state.static_link;
+        static_link =
+          ((fun_name, true) :: List.map (fun x -> (x, false)) locals)
+          :: state.static_link;
       }
   | Let (x, isTop, e1, e2) ->
       {

@@ -2,6 +2,10 @@ open Syntax
 open Common
 open Sexplib.Std
 
+[@@@ocaml.warning "-unused-open"]
+
+open Util
+
 type fun_info = {
   fun_name : name;
   pfun_name : name option;
@@ -54,14 +58,9 @@ let rec get_fun_info ((exp, attrs) : expr) (pfun_name : string option) :
         ([], []) exps
   | Resume (e, r) -> get_fun_info e pfun_name
   | Seq (e1, e2) -> get_fun_info e1 pfun_name @++@ get_fun_info e2 pfun_name
-  | Int _ | Bool _ | Unit -> ([], [])
+  | Int _ | Bool _ | Unit | Aux _ -> ([], [])
 
-let local_to_struct_field (x, ty) : string =
-  match ty with
-  | TAbs _ ->
-      spf "void *%s_fptr;\n" x ^ spf "void *%s_env;\n" x
-      ^ spf "void *%s_jb;\n" x
-  | _ -> spf "%s %s;\n" (ty_to_string ty) x
+let local_to_struct_field (x, ty) : string = spf "%s %s;\n" (ty_to_string ty) x
 
 let get_env_struct { fun_name; pfun_name; locals; handlers } : string =
   let locals = List.map local_to_struct_field locals |> String.concat "" in
