@@ -46,7 +46,7 @@ let analyze_handlerKind (f : expr') : handlerKind =
             > 0
           then Multishot
           else Abortive)
-  | _ -> error "Handler is not a full function: %t@." (Print.expr f)
+  | _ -> error "Handler is not a full function: %t@." (Print.expr' f)
 
 let mark_handlerKind state ((exp, attrs) : expr) =
   if attrs.handlerKind <> None then (exp, attrs)

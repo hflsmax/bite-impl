@@ -74,7 +74,7 @@ let compile eff_defs = function
       in
       let code = Common.cleanup (CodeGen.codeGen exp) in
       ( eff_defs,
-        ( Format.asprintf "%t@." (Print.expr exp'),
+        ( Printf.sprintf "%s" (Formatter.expr_to_string exp),
           Printf.sprintf "%s" (String.concat "\n" env_structs_string) ^ code )
       )
   | Syntax.Decl_eff (x, ty) ->
@@ -89,7 +89,7 @@ let use_file ctx filename =
   List.fold_left
     (fun (ctx, s) cmd ->
       let ctx', s' = compile ctx cmd in
-      (ctx', (fst s ^ fst s', snd s ^ snd s')))
+      (ctx', (fst s', snd s')))
     (ctx, ("", ""))
     cmds
 

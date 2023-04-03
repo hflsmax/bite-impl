@@ -6,11 +6,11 @@
 (executable
  (public_name bite)
  (name bite)
- (libraries sexplib core str)
+ (libraries sexplib core str yojson)
  (modes byte exe)
  (flags :standard -g)
  (preprocess
-  (pps ppx_sexp_conv)))
+  (pps ppx_yojson_conv)))
 
 (env
  (dev

@@ -1,19 +1,18 @@
 (* Abstract syntax. *)
 
-open Sexplib.Std
 open Util
 
 (* Variable names *)
-type name = string [@@deriving sexp]
+type name = string [@@deriving yojson_of]
 
 type handlerKind = TailResumptive | Abortive | Multishot | SingleShot
-[@@deriving sexp]
+[@@deriving yojson_of]
 
 (* Effect names *)
-type fname = string [@@deriving sexp]
-type hvar = string [@@deriving sexp]
-type eff = EVar of string | HVar of hvar [@@deriving sexp]
-type effs = eff list [@@deriving sexp]
+type fname = string [@@deriving yojson_of]
+type hvar = string [@@deriving yojson_of]
+type eff = EVar of string | HVar of hvar [@@deriving yojson_of]
+type effs = eff list [@@deriving yojson_of]
 
 (* Types *)
 type ty =
@@ -24,14 +23,14 @@ type ty =
   | TMut of ty
   | TCustom of string
   | TUnit
-[@@deriving sexp]
+[@@deriving yojson_of]
 
-and tys = ty list [@@deriving sexp]
+and tys = ty list [@@deriving yojson_of]
 
-type f_ENV = (fname * ty) list [@@deriving sexp]
-type e_ENV = effs [@@deriving sexp]
-type h_ENV = (hvar * fname) list [@@deriving sexp]
-type t_ENV = (name * ty) list [@@deriving sexp]
+type f_ENV = (fname * ty) list [@@deriving yojson_of]
+type e_ENV = effs [@@deriving yojson_of]
+type h_ENV = (hvar * fname) list [@@deriving yojson_of]
+type t_ENV = (name * ty) list [@@deriving yojson_of]
 
 let builtin_fun =
   [
@@ -57,32 +56,39 @@ let builtin_fun =
 
 (* Control-flow destination *)
 type cf_dest = Return | Abort | Continue (* Neither return or abort. *)
-[@@deriving sexp]
+[@@deriving yojson_of]
 
 type richHvar = { name : name; fname : fname; ty : ty; depth : int }
-[@@deriving sexp]
+[@@deriving yojson_of]
 
 type attrs = {
-  loc : location;
-  isRecursiveCall : bool; (* Used in FullApply *)
-  isTopCall : bool; (* Used in FullApply *)
-  cfDest : cf_dest;
-  isOptimizedSjlj : bool;
-  isBuiltin : bool;
-  isDeclareOnly : bool; (* Used in Let *)
-  varDepth : int option;
-  ty : ty;
-  effs : effs;
-  hvarParams : richHvar list option; (* Used in FullFun *)
-  hvarArgs : richHvar list option; (* Used in FullApply and Raise *)
-  lhsHvar : richHvar option; (* Used in Raise *)
-  bindHvar : richHvar option; (* Used in Handle *)
-  handlerKind : handlerKind option; (* Used in Handle *)
-  isHandler : bool; (* Used in FullFun *)
-  freeVars : (name * ty) list; (* Used in FullFun *)
-  freeVarsOfBody : (name * ty) list; (* Used in FullFun *)
+  loc : location; [@yojson_drop_if fun _ -> true]
+  isRecursiveCall : bool; [@yojson_drop_if fun _ -> true]
+      (* Used in FullApply *)
+  isTopCall : bool; [@yojson_drop_if fun _ -> true] (* Used in FullApply *)
+  cfDest : cf_dest; [@yojson_drop_if fun _ -> true]
+  isOptimizedSjlj : bool; [@yojson_drop_if fun _ -> true]
+  isBuiltin : bool; [@yojson_drop_if fun _ -> true]
+  isDeclareOnly : bool; [@yojson_drop_if fun _ -> true] (* Used in Let *)
+  varDepth : int option; [@yojson_drop_if fun _ -> true]
+  ty : ty; [@yojson_drop_if fun _ -> true]
+  effs : effs; [@yojson_drop_if fun _ -> true]
+  hvarParams : richHvar list option; [@yojson_drop_if fun _ -> true]
+      (* Used in FullFun *)
+  hvarArgs : richHvar list option; [@yojson_drop_if fun _ -> true]
+      (* Used in FullApply and Raise *)
+  lhsHvar : richHvar option; [@yojson_drop_if fun _ -> true] (* Used in Raise *)
+  bindHvar : richHvar option; [@yojson_drop_if fun _ -> true]
+      (* Used in Handle *)
+  handlerKind : handlerKind option; [@yojson_drop_if fun _ -> true]
+      (* Used in Handle *)
+  isHandler : bool; [@yojson_drop_if fun _ -> true] (* Used in FullFun *)
+  freeVars : (name * ty) list; [@yojson_drop_if fun _ -> true]
+      (* Used in FullFun *)
+  freeVarsOfBody : (name * ty) list; [@yojson_drop_if fun _ -> true]
+      (* Used in FullFun *)
 }
-[@@deriving sexp]
+[@@deriving yojson_of]
 
 let default_attrs =
   {
@@ -113,10 +119,10 @@ type auxFunction =
   | ReifyEnvironment (* Environment of closure *)
   | ReifyContext (* Evaluation Context *)
   | ReifyContinuation
-[@@deriving sexp]
+[@@deriving yojson_of]
 
 (* Expressions *)
-type expr = expr' * attrs
+type expr = expr' * attrs [@@deriving yojson_of]
 
 and expr' =
   | Var of name
@@ -140,7 +146,7 @@ and expr' =
   | Resume of expr * expr option
   | Seq of expr * expr
   | Aux of auxFunction
-[@@deriving sexp]
+[@@deriving yojson_of]
 
 (* Toplevel commands *)
 type command =
@@ -148,5 +154,5 @@ type command =
   (* Expression *)
   | Decl_eff of fname * ty
 
-type locals = (name * ty) list [@@deriving sexp]
-type static_link = (name * bool) list list [@@deriving sexp]
+type locals = (name * ty) list [@@deriving yojson_of]
+type static_link = (name * bool) list list [@@deriving yojson_of]

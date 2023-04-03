@@ -163,9 +163,6 @@ let rec type_of (eff_defs : f_ENV) (e_env : e_ENV) (h_env : h_ENV)
       | _ -> typing_error ~loc:attrs.loc "Operand to deref must be a variable")
   | Let (x, isTop, exp1, exp2) ->
       let exp1', attrs1 = type_of eff_defs e_env h_env t_env exp1 in
-
-      print_info "let %s : %t = %t@.@." x (Print.ty attrs1.ty)
-        (Print.expr (fst exp1));
       let exp2', attrs2 =
         type_of eff_defs e_env h_env ((x, attrs1.ty) :: t_env) exp2
       in
@@ -251,7 +248,7 @@ let rec type_of (eff_defs : f_ENV) (e_env : e_ENV) (h_env : h_ENV)
       | _ ->
           typing_error ~loc:attrs.loc
             "The lhs of application \"%t\" of type \"%t\" must be of type TAbs"
-            (Print.expr (fst exp1))
+            (Print.expr' (fst exp1))
             (Print.ty attrs1.ty))
   | Raise (hvar, es, hs, exps) -> (
       List.assoc_opt hvar h_env |> function

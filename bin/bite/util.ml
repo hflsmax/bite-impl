@@ -1,11 +1,8 @@
-open Sexplib
-
 type location =
   | Location of Lexing.position * Lexing.position  (** delimited location *)
   | Nowhere  (** no location *)
 
-let sexp_of_location sexp_of_a = Sexp.Atom "Nowhere"
-let location_of_sexp a_of_sexp = Nowhere
+let yojson_of_location _ = Yojson.Safe.from_string "\"\""
 let make_location loc1 loc2 = Location (loc1, loc2)
 
 let location_of_lex lex =

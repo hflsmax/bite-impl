@@ -1,6 +1,6 @@
 open Syntax
 open Common
-open Sexplib.Std
+open Yojson.Safe
 
 [@@@ocaml.warning "-unused-open"]
 
@@ -12,7 +12,7 @@ type fun_info = {
   locals : (name * ty) list;
   handlers : name list;
 }
-[@@deriving sexp]
+[@@deriving yojson_of]
 
 let rec get_fun_info ((exp, attrs) : expr) (pfun_name : string option) :
     fun_info list * name list =

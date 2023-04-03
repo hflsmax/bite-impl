@@ -50,13 +50,15 @@
             src = sources.ocaml;
 
             buildInputs = [
-              ocamlPackages.ppx_sexp_conv
+              ocamlPackages.yojson
+              ocamlPackages.ppx_yojson_conv
               ocamlPackages.core
               ocamlPackages.ocaml-lsp
             ];
 
             nativeBuildInputs = [
               legacyPackages.ocamlformat
+              legacyPackages.jfmt
               ocamlPackages.menhir
               legacyPackages.clang_13
               legacyPackages.pwndbg

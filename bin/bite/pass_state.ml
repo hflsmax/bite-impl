@@ -1,5 +1,4 @@
 open Syntax
-open Sexplib.Std
 open Pass_util
 
 [@@@ocaml.warning "-unused-open"]
@@ -15,7 +14,7 @@ type pass_state = {
   eff_defs : f_ENV;
   is_in_general_handler : bool;
 }
-[@@deriving sexp]
+[@@deriving yojson_of]
 
 let update_is_in_general_handler state ((exp, attrs) : expr) =
   match exp with
