@@ -65,7 +65,7 @@ typedef struct factorialRec_locals_t {
 } factorialRec_locals_t;
 int factorialRec(factorialRec_env_t *env, int n);
 int main();
-void *factorial_env;
+volatile void *factorial_env;
 
 int factorialRec(factorialRec_env_t *env, int n) {
   factorialRec_locals_t locals;

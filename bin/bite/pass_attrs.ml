@@ -152,7 +152,7 @@ let mark_unnecessary_reify_env state ((exp, attrs) : expr) : expr =
         ( exp,
           match exp with
           | Let (x, isTop, ((Aux ReifyEnvironment, _) as rexpr), e2) ->
-              { attrs with isDeclareOnly = fattrs.freeVars = [] }
+              { attrs with skipDef = fattrs.freeVars = [] }
           | Let (x, isTop, ((Aux _, _) as rexpr), e2) -> attrs
           | _ -> attrs )
       in

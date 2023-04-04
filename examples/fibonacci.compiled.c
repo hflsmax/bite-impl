@@ -65,7 +65,7 @@ typedef struct fibonacciRec_locals_t {
 } fibonacciRec_locals_t;
 int fibonacciRec(fibonacciRec_env_t *env, int n);
 int main();
-void *fibonacci_env;
+volatile void *fibonacci_env;
 
 int fibonacciRec(fibonacciRec_env_t *env, int n) {
   fibonacciRec_locals_t locals;

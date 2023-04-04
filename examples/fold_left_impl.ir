@@ -53,19 +53,25 @@ FullFun main
                               in
                                 Let exc_env = Aux
                                 in
-                                  Let exc_jb = Aux
+                                  Let exc_jb = ^ Aux
                                   in
-                                    If FullApply
-                                        LHS: Var !setjmp
-                                        Args: [Var exc_jb]
-                                    Then
-                                      Assign
-                                        Var next
-                                        FullApply
-                                          LHS: Var iterNext_1
-                                          Args: [Var iterNext_env, Var exc_fptr, Var exc_env, Var exc_jb]
-                                    Else
-                                      Var jmpret
+                                    Let exc_jb_saved = ^ Int 0
+                                    in
+                                      If BOP ||  Var exc_jb_saved  UOP !  FullApply
+                                              LHS: Var setjmp
+                                              Args: [Var exc_jb]
+                                      Then
+                                        Seq
+                                          Assign
+                                            Var exc_jb_saved
+                                            Bool true
+                                          Assign
+                                            Var next
+                                            FullApply
+                                              LHS: Var iterNext_1
+                                              Args: [Var iterNext_env, Var exc_fptr, Var exc_env, Var exc_jb]
+                                      Else
+                                        Var jmpret
                               If Deref Var toBreak
                               Then
                                 Var acc

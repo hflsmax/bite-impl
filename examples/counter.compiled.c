@@ -103,8 +103,8 @@ int lget_2(lget_2_env_t *env, void *jb);
 void lset_3(lset_3_env_t *env, void *jb, int n);
 int run_1(run_1_env_t *env, int n);
 int main();
-void *counter_env;
-void *run_env;
+volatile void *counter_env;
+volatile void *run_env;
 
 int f(f_env_t *env, int n, void *lget_fptr, void *lget_env, void *lget_jb,
       void *lset_fptr, void *lset_env, void *lset_jb) {

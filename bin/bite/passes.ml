@@ -181,7 +181,7 @@ let transform (effs_efs : f_ENV) (exp : expr) : expr =
   |> transform_exp
        { init_state with func_names = Pass_util.get_all_func_names exp }
        [ (* depends on expand_hvar_and_funarg *) transform_reify_context ]
-       []
+       [ update_curr_func_is_tail_recursive ]
   |> transform_exp
        { init_state with func_names = Pass_util.get_all_func_names exp }
        [ mark_var_depth ] [ update_static_link ]

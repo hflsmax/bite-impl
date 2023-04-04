@@ -64,7 +64,6 @@ typedef struct g_locals_t {
   int n;
   void *lexc_fptr;
   void *lexc_env;
-  void *lexc_jb;
 } g_locals_t;
 
 typedef g_locals_t lexc_1_env_t;
@@ -75,7 +74,9 @@ typedef struct lexc_1_locals_t {
 int lexc_1(lexc_1_env_t *env, void *jb);
 int g(g_env_t *env, int n);
 int main();
-void *run_env;
+volatile void *run_env;
+volatile jmp_buf lexc_jb;
+volatile int lexc_jb_saved;
 
 int lexc_1(lexc_1_env_t *env, void *jb) {
   lexc_1_locals_t locals;
@@ -92,13 +93,11 @@ int g(g_env_t *env, int n) {
   locals.n = n;
 
   locals.lexc_fptr = (void *)lexc_1;
-  locals.lexc_jb = ({
-    jmp_buf tmp_buf;
-    &tmp_buf;
-  });
-  if (!setjmp(locals.lexc_jb)) {
+  if (({ lexc_jb_saved || ({ !setjmp(lexc_jb); }); })) {
+
+    lexc_jb_saved = true;
     if (({ locals.n == 0; })) {
-      return lexc_1(locals.lexc_env, locals.lexc_jb);
+      return lexc_1(locals.lexc_env, lexc_jb);
     } else {
       __attribute__((musttail)) return g(locals.env, ({ locals.n - 1; }));
     };

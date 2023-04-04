@@ -123,7 +123,7 @@ void yield_3(yield_3_env_t *env, void *jb, int x, void *replace_fptr,
              void *behead_env, void *behead_jb);
 void behead_4(behead_4_env_t *env, void *jb);
 int main();
-void *iter_env;
+volatile void *iter_env;
 void *list = ListNewStatic();
 
 void replace_2(replace_2_env_t *env, void *jb, int x) {

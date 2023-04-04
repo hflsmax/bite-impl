@@ -81,18 +81,20 @@ let codeGen exp : string =
               | FullFun (fun_name, _, _, _, _, _, _), _ -> spf "void* %s;\n" x
               | _ ->
                   if attrs.isBuiltin then ""
-                  else spf "%s %s;\n" (ty_to_string (snd e1).ty) x)
+                  else spf "volatile %s %s;\n" (ty_to_string (snd e1).ty) x)
+              ^ (if attrs.defAtTop then spf "%s = %s;\n" x e1' else "")
               ^ !global_code;
-            (if attrs.isDeclareOnly then "" else spf "%s = %s;\n" x e1') ^ e2')
+            (if attrs.skipDef || attrs.defAtTop then ""
+            else spf "%s = %s;\n" x e1')
+            ^ e2')
           else
             match e1 with
             | FullFun (fun_name, _, _, _, _, _, _), fattrs ->
-                (if attrs.isDeclareOnly then ""
+                (if attrs.skipDef then ""
                 else spf "locals.%s = (void*)%s;\n" x fun_name)
                 ^ e2' ^ "\n"
             | _ ->
-                (if attrs.isDeclareOnly then ""
-                else spf "locals.%s = %s;\n" x e1')
+                (if attrs.skipDef then "" else spf "locals.%s = %s;\n" x e1')
                 ^ e2')
       | Decl (x, isTop, e1, e2) ->
           let e1' = codeGen_rec e1 in

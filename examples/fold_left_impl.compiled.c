@@ -85,7 +85,6 @@ typedef struct foldLeftRec_locals_t {
   bool toBreak;
   void *exc_fptr;
   void *exc_env;
-  void *exc_jb;
 } foldLeftRec_locals_t;
 
 typedef foldLeftRec_locals_t exc_3_env_t;
@@ -99,12 +98,14 @@ int add_2(add_2_env_t *env, int a, int b);
 int exc_3(exc_3_env_t *env, void *jb);
 int foldLeftRec(foldLeftRec_env_t *env, void *op_fptr, void *op_env, int acc);
 int main();
-int arrLen;
-void *arr;
+volatile int arrLen;
+volatile void *arr;
 int iterIdx = 0;
-void *iterNext_env;
-void *add_env;
-void *foldLeft_env;
+volatile void *iterNext_env;
+volatile void *add_env;
+volatile void *foldLeft_env;
+volatile jmp_buf exc_jb;
+volatile int exc_jb_saved;
 
 int iterNext_1(iterNext_1_env_t *env, void *exc_fptr, void *exc_env,
                void *exc_jb) {
@@ -155,15 +156,12 @@ int foldLeftRec(foldLeftRec_env_t *env, void *op_fptr, void *op_env, int acc) {
 
   locals.exc_fptr = (void *)exc_3;
   locals.exc_env = &locals;
-  locals.exc_jb = ({
-    jmp_buf tmp_buf;
-    &tmp_buf;
-  });
-  (!setjmp(locals.exc_jb) ? ({
-    locals.next = iterNext_1(iterNext_env, locals.exc_fptr, locals.exc_env,
-                             locals.exc_jb);
+  (({ exc_jb_saved || ({ !setjmp(exc_jb); }); }) ? ({
+    exc_jb_saved = true;
+    locals.next =
+        iterNext_1(iterNext_env, locals.exc_fptr, locals.exc_env, exc_jb);
   })
-                          : ({ jmpret; }));
+                                                 : ({ jmpret; }));
   if (locals.toBreak) {
     return locals.acc;
   } else {
