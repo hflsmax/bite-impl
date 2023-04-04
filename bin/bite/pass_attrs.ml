@@ -145,7 +145,7 @@ let mark_builtin_call _ ((exp, attrs) : expr) : expr =
       else (exp, attrs)
   | _ -> (exp, attrs)
 
-let mark_unnecessary_reify state ((exp, attrs) : expr) : expr =
+let mark_unnecessary_reify_env state ((exp, attrs) : expr) : expr =
   match exp with
   | Let (x, isTop, ((FullFun _, fattrs) as fexpr), e2) ->
       let mark_rec (exp, attrs) =
@@ -153,7 +153,7 @@ let mark_unnecessary_reify state ((exp, attrs) : expr) : expr =
           match exp with
           | Let (x, isTop, ((Aux ReifyEnvironment, _) as rexpr), e2) ->
               { attrs with isDeclareOnly = fattrs.freeVars = [] }
-          | Let (x, isTop, ((Aux ReifyContext, _) as rexpr), e2) -> attrs
+          | Let (x, isTop, ((Aux _, _) as rexpr), e2) -> attrs
           | _ -> attrs )
       in
       (Let (x, isTop, fexpr, mark_rec e2), attrs)

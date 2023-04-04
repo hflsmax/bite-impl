@@ -4,21 +4,31 @@ FullFun main
         Args: [env, n]
           Let lexc_fptr = FullFun lexc_1
               Args: [env, jb]
-                Int 0
+                Let jmpret = ^ Int 0
+                in
+                  FullApply
+                    LHS: Var longjmp
+                    Args: [Var jb, Int 1]
           in
             Let lexc_env = Aux
             in
               Let lexc_jb = Aux
               in
-                If BOP ==  Var n  Int 0
+                If FullApply
+                    LHS: Var !setjmp
+                    Args: [Var lexc_jb]
                 Then
-                  FullApply
-                    LHS: Var lexc_1
-                    Args: [Var lexc_env, Var lexc_jb]
+                  If BOP ==  Var n  Int 0
+                  Then
+                    FullApply
+                      LHS: Var lexc_1
+                      Args: [Var lexc_env, Var lexc_jb]
+                  Else
+                    FullApply
+                      LHS: Var g
+                      Args: [Var env, AOP -  Var n  Int 1]
                 Else
-                  FullApply
-                    LHS: Var g
-                    Args: [Var env, AOP -  Var n  Int 1]
+                  Var jmpret
     in
       Let run_env = ^ Aux
       in

@@ -82,7 +82,8 @@ int lexc_1(lexc_1_env_t *env, void *jb) {
   locals.env = env;
   locals.jb = jb;
 
-  return 0;
+  jmpret = 0;
+  longjmp(locals.jb, 1);
 }
 
 int g(g_env_t *env, int n) {
@@ -91,12 +92,19 @@ int g(g_env_t *env, int n) {
   locals.n = n;
 
   locals.lexc_fptr = (void *)lexc_1;
-  locals.lexc_jb = NULL;
-  if (({ locals.n == 0; })) {
-    return lexc_1(locals.lexc_env, locals.lexc_jb);
+  locals.lexc_jb = ({
+    jmp_buf tmp_buf;
+    &tmp_buf;
+  });
+  if (!setjmp(locals.lexc_jb)) {
+    if (({ locals.n == 0; })) {
+      return lexc_1(locals.lexc_env, locals.lexc_jb);
+    } else {
+      __attribute__((musttail)) return g(locals.env, ({ locals.n - 1; }));
+    };
   } else {
-    __attribute__((musttail)) return g(locals.env, ({ locals.n - 1; }));
-  }
+    return jmpret;
+  };
 }
 
 int main() {

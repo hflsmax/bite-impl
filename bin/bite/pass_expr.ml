@@ -95,17 +95,6 @@ let transform_general_handler _ ((exp, attrs) : expr) : expr =
     | _ -> (exp, attrs)
   else (exp, attrs)
 
-(* If tail-resumptive, remove resume expression such that it's treated like a function *)
-let transform_tail_resumptive_handler _ ((exp, attrs) : expr) : expr =
-  ( (match exp with
-    | FullFun (x, es1, hs, tm_args, ty, es2, (exp_body, exp_body_attrs)) -> (
-        match exp_body with
-        | Resume (exp_body', r) ->
-            FullFun (x, es1, hs, tm_args, ty, es2, exp_body')
-        | _ -> exp)
-    | _ -> exp),
-    attrs )
-
 let chain_let l (e : expr) =
   List.fold_right
     (fun (x, isTop, e1, attrs) (e2 : expr) -> (Let (x, isTop, e1, e2), attrs))
@@ -269,8 +258,16 @@ let expand_hvar_and_funarg state ((exp, attrs) : expr) : expr =
             attrs );
           ( x ^ "_jb",
             false,
-            (Aux ReifyContext, { default_attrs with ty = TBuiltin }),
-            attrs );
+            ( Aux
+                (match[@warning "-partial-match"] attrs.handlerKind with
+                | Some Abortive -> ReifyFixedContext
+                | Some Multishot | Some SingleShot -> ReifyContextIndirection
+                | Some TailResumptive -> Noop),
+              { default_attrs with ty = TBuiltin } ),
+            {
+              attrs with
+              isDeclareOnly = attrs.handlerKind = Some TailResumptive;
+            } );
         ]
         handle_exp
   | _ -> (exp, attrs)
@@ -314,3 +311,56 @@ let transform_topCall state ((exp, attrs) : expr) : expr =
           (Raise (fun_name, es, hs, exps), { attrs with isTopCall = true })
       | None -> (exp, attrs))
   | _ -> (exp, attrs)
+
+let transform_reify_context _ ((exp, attrs) : expr) : expr =
+  match exp with
+  | Let (x, isTop, (Aux ReifyFixedContext, aattrs), e2) ->
+      let new_e2 =
+        ( If
+            ( ( FullApply
+                  ( mk_builtin_fun "!setjmp",
+                    [],
+                    [],
+                    [ (Var x, { default_attrs with ty = TBuiltin }) ] ),
+                { default_attrs with ty = TBool } ),
+              e2,
+              (Var "jmpret", { default_attrs with ty = TInt; isBuiltin = true })
+            ),
+          snd e2 )
+      in
+      (Let (x, isTop, (Aux ReifyFixedContext, aattrs), new_e2), attrs)
+  | _ -> (exp, attrs)
+
+(* If tail-resumptive, remove resume expression such that it's treated like a function *)
+let transform_handler _ ((exp, attrs) : expr) : expr =
+  match exp with
+  | FullFun
+      (x, es, hs, tm_args, ty, es2, ((exp_body, exp_body_attrs) as rexp_body))
+    ->
+      if attrs.handlerKind = Some TailResumptive then
+        let[@warning "-partial-match"] (Resume (exp_body', r)) = exp_body in
+        (FullFun (x, es, hs, tm_args, ty, es2, exp_body'), attrs)
+      else if attrs.handlerKind = Some Abortive then
+        let new_body =
+          ( Let
+              ( "jmpret",
+                true,
+                rexp_body,
+                ( FullApply
+                    (mk_builtin_fun "longjmp", [], [], [ mk_var "jb"; mk_int 1 ]),
+                  exp_body_attrs ) ),
+            { exp_body_attrs with isBuiltin = true } )
+        in
+        (FullFun (x, es, hs, tm_args, ty, es2, new_body), attrs)
+      else (exp, attrs)
+  | _ -> (exp, attrs)
+
+(*
+   ( (match exp with
+     | FullFun (x, es1, hs, tm_args, ty, es2, (exp_body, exp_body_attrs)) -> (
+         match exp_body with
+         | Resume (exp_body', r) ->
+             FullFun (x, es1, hs, tm_args, ty, es2, exp_body')
+         | _ -> exp)
+     | _ -> exp),
+     attrs ) *)

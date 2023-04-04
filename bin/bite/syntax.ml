@@ -52,11 +52,12 @@ let builtin_fun =
     ("IterGetInt", TAbs ([], [], [ TBuiltin ], TInt, []));
     ("IterRemoveNext", TAbs ([], [], [ TBuiltin ], TUnit, []));
     ("Print", TAbs ([], [], [ TInt ], TInt, []));
+    ("!setjmp", TAbs ([], [], [ TBuiltin ], TInt, []));
+    ("longjmp", TAbs ([], [], [ TBuiltin; TInt ], TInt, []));
   ]
 
 (* Control-flow destination *)
-type cf_dest = Return | Abort | Continue (* Neither return or abort. *)
-[@@deriving yojson_of]
+type cf_dest = Return | Continue [@@deriving yojson_of]
 
 type richHvar = { name : name; fname : fname; ty : ty; depth : int }
 [@@deriving yojson_of]
@@ -117,8 +118,10 @@ let locate ?(loc = Nowhere) x = (x, { default_attrs with loc })
 type auxFunction =
   | ReifyResumer
   | ReifyEnvironment (* Environment of closure *)
-  | ReifyContext (* Evaluation Context *)
+  | ReifyFixedContext (* Evaluation context for abortive handler *)
+  | ReifyContextIndirection (* Evaluation context for general handler *)
   | ReifyContinuation
+  | Noop
 [@@deriving yojson_of]
 
 (* Expressions *)
@@ -156,3 +159,12 @@ type command =
 
 type locals = (name * ty) list [@@deriving yojson_of]
 type static_link = (name * bool) list list [@@deriving yojson_of]
+
+let mk_builtin_fun (name : string) : expr =
+  let ty = List.assoc name builtin_fun in
+  (Var name, { default_attrs with ty; isBuiltin = true })
+
+let mk_var ?(ty = TInt) (name : name) : expr =
+  (Var name, { default_attrs with ty })
+
+let mk_int (i : int) : expr = (Int i, { default_attrs with ty = TInt })

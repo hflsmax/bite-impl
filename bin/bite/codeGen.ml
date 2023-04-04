@@ -38,7 +38,8 @@ let codeGen exp : string =
       | Aux auxF -> (
           match auxF with
           | ReifyEnvironment -> "&locals"
-          | ReifyContext -> "NULL"
+          | ReifyFixedContext -> "({ jmp_buf tmp_buf; &tmp_buf; });"
+          | Noop -> "Noop"
           | _ -> failwith "Aux not implemented")
       | Unit -> ""
       | Var x ->
@@ -65,16 +66,19 @@ let codeGen exp : string =
           let e1' = codeGen_rec e1 in
           let e2' = codeGen_rec e2 in
           let e3' = codeGen_rec e3 in
-          if attrs.cfDest = Continue then spf "(%s ? %s : %s)" e1' e2' e3'
+          if attrs.cfDest = Continue then
+            spf "(%s ? ({%s;}) : ({%s;}) )" e1' e2' e3'
           else spf "if (%s) {\n%s;\n} else {\n%s;\n}" e1' e2' e3'
       | Let (x, isTop, e1, e2) -> (
           let e1' = codeGen_rec e1 in
-          let e2' = codeGen_rec e2 in
+          let e2' = codeGen_rec e2 ^ ";" in
           if isTop then (
             global_code :=
               (match e1 with
               | FullFun (fun_name, _, _, _, _, _, _), _ -> spf "void* %s;\n" x
-              | _ -> spf "%s %s;\n" (ty_to_string (snd e1).ty) x)
+              | _ ->
+                  if attrs.isBuiltin then ""
+                  else spf "%s %s;\n" (ty_to_string (snd e1).ty) x)
               ^ !global_code;
             (if attrs.isDeclareOnly then "" else spf "%s = %s;\n" x e1') ^ e2')
           else
@@ -201,7 +205,6 @@ let codeGen exp : string =
         | Return ->
             (if attrs.isRecursiveCall then "__attribute__((musttail))" else "")
             ^ "return " ^ code ^ ";"
-        | Abort -> spf "jmpret = %s;\n_longjmp(jb, 1);\n" code
         | Continue -> code
       else code
   in

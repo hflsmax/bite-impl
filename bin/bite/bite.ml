@@ -73,6 +73,7 @@ let compile eff_defs = function
         :: List.map (fun es -> Env_struct.get_env_struct es) fun_infos
       in
       let code = Common.cleanup (CodeGen.codeGen exp) in
+      (* let code = "" in *)
       ( eff_defs,
         ( Printf.sprintf "%s" (Formatter.expr_to_string exp),
           Printf.sprintf "%s" (String.concat "\n" env_structs_string) ^ code )

@@ -129,7 +129,7 @@ int f(f_env_t *env, int n, void *lget_fptr, void *lget_env, void *lget_jb,
     __attribute__((musttail)) return f(
         locals.env, ({ locals.n + 1; }), locals.lget_fptr, locals.lget_env,
         locals.lget_jb, locals.lset_fptr, locals.lset_env, locals.lset_jb);
-  }
+  };
 }
 
 int lget_2(lget_2_env_t *env, void *jb) {
@@ -157,10 +157,8 @@ int run_1(run_1_env_t *env, int n) {
   locals.s = locals.n;
   locals.lget_fptr = (void *)lget_2;
   locals.lget_env = &locals;
-  locals.lget_jb = NULL;
   locals.lset_fptr = (void *)lset_3;
   locals.lset_env = &locals;
-  locals.lset_jb = NULL;
   return f(counter_env, 0, locals.lget_fptr, locals.lget_env, locals.lget_jb,
            locals.lset_fptr, locals.lset_env, locals.lset_jb);
 }

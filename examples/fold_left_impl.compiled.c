@@ -138,8 +138,9 @@ int exc_3(exc_3_env_t *env, void *jb) {
   locals.env = env;
   locals.jb = jb;
 
-  locals.env->toBreak = true;
-  return 0;
+  jmpret = locals.env->toBreak = true;
+  0;
+  longjmp(locals.jb, 1);
 }
 
 int foldLeftRec(foldLeftRec_env_t *env, void *op_fptr, void *op_env, int acc) {
@@ -154,9 +155,15 @@ int foldLeftRec(foldLeftRec_env_t *env, void *op_fptr, void *op_env, int acc) {
 
   locals.exc_fptr = (void *)exc_3;
   locals.exc_env = &locals;
-  locals.exc_jb = NULL;
-  locals.next =
-      iterNext_1(iterNext_env, locals.exc_fptr, locals.exc_env, locals.exc_jb);
+  locals.exc_jb = ({
+    jmp_buf tmp_buf;
+    &tmp_buf;
+  });
+  (!setjmp(locals.exc_jb) ? ({
+    locals.next = iterNext_1(iterNext_env, locals.exc_fptr, locals.exc_env,
+                             locals.exc_jb);
+  })
+                          : ({ jmpret; }));
   if (locals.toBreak) {
     return locals.acc;
   } else {

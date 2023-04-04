@@ -41,21 +41,31 @@ FullFun main
                             Seq
                               Let exc_fptr = FullFun exc_3
                                   Args: [env, jb]
-                                    Seq
-                                      Assign
-                                        Var toBreak
-                                        Bool true
-                                      Int 0
+                                    Let jmpret = ^ Seq
+                                        Assign
+                                          Var toBreak
+                                          Bool true
+                                        Int 0
+                                    in
+                                      FullApply
+                                        LHS: Var longjmp
+                                        Args: [Var jb, Int 1]
                               in
                                 Let exc_env = Aux
                                 in
                                   Let exc_jb = Aux
                                   in
-                                    Assign
-                                      Var next
-                                      FullApply
-                                        LHS: Var iterNext_1
-                                        Args: [Var iterNext_env, Var exc_fptr, Var exc_env, Var exc_jb]
+                                    If FullApply
+                                        LHS: Var !setjmp
+                                        Args: [Var exc_jb]
+                                    Then
+                                      Assign
+                                        Var next
+                                        FullApply
+                                          LHS: Var iterNext_1
+                                          Args: [Var iterNext_env, Var exc_fptr, Var exc_env, Var exc_jb]
+                                    Else
+                                      Var jmpret
                               If Deref Var toBreak
                               Then
                                 Var acc

@@ -158,7 +158,6 @@ int iterRec(iterRec_env_t *env, void *l, void *yield_fptr, void *yield_env,
 
   locals.replace_fptr = (void *)replace_2;
   locals.replace_env = &locals;
-  locals.replace_jb = NULL;
   ((void (*)(void *, void *, int, void *, void *, void *, void *, void *,
              void *))locals.yield_fptr)(
       locals.yield_env, locals.yield_jb, IterGetInt(locals.l),
@@ -169,7 +168,6 @@ int iterRec(iterRec_env_t *env, void *l, void *yield_fptr, void *yield_env,
   } else {
     locals.localBehead_fptr = (void *)localBehead_1;
     locals.localBehead_env = &locals;
-    locals.localBehead_jb = NULL;
     __attribute__((musttail)) return iterRec(
         locals.env, IterNext(locals.l), locals.yield_fptr, locals.yield_env,
         locals.yield_jb, locals.localBehead_fptr, locals.localBehead_env,
@@ -215,9 +213,7 @@ int main() {
 
   ListInit(list, 100100100);
   locals.yield_fptr = (void *)yield_3;
-  locals.yield_jb = NULL;
   locals.behead_fptr = (void *)behead_4;
-  locals.behead_jb = NULL;
   return Print(iterRec(iter_env, list, locals.yield_fptr, locals.yield_env,
                        locals.yield_jb, locals.behead_fptr, locals.behead_env,
                        locals.behead_jb));

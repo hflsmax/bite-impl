@@ -56,13 +56,14 @@ let rec expr_to_string ?(indent = 0) (e : expr) : string =
             (List.map (fun (hv, fn) -> "(" ^ hv ^ ", " ^ fn ^ ")") hvars)
         in
         let tys_str = String.concat ", " (List.map (fun (n, _) -> n) tys) in
-           (* let effs_str = String.concat ", " effs' in
+        (* let effs_str = String.concat ", " effs' in
            let effs_str2 = String.concat ", " effs'' in *)
-        "FullFun " ^ n ^ "\n" ^
+        "FullFun " ^ n ^ "\n"
         (* indent_str ^ "  Handlers: [" ^ hvars_str ^ "]\n" ^ *)
-           indent_str ^ "  Args: [" ^ tys_str ^ "]\n"
-           (* indent_str ^ "  Return: " ^ t ^ "\n" ^ *)
-        ^ indent_str ^ "    "
+        ^ indent_str
+        ^ "  Args: [" ^ tys_str ^ "]\n"
+        (* indent_str ^ "  Return: " ^ t ^ "\n" ^ *) ^ indent_str
+        ^ "    "
         ^ expr_to_string ~indent:(indent + 2) e
     | FullApply (e, effs', hvars, es) ->
         (* let hvars_str = String.concat ", " hvars in *)

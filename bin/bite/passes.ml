@@ -37,7 +37,7 @@ let mark_cf_dest _ ((exp, attrs) as rexp : expr) : expr =
       (Handle (x, fname, mark Continue e1, mark attrs.cfDest e2), attrs)
   | FullFun (x, es1, hs, tm_args, ty, es2, e) ->
       if attrs.handlerKind = Some Abortive then
-        (FullFun (x, es1, hs, tm_args, ty, es2, mark Abort e), attrs)
+        (FullFun (x, es1, hs, tm_args, ty, es2, mark Continue e), attrs)
       else (FullFun (x, es1, hs, tm_args, ty, es2, mark Return e), attrs)
   | FullApply (e1, eargs, hargs, targs) ->
       ( FullApply
@@ -162,6 +162,7 @@ let transform (effs_efs : f_ENV) (exp : expr) : expr =
          mark_builtin_call;
          mark_recursive_call;
          mark_handlers;
+         mark_handlerKind;
        ]
        []
   |> fun exp ->
@@ -177,18 +178,20 @@ let transform (effs_efs : f_ENV) (exp : expr) : expr =
     [] exp
   |> transform_exp
        { init_state with func_names = Pass_util.get_all_func_names exp }
+       [ (* depends on expand_hvar_and_funarg *) transform_reify_context ]
+       []
+  |> transform_exp
+       { init_state with func_names = Pass_util.get_all_func_names exp }
        [ mark_var_depth ] [ update_static_link ]
   |> transform_exp
        { init_state with func_names = Pass_util.get_all_func_names exp }
-       [
-         (* depends on expand_hvar_and_funarg *) mark_freeVars; mark_handlerKind;
-       ]
+       [ (* depends on expand_hvar_and_funarg mark_var_depth *) mark_freeVars ]
        []
   |> transform_exp
        { init_state with func_names = Pass_util.get_all_func_names exp }
        [
          (* depends on mark_freeVars and mark_handlerKind *)
-         mark_unnecessary_reify;
+         mark_unnecessary_reify_env;
        ]
        []
   (* |> print_and_forward *)
@@ -197,7 +200,7 @@ let transform (effs_efs : f_ENV) (exp : expr) : expr =
        [
          transform_general_handler;
          mark_resumer;
-         transform_tail_resumptive_handler;
+         transform_handler;
          mark_cf_dest;
        ]
        [ update_is_in_general_handler ]
@@ -205,3 +208,7 @@ let transform (effs_efs : f_ENV) (exp : expr) : expr =
        { init_state with func_names = Pass_util.get_all_func_names exp }
        [ mark_optimized_sjlj ]
        [ update_curr_func_is_tail_recursive ]
+  |> transform_exp
+       { init_state with func_names = Pass_util.get_all_func_names exp }
+       [ mark_builtin_call; mark_var_depth ]
+       [ update_static_link ]
