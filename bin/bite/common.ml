@@ -15,6 +15,7 @@ let full_fun_to_tabs (exp : expr') : ty =
 let rec gather_locals ((exp, attrs) : expr) : locals =
   match exp with
   | AOP (_, e1, e2) | BOP (_, e1, e2) -> gather_locals e1 @ gather_locals e2
+  | UOP (_, e) -> gather_locals e
   | Assign (x, e) -> gather_locals e
   | If (e1, e2, e3) -> gather_locals e1 @ gather_locals e2 @ gather_locals e3
   | Let (x, isTop, e1, e2) ->

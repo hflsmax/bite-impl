@@ -45,6 +45,9 @@ rule token = parse
   | "<="            { LEQ }
   | ">="            { GEQ }
   | "!="            { NEQ }
+  | "&&"            { AND }
+  | "||"            { OR }
+  | "not"           { NOT }
   | "->"            { ARROW }
   | ':'             { COLON }
   | '('             { LPAREN }

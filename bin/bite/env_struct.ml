@@ -21,6 +21,7 @@ let rec get_fun_info ((exp, attrs) : expr) (pfun_name : string option) :
   | Var x -> ([], [])
   | AOP (_, e1, e2) | BOP (_, e1, e2) ->
       get_fun_info e1 pfun_name @++@ get_fun_info e2 pfun_name
+  | UOP (_, e) -> get_fun_info e pfun_name
   | Assign (e1, e2) -> get_fun_info e1 pfun_name @++@ get_fun_info e2 pfun_name
   | Deref e -> get_fun_info e pfun_name
   | If (e1, e2, e3) ->

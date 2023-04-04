@@ -20,6 +20,7 @@ let rec expr_to_string ?(indent = 0) (e : expr) : string =
         ^ expr_to_string ~indent:(indent + 1) e1
         ^ "  "
         ^ expr_to_string ~indent:(indent + 1) e2
+    | UOP (op, e) -> "UOP " ^ op ^ "  " ^ expr_to_string ~indent:(indent + 1) e
     | Assign (e1, e2) ->
         "Assign\n" ^ indent_str ^ "  "
         ^ expr_to_string ~indent:(indent + 1) e1

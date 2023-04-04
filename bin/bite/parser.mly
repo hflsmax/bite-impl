@@ -14,7 +14,7 @@
 %token NOTHING
 %token TRUE FALSE
 %token PLUS MINUS TIMES DIV MOD
-%token EQUAL LESS GREATER LEQ GEQ NEQ
+%token EQUAL LESS GREATER LEQ GEQ NEQ AND OR NOT
 %token IF THEN ELSE
 %token FUN FN IS
 %token RAISE RESUME
@@ -43,7 +43,7 @@
 %left SEMI
 %nonassoc RESUME
 %nonassoc ASSIGN
-%nonassoc EQUAL LESS GREATER LEQ GEQ NEQ
+%nonassoc EQUAL LESS GREATER LEQ GEQ NEQ AND OR NOT
 %left PLUS MINUS
 %left TIMES DIV MOD
 %nonassoc BANG
@@ -193,6 +193,12 @@ plain_expr:
     { BOP (">=", e1, e2) }
   | e1 = expr NEQ e2 = expr
     { BOP ("!=", e1, e2) }
+  | e1 = expr AND e2 = expr
+    { BOP ("&&", e1, e2) }
+  | e1 = expr OR e2 = expr
+    { BOP ("||", e1, e2) }
+  | e = NOT e1 = expr
+    { UOP ("!", e1) }
   | x = var ASSIGN e = expr
     { Assign (x, e) }
   | IF e1 = expr THEN e2 = expr ELSE e3 = expr 

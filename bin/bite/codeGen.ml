@@ -14,8 +14,8 @@ let codeGen_var (v : string) (depth : int) =
 
 let can_be_returned exp =
   match exp with
-  | Var _ | Int _ | Bool _ | Unit | AOP _ | BOP _ | Deref _ | FullApply _
-  | Raise _ ->
+  | Var _ | Int _ | Bool _ | Unit | AOP _ | BOP _ | UOP _ | Deref _
+  | FullApply _ | Raise _ ->
       true
   | Assign _ | If _ | Let _ | Decl _ | Handle _ | FullFun _ | Resume _ | Seq _
   | Aux _ ->
@@ -55,6 +55,9 @@ let codeGen exp : string =
           let e1' = codeGen_rec e1 in
           let e2' = codeGen_rec e2 in
           spf "({%s %s %s;})" e1' op e2'
+      | UOP (op, e) ->
+          let e' = codeGen_rec e in
+          spf "({%s %s;})" op e'
       | Deref e ->
           let e' = codeGen_rec e in
           e'

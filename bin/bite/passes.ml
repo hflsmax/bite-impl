@@ -25,6 +25,7 @@ let mark_cf_dest _ ((exp, attrs) as rexp : expr) : expr =
   | Var _ | Int _ | Bool _ | Unit | Aux _ -> rexp
   | AOP (op, e1, e2) -> (AOP (op, mark Continue e1, mark Continue e2), attrs)
   | BOP (op, e1, e2) -> (BOP (op, mark Continue e1, mark Continue e2), attrs)
+  | UOP (op, e) -> (UOP (op, mark Continue e), attrs)
   | Deref e -> (Deref (mark Continue e), attrs)
   | Assign (e1, e2) -> (Assign (mark Continue e1, mark Continue e2), attrs)
   | If (e1, e2, e3) ->
@@ -63,6 +64,7 @@ let transform_exp init_state exp_passes state_passes (exp : expr) : expr =
           AOP (op, transform_exp_rec state e1, transform_exp_rec state e2)
       | BOP (op, e1, e2) ->
           BOP (op, transform_exp_rec state e1, transform_exp_rec state e2)
+      | UOP (op, e) -> UOP (op, transform_exp_rec state e)
       | Assign (e1, e2) ->
           Assign (transform_exp_rec state e1, transform_exp_rec state e2)
       | Deref e -> Deref (transform_exp_rec state e)

@@ -134,6 +134,7 @@ and expr' =
   | Unit
   | AOP of string * expr * expr
   | BOP of string * expr * expr
+  | UOP of string * expr
   (* NOTE: the first component of Assign and Deref must be a Var. We choose to use the type "expr" instead of "name"
      because we want to annotate them with depth, like a Var *)
   | Assign of expr * expr

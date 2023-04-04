@@ -10,6 +10,7 @@ let gather_exp include_all_lexical_scope predicate exp =
     @
     match exp with
     | AOP (_, e1, e2) | BOP (_, e1, e2) -> gather_exp' e1 @ gather_exp' e2
+    | UOP (_, e) -> gather_exp' e
     | Assign (e1, e2) -> gather_exp' e1 @ gather_exp' e2
     | Deref e -> gather_exp' e
     | If (e1, e2, e3) -> gather_exp' e1 @ gather_exp' e2 @ gather_exp' e3
@@ -40,6 +41,7 @@ let rec gather_free_vars ?(exclude_names = []) ((exp, attrs) : expr) : locals =
   match exp with
   | AOP (_, e1, e2) | BOP (_, e1, e2) ->
       gather_free_vars e1 @ gather_free_vars e2
+  | UOP (_, e) -> gather_free_vars e
   | Assign (x, e) ->
       let[@warning "-partial-match"] Var name, attrs = x in
       (name, attrs.ty) :: gather_free_vars e

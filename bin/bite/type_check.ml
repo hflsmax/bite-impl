@@ -71,12 +71,16 @@ let rec type_of (eff_defs : f_ENV) (e_env : e_ENV) (h_env : h_ENV)
   | BOP (op, exp1, exp2) ->
       let exp1', attrs1 = type_of eff_defs e_env h_env t_env exp1 in
       let exp2', attrs2 = type_of eff_defs e_env h_env t_env exp2 in
-      if attrs1.ty <> TInt || attrs2.ty <> TInt then
+      if attrs1.ty <> attrs2.ty then
         typing_error ~loc:attrs.loc
           "In a bop exp: lhs type is %t, rhs type is %t" (Print.ty attrs1.ty)
           (Print.ty attrs2.ty);
       ( BOP (op, (exp1', attrs1), (exp2', attrs2)),
         { default_attrs with ty = TBool; effs = attrs1.effs @ attrs2.effs } )
+  | UOP (op, exp) ->
+      let exp', attrs = type_of eff_defs e_env h_env t_env exp in
+      ( UOP (op, (exp', attrs)),
+        { default_attrs with ty = TInt; effs = attrs.effs } )
   | If (exp1, exp2, exp3) ->
       let exp1', attrs1 = type_of eff_defs e_env h_env t_env exp1 in
       let exp2', attrs2 = type_of eff_defs e_env h_env t_env exp2 in
