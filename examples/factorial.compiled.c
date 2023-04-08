@@ -62,6 +62,7 @@ typedef main_locals_t factorialRec_env_t;
 typedef struct factorialRec_locals_t {
   factorialRec_env_t *env;
   int n;
+  int factorialRec_env;
 } factorialRec_locals_t;
 int factorialRec(factorialRec_env_t *env, int n);
 int main();
@@ -72,11 +73,14 @@ int factorialRec(factorialRec_env_t *env, int n) {
   locals.env = env;
   locals.n = n;
 
+  locals.factorialRec_env = locals.env;
   if (({ locals.n == 0; })) {
     return 1;
   } else {
-    return ({ locals.n *factorialRec(locals.env, ({ locals.n - 1; })); });
-  }
+    return ({
+      locals.n *factorialRec(locals.factorialRec_env, ({ locals.n - 1; }));
+    });
+  };
 }
 
 int main() {

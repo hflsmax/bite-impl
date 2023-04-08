@@ -23,6 +23,7 @@ type ty =
   | TMut of ty
   | TCustom of string
   | TUnit
+  | TCont of ty * effs * ty * effs
 [@@deriving yojson_of]
 
 and tys = ty list [@@deriving yojson_of]
@@ -40,6 +41,7 @@ let builtin_fun =
     ("ListNew", TAbs ([], [], [], TBuiltin, []));
     ("ListNewStatic", TAbs ([], [], [], TBuiltin, []));
     ("ListInit", TAbs ([], [], [ TBuiltin; TInt ], TBuiltin, []));
+    ("ListIsEmpty", TAbs ([], [], [ TBuiltin ], TBool, []));
     ("ListAppend", TAbs ([], [], [ TBuiltin; TBuiltin ], TUnit, []));
     ("ListPopFirstElement", TAbs ([], [], [ TBuiltin ], TBuiltin, []));
     ("ListRemoveFirstElement", TAbs ([], [], [ TBuiltin ], TUnit, []));
@@ -54,6 +56,10 @@ let builtin_fun =
     ("Print", TAbs ([], [], [ TInt ], TInt, []));
     ("setjmp", TAbs ([], [], [ TBuiltin ], TInt, []));
     ("longjmp", TAbs ([], [], [ TBuiltin; TInt ], TInt, []));
+    ( "ListAppendCont",
+      TAbs ([], [], [ TBuiltin; TCont (TUnit, [], TUnit, []) ], TUnit, []) );
+    ( "ListPopFirstElementCont",
+      TAbs ([], [], [ TBuiltin ], TCont (TUnit, [], TUnit, []), []) );
   ]
 
 (* Control-flow destination *)
@@ -64,10 +70,11 @@ type richHvar = { name : name; fname : fname; ty : ty; depth : int }
 
 type attrs = {
   loc : location; [@yojson_drop_if fun _ -> true]
-  isRecursiveCall : bool; [@yojson_drop_if fun _ -> true]
+  recursiveCallFunName : string option; [@yojson_drop_if fun _ -> true]
       (* Used in FullApply *)
   isTopCall : bool; [@yojson_drop_if fun _ -> true] (* Used in FullApply *)
   cfDest : cf_dest; [@yojson_drop_if fun _ -> true]
+  isRecursive : bool; [@yojson_drop_if fun _ -> true] (* Used in FullFun *)
   isOptimizedSjlj : bool; [@yojson_drop_if fun _ -> true]
   isBuiltin : bool; [@yojson_drop_if fun _ -> true]
   skipDef : bool; [@yojson_drop_if fun _ -> true] (* Used in Let *)
@@ -95,13 +102,14 @@ type attrs = {
 let default_attrs =
   {
     loc = Nowhere;
-    isRecursiveCall = false;
+    recursiveCallFunName = None;
     isTopCall = false;
     isBuiltin = false;
     isOptimizedSjlj = false;
     skipDef = false;
     defAtTop = false;
     cfDest = Continue;
+    isRecursive = false;
     varDepth = None;
     ty = TInt;
     effs = [];
@@ -179,6 +187,9 @@ let mk_uop (op : string) (e : expr) : expr =
 let mk_bop (op : string) (e1 : expr) (e2 : expr) : expr =
   (BOP (op, e1, e2), { default_attrs with ty = TBool })
 
+let mk_apply_0 ?(ty = TInt) (e : expr) : expr =
+  (FullApply (e, [], [], []), { default_attrs with ty })
+
 let mk_apply_1 ?(ty = TInt) (e1 : expr) (e2 : expr) : expr =
   (FullApply (e1, [], [], [ e2 ]), { default_attrs with ty })
 
@@ -187,3 +198,10 @@ let mk_seq ?(ty = TInt) (e1 : expr) (e2 : expr) : expr =
 
 let mk_asgn (e1 : expr) (e2 : expr) : expr =
   (Assign (e1, e2), { default_attrs with ty = TUnit })
+
+let mk_fun_0 ?(ty = TInt) (name : name) (body : expr) : expr =
+  ( FullFun (name, [], [], [], ty, [], body),
+    { default_attrs with ty = TAbs ([], [], [], ty, []) } )
+
+let mk_let ?(ty = TInt) (name : name) (e1 : expr) (e2 : expr) : expr =
+  (Let (name, false, e1, e2), { default_attrs with ty })

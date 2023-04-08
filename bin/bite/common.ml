@@ -46,6 +46,7 @@ let rec ty_to_string ty : string =
   | TAbs _ -> "void*"
   | TCustom s -> s
   | TUnit -> "void"
+  | TCont _ -> "void*"
 
 let tabs_to_string ty is_handler : string =
   match ty with
@@ -102,3 +103,25 @@ let cleanup s =
        (Str.regexp_string "int main(closure_t* closure)")
        "int main()"
   |> remove_semisemi
+
+let rec get_last (l : 'a list) : 'a =
+  match l with
+  | [] -> failwith "get_last: empty list"
+  | [ x ] -> x
+  | x :: xs -> get_last xs
+
+let rec remove_last (l : 'a list) : 'a list =
+  match l with [] -> [] | [ x ] -> [] | x :: xs -> x :: remove_last xs
+
+let remove_cont_from_abs (ty : ty) : ty =
+  let[@warning "-partial-match"] (TAbs (es1, hs, ty_args, ty0, es2)) = ty in
+  if List.length ty_args > 0 then
+    match List.hd (List.rev ty_args) with
+    | TCont _ -> TAbs (es1, hs, remove_last ty_args, ty0, es2)
+    | _ -> ty
+  else ty
+
+let special_case_env (x, ty) =
+  if String.ends_with ~suffix:"_env" x then ("env", ty) else (x, ty)
+
+let special_case_env2 x = if String.ends_with ~suffix:"_env" x then "env" else x

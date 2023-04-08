@@ -2,19 +2,21 @@ FullFun main
   Args: []
     Let fibonacci_fptr = FullFun fibonacciRec
         Args: [env, n]
-          If BOP ==  Var n  Int 0
-          Then
-            Int 0
-          Else
-            If BOP ==  Var n  Int 1
+          Let fibonacciRec_env = Var env
+          in
+            If BOP ==  Var n  Int 0
             Then
-              Int 1
+              Int 0
             Else
-              AOP +  FullApply
-                  LHS: Var fibonacciRec
-                  Args: [Var env, AOP -  Var n  Int 1]  FullApply
-                  LHS: Var fibonacciRec
-                  Args: [Var env, AOP -  Var n  Int 2]
+              If BOP ==  Var n  Int 1
+              Then
+                Int 1
+              Else
+                AOP +  FullApply
+                    LHS: Var fibonacciRec
+                    Args: [Var fibonacciRec_env, AOP -  Var n  Int 1]  FullApply
+                    LHS: Var fibonacciRec
+                    Args: [Var fibonacciRec_env, AOP -  Var n  Int 2]
     in
       Let fibonacci_env = ^ Aux
       in

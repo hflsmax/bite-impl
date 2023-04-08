@@ -2,39 +2,41 @@ FullFun main
   Args: []
     Let run_fptr = FullFun g
         Args: [env, n]
-          Let lexc_fptr = FullFun lexc_1
-              Args: [env, jb]
-                Let jmpret = ^ Int 0
-                in
-                  FullApply
-                    LHS: Var longjmp
-                    Args: [Var jb, Int 1]
+          Let g_env = Var env
           in
-            Let lexc_env = Aux
+            Let lexc_fptr = FullFun lexc_1
+                Args: [env, jb]
+                  Let jmpret = ^ Int 0
+                  in
+                    FullApply
+                      LHS: Var longjmp
+                      Args: [Var jb, Int 1]
             in
-              Let lexc_jb = ^ Aux
+              Let lexc_env = Aux
               in
-                Let lexc_jb_saved = ^ Int 0
+                Let lexc_jb = ^ Aux
                 in
-                  If BOP ||  Var lexc_jb_saved  UOP !  FullApply
-                          LHS: Var setjmp
-                          Args: [Var lexc_jb]
-                  Then
-                    Seq
-                      Assign
-                        Var lexc_jb_saved
-                        Bool true
-                      If BOP ==  Var n  Int 0
-                      Then
-                        FullApply
-                          LHS: Var lexc_1
-                          Args: [Var lexc_env, Var lexc_jb]
-                      Else
-                        FullApply
-                          LHS: Var g
-                          Args: [Var env, AOP -  Var n  Int 1]
-                  Else
-                    Var jmpret
+                  Let lexc_jb_saved = ^ Int 0
+                  in
+                    If BOP ||  Var lexc_jb_saved  UOP !  FullApply
+                            LHS: Var setjmp
+                            Args: [Var lexc_jb]
+                    Then
+                      Seq
+                        Assign
+                          Var lexc_jb_saved
+                          Bool true
+                        If BOP ==  Var n  Int 0
+                        Then
+                          FullApply
+                            LHS: Var lexc_1
+                            Args: [Var lexc_env, Var lexc_jb]
+                        Else
+                          FullApply
+                            LHS: Var g
+                            Args: [Var g_env, AOP -  Var n  Int 1]
+                    Else
+                      Var jmpret
     in
       Let run_env = ^ Aux
       in

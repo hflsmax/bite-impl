@@ -2,13 +2,15 @@ FullFun main
   Args: []
     Let factorial_fptr = FullFun factorialRec
         Args: [env, n]
-          If BOP ==  Var n  Int 0
-          Then
-            Int 1
-          Else
-            AOP *  Var n  FullApply
-                LHS: Var factorialRec
-                Args: [Var env, AOP -  Var n  Int 1]
+          Let factorialRec_env = Var env
+          in
+            If BOP ==  Var n  Int 0
+            Then
+              Int 1
+            Else
+              AOP *  Var n  FullApply
+                  LHS: Var factorialRec
+                  Args: [Var factorialRec_env, AOP -  Var n  Int 1]
     in
       Let factorial_env = ^ Aux
       in

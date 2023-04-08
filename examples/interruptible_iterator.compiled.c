@@ -74,6 +74,7 @@ typedef struct iterRec_locals_t {
   void *behead_fptr;
   void *behead_env;
   void *behead_jb;
+  int iterRec_env;
   void *replace_fptr;
   void *replace_env;
   void *replace_jb;
@@ -156,6 +157,8 @@ int iterRec(iterRec_env_t *env, void *l, void *yield_fptr, void *yield_env,
   locals.behead_env = behead_env;
   locals.behead_jb = behead_jb;
 
+  locals.iterRec_env = locals.env;
+
   locals.replace_fptr = (void *)replace_2;
   locals.replace_env = &locals;
   ((void (*)(void *, void *, int, void *, void *, void *, void *, void *,
@@ -169,9 +172,9 @@ int iterRec(iterRec_env_t *env, void *l, void *yield_fptr, void *yield_env,
     locals.localBehead_fptr = (void *)localBehead_1;
     locals.localBehead_env = &locals;
     __attribute__((musttail)) return iterRec(
-        locals.env, IterNext(locals.l), locals.yield_fptr, locals.yield_env,
-        locals.yield_jb, locals.localBehead_fptr, locals.localBehead_env,
-        locals.localBehead_jb);
+        locals.iterRec_env, IterNext(locals.l), locals.yield_fptr,
+        locals.yield_env, locals.yield_jb, locals.localBehead_fptr,
+        locals.localBehead_env, locals.localBehead_jb);
   };
 }
 

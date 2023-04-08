@@ -34,53 +34,55 @@ FullFun main
                 in
                   Let foldLeft_fptr = FullFun foldLeftRec
                       Args: [env, op_fptr, op_env, acc]
-                        Decl next = Int 0
+                        Let foldLeftRec_env = Var env
                         in
-                          Decl toBreak = Bool false
+                          Decl next = Int 0
                           in
-                            Seq
-                              Let exc_fptr = FullFun exc_3
-                                  Args: [env, jb]
-                                    Let jmpret = ^ Seq
-                                        Assign
-                                          Var toBreak
-                                          Bool true
-                                        Int 0
-                                    in
-                                      FullApply
-                                        LHS: Var longjmp
-                                        Args: [Var jb, Int 1]
-                              in
-                                Let exc_env = Aux
-                                in
-                                  Let exc_jb = ^ Aux
-                                  in
-                                    Let exc_jb_saved = ^ Int 0
-                                    in
-                                      If BOP ||  Var exc_jb_saved  UOP !  FullApply
-                                              LHS: Var setjmp
-                                              Args: [Var exc_jb]
-                                      Then
-                                        Seq
+                            Decl toBreak = Bool false
+                            in
+                              Seq
+                                Let exc_fptr = FullFun exc_3
+                                    Args: [env, jb]
+                                      Let jmpret = ^ Seq
                                           Assign
-                                            Var exc_jb_saved
+                                            Var toBreak
                                             Bool true
-                                          Assign
-                                            Var next
-                                            FullApply
-                                              LHS: Var iterNext_1
-                                              Args: [Var iterNext_env, Var exc_fptr, Var exc_env, Var exc_jb]
-                                      Else
-                                        Var jmpret
-                              If Deref Var toBreak
-                              Then
-                                Var acc
-                              Else
-                                FullApply
-                                  LHS: Var foldLeftRec
-                                  Args: [Var env, Var op_fptr, Var op_env, FullApply
-                                    LHS: Var op_fptr
-                                    Args: [Var op_env, Var acc, Deref Var next]]
+                                          Int 0
+                                      in
+                                        FullApply
+                                          LHS: Var longjmp
+                                          Args: [Var jb, Int 1]
+                                in
+                                  Let exc_env = Aux
+                                  in
+                                    Let exc_jb = ^ Aux
+                                    in
+                                      Let exc_jb_saved = ^ Int 0
+                                      in
+                                        If BOP ||  Var exc_jb_saved  UOP !  FullApply
+                                                LHS: Var setjmp
+                                                Args: [Var exc_jb]
+                                        Then
+                                          Seq
+                                            Assign
+                                              Var exc_jb_saved
+                                              Bool true
+                                            Assign
+                                              Var next
+                                              FullApply
+                                                LHS: Var iterNext_1
+                                                Args: [Var iterNext_env, Var exc_fptr, Var exc_env, Var exc_jb]
+                                        Else
+                                          Var jmpret
+                                If Deref Var toBreak
+                                Then
+                                  Var acc
+                                Else
+                                  FullApply
+                                    LHS: Var foldLeftRec
+                                    Args: [Var foldLeftRec_env, Var op_fptr, Var op_env, FullApply
+                                      LHS: Var op_fptr
+                                      Args: [Var op_env, Var acc, Deref Var next]]
                   in
                     Let foldLeft_env = ^ Aux
                     in

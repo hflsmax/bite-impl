@@ -81,6 +81,7 @@ typedef struct foldLeftRec_locals_t {
   void *op_fptr;
   void *op_env;
   int acc;
+  int foldLeftRec_env;
   int next;
   bool toBreak;
   void *exc_fptr;
@@ -151,6 +152,7 @@ int foldLeftRec(foldLeftRec_env_t *env, void *op_fptr, void *op_env, int acc) {
   locals.op_env = op_env;
   locals.acc = acc;
 
+  locals.foldLeftRec_env = locals.env;
   locals.next = 0;
   locals.toBreak = false;
 
@@ -166,7 +168,7 @@ int foldLeftRec(foldLeftRec_env_t *env, void *op_fptr, void *op_env, int acc) {
     return locals.acc;
   } else {
     __attribute__((musttail)) return foldLeftRec(
-        locals.env, locals.op_fptr, locals.op_env,
+        locals.foldLeftRec_env, locals.op_fptr, locals.op_env,
         ((int (*)(void *, int, int))locals.op_fptr)(locals.op_env, locals.acc,
                                                     locals.next));
   };

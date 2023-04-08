@@ -62,6 +62,7 @@ typedef main_locals_t fibonacciRec_env_t;
 typedef struct fibonacciRec_locals_t {
   fibonacciRec_env_t *env;
   int n;
+  int fibonacciRec_env;
 } fibonacciRec_locals_t;
 int fibonacciRec(fibonacciRec_env_t *env, int n);
 int main();
@@ -72,6 +73,7 @@ int fibonacciRec(fibonacciRec_env_t *env, int n) {
   locals.env = env;
   locals.n = n;
 
+  locals.fibonacciRec_env = locals.env;
   if (({ locals.n == 0; })) {
     return 0;
   } else {
@@ -79,11 +81,11 @@ int fibonacciRec(fibonacciRec_env_t *env, int n) {
       return 1;
     } else {
       return ({
-        fibonacciRec(locals.env, ({ locals.n - 1; })) +
-            fibonacciRec(locals.env, ({ locals.n - 2; }));
+        fibonacciRec(locals.fibonacciRec_env, ({ locals.n - 1; })) +
+            fibonacciRec(locals.fibonacciRec_env, ({ locals.n - 2; }));
       });
     };
-  }
+  };
 }
 
 int main() {

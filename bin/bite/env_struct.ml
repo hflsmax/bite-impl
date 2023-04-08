@@ -1,6 +1,5 @@
 open Syntax
 open Common
-open Yojson.Safe
 
 [@@@ocaml.warning "-unused-open"]
 

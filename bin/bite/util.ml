@@ -62,10 +62,3 @@ let print_info msg =
   Format.kfprintf
     (fun ppf -> Format.pp_print_flush ppf ())
     Format.std_formatter msg
-
-let error ?(kind = "Error") ?(loc = Nowhere) =
-  let k _ =
-    let msg = Format.flush_str_formatter () in
-    raise (Error (loc, kind, msg))
-  in
-  Format.kfprintf k Format.str_formatter

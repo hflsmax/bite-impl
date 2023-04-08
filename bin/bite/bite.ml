@@ -79,7 +79,6 @@ let compile eff_defs = function
           Printf.sprintf "%s" (String.concat "\n" env_structs_string) ^ code )
       )
   | Syntax.Decl_eff (x, ty) ->
-      Type_check.ty_ok eff_defs [] [] ty;
       ( (x, ty) :: eff_defs,
         (Format.asprintf "eff %s = %t@." x (Print.ty ty), "") )
 

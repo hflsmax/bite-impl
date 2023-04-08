@@ -9,6 +9,9 @@ let t_ENV t_env ppf =
 let h_ENV h_env ppf =
   print_parens ppf "%s" (Yojson.Safe.to_string (Syntax.yojson_of_h_ENV h_env))
 
+let f_ENV f_env ppf =
+  print_parens ppf "%s" (Yojson.Safe.to_string (Syntax.yojson_of_f_ENV f_env))
+
 let expr e ppf =
   print_parens ppf "%s" (Yojson.Safe.to_string (Syntax.yojson_of_expr e))
 

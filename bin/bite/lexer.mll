@@ -3,7 +3,7 @@
 }
 
 let whitespace = [' ' '\t' '\r']
-let var = ['a'-'z' 'A'-'Z']+
+let var = ['a'-'z' 'A'-'Z' '0'-'9']+
 
 rule token = parse
   | whitespace { token lexbuf }
@@ -13,6 +13,7 @@ rule token = parse
   | "Int"           { TINT }
   | "Bool"          { TBOOL }
   | "Unit"          { TUNIT }
+  | "Cont"          { TCONT }
   | "Builtin"       { TBUILTIN }
   | "true"          { TRUE }
   | "false"         { FALSE }

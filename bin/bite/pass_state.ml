@@ -7,7 +7,7 @@ open Util
 
 type pass_state = {
   func_names : string list;
-  curr_func_name : string;
+  curr_func_names : string list;
   curr_func_is_tail_recursive : bool;
   value_store : (string * string) list;
   static_link : (string * bool) list list; (* name, isTop *)
@@ -65,7 +65,7 @@ let update_curr_func_is_tail_recursive state ((exp, attrs) : expr) =
           (gather_exp true
              (function
                | FullApply ((Var x', _), _, _, _), attrs ->
-                   x = x' && not attrs.isRecursiveCall
+                   x = x' && attrs.cfDest <> Return
                | _ -> false)
              exp_body)
         != 0

@@ -1,0 +1,159 @@
+FullFun main
+  Args: []
+    Decl partialResult = Int 0
+    in
+      Decl runq = FullApply
+          LHS: Var ListNew
+          Args: []
+      in
+        Let suspend_fptr = FullFun suspend_1
+            Args: [env, r]
+              FullApply
+                LHS: Var ListAppendCont
+                Args: [Deref Var runq, Var r]
+        in
+          Let suspend_env = Aux
+          in
+            Let runNext_fptr = FullFun runNext_2
+                Args: [env]
+                  If FullApply
+                      LHS: Var ListIsEmpty
+                      Args: [Deref Var runq]
+                  Then
+                    Unit
+                  Else
+                    Let k = FullApply
+                        LHS: Var ListPopFirstElementCont
+                        Args: [Deref Var runq]
+                    in
+                      Resume
+                        Unit
+                        Some Var k
+            in
+              Let runNext_env = Aux
+              in
+                Let spawn_fptr = FullFun spawnRec
+                    Args: [env, f_fptr, f_env]
+                      Let spawnRec_env = Var env
+                      in
+                        Let lyield_fptr = FullFun lyield_3
+                            Args: [env, jb, k]
+                              Let jmpret = ^ Seq
+                                  FullApply
+                                    LHS: Var suspend_1
+                                    Args: [Var suspend_env, Var k]
+                                  FullApply
+                                    LHS: Var runNext_2
+                                    Args: [Var runNext_env]
+                              in
+                                FullApply
+                                  LHS: Var longjmp
+                                  Args: [Var jb, Int 1]
+                        in
+                          Let lyield_env = Aux
+                          in
+                            Let lyield_jb = Aux
+                            in
+                              If FullApply
+                                  LHS: Var setjmp
+                                  Args: [Var lyield_jb]
+                              Then
+                                Let lfork_fptr = FullFun lfork_4
+                                    Args: [env, jb, forkf_fptr, forkf_env, k]
+                                      Let jmpret = ^ Seq
+                                          FullApply
+                                            LHS: Var suspend_1
+                                            Args: [Var suspend_env, Var k]
+                                          FullApply
+                                            LHS: Var spawnRec
+                                            Args: [Var spawnRec_env, Var forkf_fptr, Var forkf_env]
+                                      in
+                                        FullApply
+                                          LHS: Var longjmp
+                                          Args: [Var jb, Int 1]
+                                in
+                                  Let lfork_env = Aux
+                                  in
+                                    Let lfork_jb = Aux
+                                    in
+                                      If FullApply
+                                          LHS: Var setjmp
+                                          Args: [Var lfork_jb]
+                                      Then
+                                        FullApply
+                                          LHS: Var f_fptr
+                                          Args: [Var f_env, Var lyield_fptr, Var lyield_env, Var lyield_jb, Var lfork_fptr, Var lfork_env, Var lfork_jb]
+                                      Else
+                                        Var jmpret
+                              Else
+                                Var jmpret
+                in
+                  Let spawn_env = Aux
+                  in
+                    Let nYield = Int 100
+                    in
+                      Let nJob = Int 100100
+                      in
+                        Let job_fptr = FullFun job_5
+                            Args: [env, lyield_fptr, lyield_env, lyield_jb, lfork_fptr, lfork_env, lfork_jb]
+                              Let job0_fptr = FullFun jobRec
+                                  Args: [env, i, lyield_fptr, lyield_env, lyield_jb, lfork_fptr, lfork_env, lfork_jb]
+                                    Let jobRec_env = Var env
+                                    in
+                                      If BOP <  Int 0  Var i
+                                      Then
+                                        Seq
+                                          Seq
+                                            FullApply
+                                              LHS: Var lyield_fptr
+                                              Args: [Var lyield_env, Var lyield_jb]
+                                            Assign
+                                              Var partialResult
+                                              AOP +  Deref Var partialResult  Int 1
+                                          FullApply
+                                            LHS: Var jobRec
+                                            Args: [Var jobRec_env, AOP -  Var i  Int 1, Var lyield_fptr, Var lyield_env, Var lyield_jb, Var lfork_fptr, Var lfork_env, Var lfork_jb]
+                                      Else
+                                        Unit
+                              in
+                                Let job0_env = Aux
+                                in
+                                  FullApply
+                                    LHS: Var jobRec
+                                    Args: [Var job0_env, Var nYield, Var lyield_fptr, Var lyield_env, Var lyield_jb, Var lfork_fptr, Var lfork_env, Var lfork_jb]
+                        in
+                          Let job_env = Aux
+                          in
+                            Let start_fptr = FullFun start_6
+                                Args: [env, lyield_fptr, lyield_env, lyield_jb, lfork_fptr, lfork_env, lfork_jb]
+                                  Let start0_fptr = FullFun startRec
+                                      Args: [env, i, lyield_fptr, lyield_env, lyield_jb, lfork_fptr, lfork_env, lfork_jb]
+                                        Let startRec_env = Var env
+                                        in
+                                          If BOP <  Int 0  Var i
+                                          Then
+                                            Seq
+                                              FullApply
+                                                LHS: Var lfork_fptr
+                                                Args: [Var lfork_env, Var lfork_jb, Var job_fptr, Var job_env]
+                                              FullApply
+                                                LHS: Var startRec
+                                                Args: [Var startRec_env, AOP -  Var i  Int 1, Var lyield_fptr, Var lyield_env, Var lyield_jb, Var lfork_fptr, Var lfork_env, Var lfork_jb]
+                                          Else
+                                            Unit
+                                  in
+                                    Let start0_env = Aux
+                                    in
+                                      FullApply
+                                        LHS: Var startRec
+                                        Args: [Var start0_env, Var nJob, Var lyield_fptr, Var lyield_env, Var lyield_jb, Var lfork_fptr, Var lfork_env, Var lfork_jb]
+                            in
+                              Let start_env = Aux
+                              in
+                                Seq
+                                  FullApply
+                                    LHS: Var spawnRec
+                                    Args: [Var spawn_env, Var start_fptr, Var start_env]
+                                  FullApply
+                                    LHS: Var Print
+                                    Args: [Deref Var partialResult]

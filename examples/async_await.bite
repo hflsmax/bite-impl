@@ -1,58 +1,64 @@
+
+eff Fork : ∀[].∀{}.(∀[].∀{lyield:Yield, lfork:Fork}.() -> Unit_[~lyield,~lfork]) -> Unit_[];;
 eff Yield : ∀[].∀{}.() -> Unit_[];;
-eff Fork : ∀[].∀{}.(∀[].∀{}.() -> Unit_[]) -> Unit_[];;
+
 
 dcl partialResult := 0 in
-dcl runq := ListInit 0 in
-let suspend = fn [] {} (k : ∀[].∀{}.() -> Unit_[]) : Unit_[] is
-    ListAppend runq k
+dcl runq := ListNew () in
+let suspend = fn [] {} (r : Cont Unit_[] -> Unit_[]) : Unit_[] is
+    ListAppendCont !runq r
 end in
-let run_next = fn [] {} () : Unit_[] is
-    if ListEmpty runq then
-        ()
+let runNext = fn [] {} () : Unit_[] is
+    if ListIsEmpty !runq then
+        unit
     else
-        let k = ListShift runq in
-        resume k ()
+        let k = ListPopFirstElementCont !runq in
+            resume {k} unit
+        end
 end in
 let spawn = fun spawnRec [] {} (f : ∀[].∀{lyield:Yield, lfork:Fork}.() -> Unit_[~lyield,~lfork]) : Unit_[] is
-    handle lyield : Yield = fn [] {} () : Unit_[] is
-        let r = ReifyResumer () in
-        suspend r; run_next ()
+    handle lyield : Yield = fn [] {} (k : Cont Unit_[] -> Unit_[]) : Unit_[] is
+        suspend k; runNext ()
     end in
-        handle lfork : Fork = fn [] {} (forkf : ∀[].∀{lyield:Yield, lfork:Fork}.() -> Unit_[]) : Unit_[] is
-            let r = ReifyResumer () in
-            suspend r; spawnRec forkf
+        handle lfork : Fork = fn [] {} (forkf : ∀[].∀{lyield:Yield, lfork:Fork}.() -> Unit_[~lyield,~lfork], k : Cont Unit_[] -> Unit_[]) : Unit_[] is
+            suspend k; spawnRec forkf
         end in
-            f {lyield, lfork} ()
+            f {lyield lfork} ()
         end
     end
 end in
-    let job = fn [] {lyield:Yield, lfork:Fork} (yieldCounts : Int) : Unit_[~lyield,~lfork] is
-        let jobRec = fn [] {lyield:Yield, lfork:Fork} (i : Int) : Unit_[~lyield,~lfork] is
-            if 0 < i then
-                raise lyield ();
-                partialResult := !partialResult + 1;
-                jobRec {lyield, lfork} (i - 1)
-            else
-                ()
-        end in
-            jobRec {lyield, lfork} yieldCounts
-        end
-    end in
-        let start = fn [] {lyield:Yield, lfork:Fork} () : Unit_[~lyield,~lfork] is
-            let startRec = fn [] {lyield:Yield, lfork:Fork} (i : Int) : Unit_[~lyield,~lfork] is
+    let nYield = 100 in
+    let nJob = 100100 in
+        let job = fn [] {lyield:Yield, lfork:Fork} () : Unit_[~lyield,~lfork] is
+            let job0 = fun jobRec [] {lyield:Yield, lfork:Fork} (i : Int) : Unit_[~lyield,~lfork] is
                 if 0 < i then
-                    raise lfork job;
-                    startRec (i - 1)
+                    raise lyield ();
+                    partialResult := !partialResult + 1;
+                    jobRec {lyield lfork} (i - 1)
                 else
-                    ()
+                    unit
             end in
-                startRec 100100
+                job0 {lyield lfork} nYield
             end
         end in
-            spawn start;
-            Print !partialResult
+            let start = fn [] {lyield:Yield, lfork:Fork} () : Unit_[~lyield,~lfork] is
+                let start0 = fun startRec [] {lyield:Yield, lfork:Fork} (i : Int) : Unit_[~lyield,~lfork] is
+                    if 0 < i then
+                        raise lfork job;
+                        startRec {lyield lfork} (i - 1)
+                    else
+                        unit
+                end in
+                    start0 {lyield lfork} nJob
+                end
+            end in
+                spawn start;
+                Print !partialResult
+            end
         end
     end
+    end
+end
 end
 end
 end

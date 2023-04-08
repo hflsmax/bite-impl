@@ -116,7 +116,7 @@ let transform_exp init_state exp_passes state_passes (exp : expr) : expr =
                 (* Remember the name of self so to identify recursive function. *)
                 {
                   state with
-                  curr_func_name = x;
+                  curr_func_names = x :: state.curr_func_names;
                   value_store = (x, x) :: state.value_store;
                 }
                 exp_body )
@@ -149,7 +149,7 @@ let transform (effs_efs : f_ENV) (exp : expr) : expr =
   let init_state =
     {
       func_names = [];
-      curr_func_name = "";
+      curr_func_names = [];
       curr_func_is_tail_recursive = false;
       value_store = [];
       static_link = [];
@@ -165,8 +165,11 @@ let transform (effs_efs : f_ENV) (exp : expr) : expr =
          mark_recursive_call;
          mark_handlers;
          mark_handlerKind;
+         mark_cf_dest;
        ]
        []
+  |> transform_exp init_state [ mark_is_recursive ] []
+  |> transform_exp init_state [ add_env_for_recursive_function ] []
   |> fun exp ->
   transform_exp
     { init_state with func_names = Pass_util.get_all_func_names exp }
@@ -199,12 +202,7 @@ let transform (effs_efs : f_ENV) (exp : expr) : expr =
   (* |> print_and_forward *)
   |> transform_exp
        { init_state with func_names = Pass_util.get_all_func_names exp }
-       [
-         transform_general_handler;
-         mark_resumer;
-         transform_handler;
-         mark_cf_dest;
-       ]
+       [ transform_general_handler; transform_handler; mark_cf_dest ]
        [ update_is_in_general_handler ]
   |> transform_exp
        { init_state with func_names = Pass_util.get_all_func_names exp }

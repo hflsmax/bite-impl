@@ -7,6 +7,7 @@
 %token TINT
 %token TBOOL
 %token ARROW
+%token TCONT
 %token TBUILTIN
 %token <Syntax.name> VAR
 %token <int> INT
@@ -147,6 +148,11 @@ term_args:
   | args = term_arg+
     { args }
 
+resumer: mark_position(plain_resumer) { $1 }
+plain_resumer:
+| LBRACE r = plain_var RBRACE
+  { r }
+
 expr: mark_position(plain_expr) { $1 }
 plain_expr:
   | LPAREN e = plain_expr RPAREN	
@@ -155,8 +161,8 @@ plain_expr:
     { FullApply (lhs, (Option.value es ~default:[]), (Option.value hs ~default:[]), exps) }
   | RAISE hvar = VAR es = effect_args? hs = handler_args? exps = term_args
     { Raise (hvar, (Option.value es ~default:[]), (Option.value hs ~default:[]), exps) }
-  | RESUME expr = expr
-    { Resume (expr, None) }
+  | RESUME r = resumer? expr = expr
+    { Resume (expr, r) }
   | x = plain_lhs
     { x }
   | TRUE    
@@ -234,6 +240,8 @@ ty:
     { TBuiltin }
   | COMMA? LPAREN t = ty RPAREN
     { t }
+  | COMMA? TCONT t1 = ty UNDERSCORE LBRACKET es1 = eff_name* RBRACKET ARROW t2 = ty UNDERSCORE LBRACKET es2 = eff_name* RBRACKET
+    { TCont (t1, es1, t2, es2) }
   | COMMA? FORALL LBRACKET es1 = eff_name* RBRACKET DOT 
     FORALL LBRACE hs = hd_param* RBRACE DOT 
     ts = tys

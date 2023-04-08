@@ -2,43 +2,45 @@ FullFun main
   Args: []
     Let iter_fptr = FullFun iterRec
         Args: [env, l, yield_fptr, yield_env, yield_jb, behead_fptr, behead_env, behead_jb]
-          Seq
-            Let replace_fptr = FullFun replace_2
-                Args: [env, jb, x]
-                  FullApply
-                    LHS: Var IterSetInt
-                    Args: [Var l, Var x]
-            in
-              Let replace_env = Aux
-              in
-                Let replace_jb = Aux
-                in
-                  FullApply
-                    LHS: Var yield_fptr
-                    Args: [Var yield_env, Var yield_jb, FullApply
-                      LHS: Var IterGetInt
-                      Args: [Var l], Var replace_fptr, Var replace_env, Var replace_jb, Var behead_fptr, Var behead_env, Var behead_jb]
-            If FullApply
-                LHS: Var IterHasNext
-                Args: [Var l]
-            Then
-              Int 0
-            Else
-              Let localBehead_fptr = FullFun localBehead_1
-                  Args: [env, jb]
+          Let iterRec_env = Var env
+          in
+            Seq
+              Let replace_fptr = FullFun replace_2
+                  Args: [env, jb, x]
                     FullApply
-                      LHS: Var IterRemoveNext
-                      Args: [Var l]
+                      LHS: Var IterSetInt
+                      Args: [Var l, Var x]
               in
-                Let localBehead_env = Aux
+                Let replace_env = Aux
                 in
-                  Let localBehead_jb = Aux
+                  Let replace_jb = Aux
                   in
                     FullApply
-                      LHS: Var iterRec
-                      Args: [Var env, FullApply
-                        LHS: Var IterNext
-                        Args: [Var l], Var yield_fptr, Var yield_env, Var yield_jb, Var localBehead_fptr, Var localBehead_env, Var localBehead_jb]
+                      LHS: Var yield_fptr
+                      Args: [Var yield_env, Var yield_jb, FullApply
+                        LHS: Var IterGetInt
+                        Args: [Var l], Var replace_fptr, Var replace_env, Var replace_jb, Var behead_fptr, Var behead_env, Var behead_jb]
+              If FullApply
+                  LHS: Var IterHasNext
+                  Args: [Var l]
+              Then
+                Int 0
+              Else
+                Let localBehead_fptr = FullFun localBehead_1
+                    Args: [env, jb]
+                      FullApply
+                        LHS: Var IterRemoveNext
+                        Args: [Var l]
+                in
+                  Let localBehead_env = Aux
+                  in
+                    Let localBehead_jb = Aux
+                    in
+                      FullApply
+                        LHS: Var iterRec
+                        Args: [Var iterRec_env, FullApply
+                          LHS: Var IterNext
+                          Args: [Var l], Var yield_fptr, Var yield_env, Var yield_jb, Var localBehead_fptr, Var localBehead_env, Var localBehead_jb]
     in
       Let iter_env = ^ Aux
       in

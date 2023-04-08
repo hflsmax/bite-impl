@@ -1,5 +1,6 @@
 open Syntax
 open Pass_state
+open Pass_util
 
 [@@@ocaml.warning "-unused-open"]
 
@@ -134,13 +135,18 @@ let expand_hvar_and_funarg state ((exp, attrs) : expr) : expr =
       in
       let expanded_tm_arg_ty_pairs =
         (if attrs.isBuiltin then []
-        else if attrs.isRecursiveCall then
-          [ ((Var "env", { default_attrs with ty = TBuiltin }), TBuiltin) ]
         else
-          [
-            ( (Var (lhs_name ^ "_env"), { default_attrs with ty = TBuiltin }),
-              TBuiltin );
-          ])
+          match attrs.recursiveCallFunName with
+          | None ->
+              [
+                ( (Var (lhs_name ^ "_env"), { default_attrs with ty = TBuiltin }),
+                  TBuiltin );
+              ]
+          | Some fun_name ->
+              [
+                ( (Var (fun_name ^ "_env"), { default_attrs with ty = TBuiltin }),
+                  TBuiltin );
+              ])
         :: (if attrs.isHandler then
             [ ((Var "jb", { default_attrs with ty = TBuiltin }), TBuiltin) ]
            else [])
@@ -356,6 +362,13 @@ let transform_reify_context state ((exp, attrs) : expr) : expr =
               (Aux ReifyFixedContext, { aattrs with ty = TCustom "jmp_buf*" }),
               new_e2 ),
           attrs )
+  | Let (x, isTop, (Aux ReifyContextIndirection, aattrs), e2) ->
+      ( Let
+          ( x ^ "_wrapper",
+            isTop,
+            mk_fun_0 ("_" ^ x ^ "_wrapper") e2,
+            mk_apply_0 (mk_var (x ^ "_wrapper")) ),
+        attrs )
   | _ -> (exp, attrs)
 
 let transform_handler _ ((exp, attrs) : expr) : expr =
@@ -380,6 +393,30 @@ let transform_handler _ ((exp, attrs) : expr) : expr =
         (FullFun (x, es, hs, tm_args, ty, es2, new_body), attrs)
       else (exp, attrs)
   | _ -> (exp, attrs)
+
+let mark_is_recursive state ((exp, attrs) : expr) : expr =
+  match exp with
+  | FullFun (x, es1, hs, tm_args, ty, es2, exp_body) ->
+      if
+        gather_exp true
+          (function
+            | FullApply ((Var x', _), _, _, _), attrs -> x = x' | _ -> false)
+          exp_body
+        <> []
+      then (exp, { attrs with isRecursive = true })
+      else (exp, { attrs with isRecursive = false })
+  | _ -> (exp, attrs)
+
+let add_env_for_recursive_function state ((exp, attrs) : expr) : expr =
+  if attrs.isRecursive then
+    let[@warning "-partial-match"] (FullFun
+                                     (x, es1, hs, tm_args, ty, es2, body)) =
+      exp
+    in
+    ( FullFun
+        (x, es1, hs, tm_args, ty, es2, mk_let (x ^ "_env") (mk_var "env") body),
+      attrs )
+  else (exp, attrs)
 
 (*
    ( (match exp with

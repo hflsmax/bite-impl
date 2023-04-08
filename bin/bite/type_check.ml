@@ -1,6 +1,7 @@
 (** Type checking. *)
 
 open Syntax
+open Common
 
 [@@@ocaml.warning "-unused-open"]
 
@@ -47,7 +48,7 @@ let rec type_of (eff_defs : f_ENV) (e_env : e_ENV) (h_env : h_ENV)
     (t_env : t_ENV) (e, attrs) : expr =
   match e with
   | Aux _ ->
-      typing_error ~loc:attrs.loc "auxiliary should not be used in source code"
+      (e, { default_attrs with ty = TAbs ([], [], [], TUnit, []); effs = [] })
   | Var x -> (
       match List.assoc_opt x builtin_fun with
       | None -> (
@@ -182,36 +183,33 @@ let rec type_of (eff_defs : f_ENV) (e_env : e_ENV) (h_env : h_ENV)
         { default_attrs with ty = attrs1.ty; effs = attrs1.effs @ attrs2.effs }
       )
   | Handle (x, fname, exp_catch, exp_handle) -> (
-      let exp_catch', attrs_catch =
-        type_of eff_defs e_env h_env t_env exp_catch
-      in
-      let exp_handle', attrs_handle =
-        type_of eff_defs e_env ((x, fname) :: h_env) t_env exp_handle
-      in
-      try
-        match List.assoc fname eff_defs with
-        | TAbs (es1, hs, ts, t, es2) as ty_fname ->
-            (* TODO: check that the answer type matches *)
-            if attrs_catch.ty <> ty_fname then
-              typing_error ~loc:attrs.loc
-                "The handler's type must match the type of effect definition, \
-                 expected %t but got %t"
-                (Print.ty ty_fname) (Print.ty attrs_catch.ty);
-            ( Handle
-                ( x,
-                  fname,
-                  (exp_catch', attrs_catch),
-                  (exp_handle', attrs_handle) ),
-              {
-                default_attrs with
-                ty = attrs_handle.ty;
-                effs = List.filter (fun e -> e <> HVar x) attrs_handle.effs;
-                bindHvar = Some { name = x; fname; ty = ty_fname; depth = -1 };
-              } )
-        | _ ->
-            typing_error ~loc:attrs.loc "effect definition must be of type TAbs"
-      with Not_found ->
-        typing_error ~loc:attrs.loc "unknown effect name %s" fname)
+      match List.assoc_opt fname eff_defs with
+      | Some (TAbs (es1, hs, ts, t, es2) as ty_fname) ->
+          let exp_handle', attrs_handle =
+            type_of eff_defs e_env ((x, fname) :: h_env) t_env exp_handle
+          in
+          let exp_catch', attrs_catch =
+            type_of eff_defs e_env h_env t_env exp_catch
+          in
+          let attrs_catch =
+            { attrs_catch with ty = remove_cont_from_abs attrs_catch.ty }
+          in
+          (* TODO: check that the result type matches *)
+          if attrs_catch.ty <> ty_fname then
+            typing_error ~loc:attrs.loc
+              "The handler's type must match the type of effect definition, \
+               expected %t but got %t"
+              (Print.ty ty_fname) (Print.ty attrs_catch.ty);
+          ( Handle
+              (x, fname, (exp_catch', attrs_catch), (exp_handle', attrs_handle)),
+            {
+              default_attrs with
+              ty = attrs_handle.ty;
+              effs = List.filter (fun e -> e <> HVar x) attrs_handle.effs;
+              bindHvar = Some { name = x; fname; ty = ty_fname; depth = -1 };
+            } )
+      | _ ->
+          typing_error ~loc:attrs.loc "effect definition must be of type TAbs")
   | FullApply (exp1, es, hs, exps) -> (
       let exp1', attrs1 = type_of eff_defs e_env h_env t_env exp1 in
       match attrs1.ty with
@@ -281,7 +279,9 @@ let rec type_of (eff_defs : f_ENV) (e_env : e_ENV) (h_env : h_ENV)
                   typing_error ~loc:attrs.loc
                     "Wrong types of handler arguments.";
                 if tys <> ts' then
-                  typing_error ~loc:attrs.loc "Wrong types of term arguments.";
+                  typing_error ~loc:attrs.loc
+                    "Wrong types of term arguments, expected \n%t, got %t"
+                    (Print.tys ts') (Print.tys tys);
                 ( Raise (hvar, es, hs, exps_list),
                   {
                     default_attrs with

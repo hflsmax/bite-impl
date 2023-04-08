@@ -2,21 +2,23 @@ FullFun main
   Args: []
     Let counter_fptr = FullFun f
         Args: [env, n, lget_fptr, lget_env, lget_jb, lset_fptr, lset_env, lset_jb]
-          Let i = FullApply
-              LHS: Var lget_fptr
-              Args: [Var lget_env, Var lget_jb]
+          Let f_env = Var env
           in
-            If BOP ==  Var i  Int 0
-            Then
-              Var n
-            Else
-              Seq
-                FullApply
-                  LHS: Var lset_fptr
-                  Args: [Var lset_env, Var lset_jb, AOP -  Var i  Int 1]
-                FullApply
-                  LHS: Var f
-                  Args: [Var env, AOP +  Var n  Int 1, Var lget_fptr, Var lget_env, Var lget_jb, Var lset_fptr, Var lset_env, Var lset_jb]
+            Let i = FullApply
+                LHS: Var lget_fptr
+                Args: [Var lget_env, Var lget_jb]
+            in
+              If BOP ==  Var i  Int 0
+              Then
+                Var n
+              Else
+                Seq
+                  FullApply
+                    LHS: Var lset_fptr
+                    Args: [Var lset_env, Var lset_jb, AOP -  Var i  Int 1]
+                  FullApply
+                    LHS: Var f
+                    Args: [Var f_env, AOP +  Var n  Int 1, Var lget_fptr, Var lget_env, Var lget_jb, Var lset_fptr, Var lset_env, Var lset_jb]
     in
       Let counter_env = ^ Aux
       in

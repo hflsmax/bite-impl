@@ -62,6 +62,7 @@ typedef main_locals_t g_env_t;
 typedef struct g_locals_t {
   g_env_t *env;
   int n;
+  int g_env;
   void *lexc_fptr;
   void *lexc_env;
 } g_locals_t;
@@ -92,6 +93,7 @@ int g(g_env_t *env, int n) {
   locals.env = env;
   locals.n = n;
 
+  locals.g_env = locals.env;
   locals.lexc_fptr = (void *)lexc_1;
   if (({ lexc_jb_saved || ({ !setjmp(lexc_jb); }); })) {
 
@@ -99,7 +101,7 @@ int g(g_env_t *env, int n) {
     if (({ locals.n == 0; })) {
       return lexc_1(locals.lexc_env, lexc_jb);
     } else {
-      __attribute__((musttail)) return g(locals.env, ({ locals.n - 1; }));
+      __attribute__((musttail)) return g(locals.g_env, ({ locals.n - 1; }));
     };
   } else {
     return jmpret;

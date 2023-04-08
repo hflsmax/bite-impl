@@ -24,14 +24,6 @@ let mark_handlers state ((exp, attrs) : expr) =
         attrs )
   | _ -> (exp, attrs)
 
-let mark_resumer state ((exp, attrs) : expr) =
-  match exp with
-  | Resume (e, _) ->
-      if state.is_in_general_handler then
-        (Resume (e, Some (Var "r", default_attrs)), attrs)
-      else (Resume (e, None), attrs)
-  | _ -> (exp, attrs)
-
 let analyze_handlerKind (f : expr') : handlerKind =
   match f with
   | FullFun (_, _, _, _, _, _, body) -> (
@@ -133,8 +125,8 @@ let mark_optimized_sjlj state ((exp, attrs) : expr) =
 let mark_recursive_call state ((exp, attrs) : expr) : expr =
   match exp with
   | FullApply ((Var x, _), _, _, _) ->
-      if x = state.curr_func_name then
-        (exp, { attrs with isRecursiveCall = true })
+      if List.mem x state.curr_func_names then
+        (exp, { attrs with recursiveCallFunName = Some x })
       else (exp, attrs)
   | _ -> (exp, attrs)
 

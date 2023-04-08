@@ -69,6 +69,7 @@ typedef struct f_locals_t {
   void *lset_fptr;
   void *lset_env;
   void *lset_jb;
+  int f_env;
   int i;
 } f_locals_t;
 
@@ -118,6 +119,7 @@ int f(f_env_t *env, int n, void *lget_fptr, void *lget_env, void *lget_jb,
   locals.lset_env = lset_env;
   locals.lset_jb = lset_jb;
 
+  locals.f_env = locals.env;
   locals.i = ((int (*)(void *, void *))locals.lget_fptr)(locals.lget_env,
                                                          locals.lget_jb);
   if (({ locals.i == 0; })) {
@@ -127,7 +129,7 @@ int f(f_env_t *env, int n, void *lget_fptr, void *lget_env, void *lget_jb,
     ((void (*)(void *, void *, int))locals.lset_fptr)(
         locals.lset_env, locals.lset_jb, ({ locals.i - 1; }));
     __attribute__((musttail)) return f(
-        locals.env, ({ locals.n + 1; }), locals.lget_fptr, locals.lget_env,
+        locals.f_env, ({ locals.n + 1; }), locals.lget_fptr, locals.lget_env,
         locals.lget_jb, locals.lset_fptr, locals.lset_env, locals.lset_jb);
   };
 }

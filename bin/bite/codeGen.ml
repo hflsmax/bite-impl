@@ -208,7 +208,9 @@ let codeGen exp : string =
       if can_be_returned exp then
         match attrs.cfDest with
         | Return ->
-            (if attrs.isRecursiveCall then "__attribute__((musttail))" else "")
+            (if attrs.recursiveCallFunName <> None then
+             "__attribute__((musttail))"
+            else "")
             ^ "return " ^ code ^ ";"
         | Continue -> code
       else code
