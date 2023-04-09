@@ -46,7 +46,7 @@ let mark_cf_dest _ ((exp, attrs) as rexp : expr) : expr =
         attrs )
   | Raise (x, es, hs, exps) ->
       (Raise (x, es, hs, List.map (mark Continue) exps), attrs)
-  | Resume (e, r) -> (Resume (mark attrs.cfDest e, r), attrs)
+  | Resume (e, r) -> (Resume (mark Continue e, r), attrs)
   | Seq (e1, e2) -> (Seq (mark Continue e1, mark attrs.cfDest e2), attrs)
 
 (* Bottom-up AST walker *)
@@ -202,7 +202,7 @@ let transform (effs_efs : f_ENV) (exp : expr) : expr =
   (* |> print_and_forward *)
   |> transform_exp
        { init_state with func_names = Pass_util.get_all_func_names exp }
-       [ transform_general_handler; transform_handler; mark_cf_dest ]
+       [ transform_handler; mark_cf_dest ]
        [ update_is_in_general_handler ]
   |> transform_exp
        { init_state with func_names = Pass_util.get_all_func_names exp }

@@ -249,8 +249,17 @@ ty:
     { TAbs (es1, hs, ts, t1, es2) }
 
 effect_declare:
-  | EFF x = VAR COLON t = ty
-    { Decl_eff (x, t) }
+  | EFF x = VAR kind = VAR COLON t = ty
+    { if kind = "ABT" then
+        Decl_eff (x, Abortive, t)
+      else if kind = "TR" then
+        Decl_eff (x, TailResumptive, t)
+      else if kind = "SS" then
+        Decl_eff (x, SingleShot, t)
+      else if kind = "MS" then
+        Decl_eff (x, MultiShot, t)
+      else 
+        failwith "Invalid effect kind" }
 
 mark_position(X):
   x = X

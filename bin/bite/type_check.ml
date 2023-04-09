@@ -37,10 +37,10 @@ let rec ty_ok (eff_defs : f_ENV) (e_env : e_ENV) (h_env : h_ENV) ty =
       List.iter (eff_ok new_e_env new_h_env) es2
   | _ -> ()
 
-let hvar_to_rich_hvar eff_defs h_env name =
+let hvar_to_rich_hvar (eff_defs : f_ENV) h_env name : richHvar =
   let fname = List.assoc name h_env in
-  let ty = List.assoc fname eff_defs in
-  { name; fname; ty; depth = -1 }
+  let kind, ty = List.assoc fname eff_defs in
+  { name; fname; kind; ty; depth = -1 }
 
 let default_attrs = Syntax.default_attrs
 
@@ -127,7 +127,8 @@ let rec type_of (eff_defs : f_ENV) (e_env : e_ENV) (h_env : h_ENV)
             Some
               (List.map
                  (fun (name, fname) ->
-                   { name; fname; ty = List.assoc fname eff_defs; depth = -1 })
+                   let kind, ty = List.assoc fname eff_defs in
+                   { name; fname; kind; ty; depth = -1 })
                  hs);
         } )
   | Assign (exp_v, exp) -> (
@@ -184,7 +185,7 @@ let rec type_of (eff_defs : f_ENV) (e_env : e_ENV) (h_env : h_ENV)
       )
   | Handle (x, fname, exp_catch, exp_handle) -> (
       match List.assoc_opt fname eff_defs with
-      | Some (TAbs (es1, hs, ts, t, es2) as ty_fname) ->
+      | Some (kind, (TAbs (es1, hs, ts, t, es2) as ty_fname)) ->
           let exp_handle', attrs_handle =
             type_of eff_defs e_env ((x, fname) :: h_env) t_env exp_handle
           in
@@ -206,7 +207,8 @@ let rec type_of (eff_defs : f_ENV) (e_env : e_ENV) (h_env : h_ENV)
               default_attrs with
               ty = attrs_handle.ty;
               effs = List.filter (fun e -> e <> HVar x) attrs_handle.effs;
-              bindHvar = Some { name = x; fname; ty = ty_fname; depth = -1 };
+              bindHvar =
+                Some { name = x; fname; kind; ty = ty_fname; depth = -1 };
             } )
       | _ ->
           typing_error ~loc:attrs.loc "effect definition must be of type TAbs")
@@ -257,7 +259,7 @@ let rec type_of (eff_defs : f_ENV) (e_env : e_ENV) (h_env : h_ENV)
       | Some fname -> (
           try
             match List.assoc fname eff_defs with
-            | TAbs (es1', hs', ts', t', es2') ->
+            | _, TAbs (es1', hs', ts', t', es2') ->
                 List.iter (eff_ok e_env h_env) es;
                 List.iter (hd_ok h_env) hs;
                 let exps_list =

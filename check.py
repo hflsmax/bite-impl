@@ -12,6 +12,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Run Bite compiler examples")
     parser.add_argument("example", nargs="*", help="Examples to run. If not specified, run all examples.")
     parser.add_argument("--skip-compile-to-c", action="store_true", help="Skip compiling to C.")
+    parser.add_argument("-O", type=int, default=3, help="Optimization level for C compiler (default: 3).")
     parser.add_argument("--allow-fail", action="store_true", help="Allow subprocess commands to fail and display failed names.")
     parser.add_argument("--perf", action="store_true", help="Run examples with hyperfine and report performance results.")
     parser.add_argument("--save", action="store_true", help="Save performance and output data to file.")
@@ -29,7 +30,7 @@ def run_example(name):
         if not args.skip_compile_to_c:
             subprocess.run(["dune", "exec", "--display", "quiet", "bite", "--", "-l", f"./examples/{name}.bite", "-o", f"./examples/{name}.compiled.c", "-oir", f"./examples/{name}.ir"], check=True, env = {**os.environ, "OCAMLRUNPARAM": "b"})
         subprocess.run(["clang-format", "-i", f"./examples/{name}.compiled.c"], check=True)
-        subprocess.run(["clang", "-O3", "-I", "./libmprompt/include", "-o", f"./examples/{name}.exe", f"./examples/{name}.compiled.c", "./libmprompt/src/mprompt/main.c", "./libmprompt/src/mprompt/asm/longjmp_amd64.S"], check=True)
+        subprocess.run(["clang", "-O{}".format(args.O), "-ggdb", "-I", "./libmprompt/include", "-o", f"./examples/{name}.exe", f"./examples/{name}.compiled.c", "./libmprompt/src/mprompt/main.c", "./libmprompt/src/mprompt/asm/longjmp_amd64.S"], check=True)
         output = subprocess.run([f"./examples/{name}.exe"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True, text=True)
         return output.stdout.strip()
     except subprocess.CalledProcessError as e:

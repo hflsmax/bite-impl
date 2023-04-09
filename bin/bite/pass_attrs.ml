@@ -1,6 +1,7 @@
 open Syntax
 open Pass_state
 open Pass_util
+open Common
 
 [@@@ocaml.warning "-unused-open"]
 
@@ -24,34 +25,53 @@ let mark_handlers state ((exp, attrs) : expr) =
         attrs )
   | _ -> (exp, attrs)
 
+(*
+    TailResumptive: the whole body is a Resume expression
+    Abortive: the handler doesn't have continuation as an argument
+    SingleShot: the handler takes continuation as the last argument *)
 let analyze_handlerKind (f : expr') : handlerKind =
   match f with
-  | FullFun (_, _, _, _, _, _, body) -> (
-      match body with
-      | Resume _, _ -> TailResumptive
-      | _ ->
-          if
-            List.length
-              (gather_exp true
-                 (fun exp -> match exp with Resume _, _ -> true | _ -> false)
-                 body)
-            > 0
-          then Multishot
-          else Abortive)
+  | FullFun (fun_name, _, _, term_args, _, _, body) ->
+      let has_resume =
+        List.length
+          (gather_exp true
+             (fun exp -> match exp with Resume _, _ -> true | _ -> false)
+             body)
+        > 0
+      in
+      let wrapped_by_resume =
+        match body with Resume _, _ -> true | _ -> false
+      in
+      let cont_as_last_arg =
+        List.length term_args > 0
+        && match snd (get_last term_args) with TCont _ -> true | _ -> false
+      in
+      if has_resume && wrapped_by_resume && not cont_as_last_arg then
+        TailResumptive
+      else if (not has_resume) && not cont_as_last_arg then Abortive
+      else if cont_as_last_arg then SingleShot
+      else error "Fail to recognize handler kind: %s@." fun_name
   | _ -> error "Handler is not a full function: %t@." (Print.expr' f)
 
 let mark_handlerKind state ((exp, attrs) : expr) =
-  if attrs.handlerKind <> None then (exp, attrs)
-  else
-    match exp with
-    | Handle (x, fname, (f, fattrs), exp_handle) ->
+  match exp with
+  | Handle (x, fname, (f, fattrs), exp_handle) ->
+      let analyzed_kind = analyze_handlerKind f in
+      let declared_kind = (Option.get attrs.bindHvar).kind in
+      if analyzed_kind = declared_kind then
         ( Handle
             ( x,
               fname,
-              (f, { fattrs with handlerKind = Some (analyze_handlerKind f) }),
+              (f, { fattrs with handlerKind = Some analyzed_kind }),
               exp_handle ),
-          { attrs with handlerKind = Some (analyze_handlerKind f) } )
-    | _ -> (exp, attrs)
+          { attrs with handlerKind = Some analyzed_kind } )
+      else
+        error
+          "declared handlerKind does not match implementation. Expected %t, \
+           got %t@."
+          (Print.handlerKind declared_kind)
+          (Print.handlerKind analyzed_kind)
+  | _ -> (exp, attrs)
 
 let mark_var_depth state ((exp, attrs) : expr) =
   let rec get_var_depth_rec (x : name) (slink : (string * bool) list list)

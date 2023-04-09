@@ -5,7 +5,8 @@ open Util
 (* Variable names *)
 type name = string [@@deriving yojson_of]
 
-type handlerKind = TailResumptive | Abortive | Multishot | SingleShot
+(* NB: multishot is not supported *)
+type handlerKind = TailResumptive | Abortive | MultiShot | SingleShot
 [@@deriving yojson_of]
 
 (* Effect names *)
@@ -28,7 +29,7 @@ type ty =
 
 and tys = ty list [@@deriving yojson_of]
 
-type f_ENV = (fname * ty) list [@@deriving yojson_of]
+type f_ENV = (fname * (handlerKind * ty)) list [@@deriving yojson_of]
 type e_ENV = effs [@@deriving yojson_of]
 type h_ENV = (hvar * fname) list [@@deriving yojson_of]
 type t_ENV = (name * ty) list [@@deriving yojson_of]
@@ -54,18 +55,36 @@ let builtin_fun =
     ("IterGetInt", TAbs ([], [], [ TBuiltin ], TInt, []));
     ("IterRemoveNext", TAbs ([], [], [ TBuiltin ], TUnit, []));
     ("Print", TAbs ([], [], [ TInt ], TInt, []));
-    ("setjmp", TAbs ([], [], [ TBuiltin ], TInt, []));
-    ("longjmp", TAbs ([], [], [ TBuiltin; TInt ], TInt, []));
     ( "ListAppendCont",
       TAbs ([], [], [ TBuiltin; TCont (TUnit, [], TUnit, []) ], TUnit, []) );
     ( "ListPopFirstElementCont",
       TAbs ([], [], [ TBuiltin ], TCont (TUnit, [], TUnit, []), []) );
+    ("setjmp", TAbs ([], [], [ TBuiltin ], TInt, []));
+    ("longjmp", TAbs ([], [], [ TBuiltin; TInt ], TInt, []));
+    ("mp_prompt", TAbs ([], [], [ TBuiltin; TBuiltin ], TUnit, []));
+    ( "mp_yield",
+      TAbs
+        ( [],
+          [],
+          [
+            TBuiltin;
+            TAbs ([], [], [ TBuiltin; TBuiltin ], TBuiltin, []);
+            TBuiltin;
+          ],
+          TUnit,
+          [] ) );
   ]
 
 (* Control-flow destination *)
 type cf_dest = Return | Continue [@@deriving yojson_of]
 
-type richHvar = { name : name; fname : fname; ty : ty; depth : int }
+type richHvar = {
+  name : name;
+  fname : fname;
+  kind : handlerKind;
+  ty : ty;
+  depth : int;
+}
 [@@deriving yojson_of]
 
 type attrs = {
@@ -90,7 +109,7 @@ type attrs = {
   bindHvar : richHvar option; [@yojson_drop_if fun _ -> true]
       (* Used in Handle *)
   handlerKind : handlerKind option; [@yojson_drop_if fun _ -> true]
-      (* Used in Handle *)
+      (* Used in Handle and FullFun *)
   isHandler : bool; [@yojson_drop_if fun _ -> true] (* Used in FullFun *)
   freeVars : (name * ty) list; [@yojson_drop_if fun _ -> true]
       (* Used in FullFun *)
@@ -166,7 +185,7 @@ and expr' =
 type command =
   | Expr of expr
   (* Expression *)
-  | Decl_eff of fname * ty
+  | Decl_eff of fname * handlerKind * ty
 
 type locals = (name * ty) list [@@deriving yojson_of]
 type static_link = (name * bool) list list [@@deriving yojson_of]
@@ -193,6 +212,9 @@ let mk_apply_0 ?(ty = TInt) (e : expr) : expr =
 let mk_apply_1 ?(ty = TInt) (e1 : expr) (e2 : expr) : expr =
   (FullApply (e1, [], [], [ e2 ]), { default_attrs with ty })
 
+let mk_apply_2 ?(ty = TInt) (e1 : expr) (e2 : expr) (e3 : expr) : expr =
+  (FullApply (e1, [], [], [ e2; e3 ]), { default_attrs with ty })
+
 let mk_seq ?(ty = TInt) (e1 : expr) (e2 : expr) : expr =
   (Seq (e1, e2), { default_attrs with ty })
 
@@ -203,5 +225,19 @@ let mk_fun_0 ?(ty = TInt) (name : name) (body : expr) : expr =
   ( FullFun (name, [], [], [], ty, [], body),
     { default_attrs with ty = TAbs ([], [], [], ty, []) } )
 
+let mk_fun_2 ?(ty = TInt) (f_name : name) (arg1_name : name) (arg1_ty : ty)
+    (arg2_name : name) (arg2_ty : ty) (body : expr) : expr =
+  ( FullFun
+      ( f_name,
+        [],
+        [],
+        [ (arg1_name, arg1_ty); (arg2_name, arg2_ty) ],
+        ty,
+        [],
+        body ),
+    { default_attrs with ty = TAbs ([], [], [ arg1_ty; arg2_ty ], ty, []) } )
+
 let mk_let ?(ty = TInt) (name : name) (e1 : expr) (e2 : expr) : expr =
   (Let (name, false, e1, e2), { default_attrs with ty })
+
+let mk_aux (f : auxFunction) : expr = (Aux f, { default_attrs with ty = TInt })

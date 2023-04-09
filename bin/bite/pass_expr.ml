@@ -53,48 +53,25 @@ let transform_nameless_function _ ((exp, attrs) : expr) : expr =
   | _ -> (exp, attrs)
 
 (* This wrapper allows the body to be a function and takes in mp_prompt_t as the first argument *)
-let transform_general_handler _ ((exp, attrs) : expr) : expr =
-  if attrs.handlerKind = Some Multishot || attrs.handlerKind = Some SingleShot
-  then
-    match exp with
-    | Handle
-        ( x,
-          fname,
-          (FullFun (fun_name, es1, hs, tm_args, ty, es2, exp_body), fattrs),
-          exp_handle ) ->
-        let new_handler =
-          FullFun (fun_name, [], [], [ ("r", TBuiltin) ], ty, [], exp_body)
-        in
-        let handler_wrapper =
-          FullFun
-            ( fun_name ^ "_handler_wrapper",
-              es1,
-              hs,
-              tm_args,
-              ty,
-              es2,
-              ( Let
-                  ( fun_name,
-                    false,
-                    (new_handler, fattrs),
-                    (FullApply ((Var fun_name, fattrs), [], [], []), fattrs) ),
-                fattrs ) )
-        in
-        let body_wrapper =
-          FullFun
-            ( fun_name ^ "_body_wrapper",
-              [],
-              [],
-              [],
-              attrs.ty,
-              attrs.effs,
-              exp_handle )
-        in
-        ( Handle
-            (x, fname, (handler_wrapper, fattrs), (body_wrapper, default_attrs)),
-          attrs )
-    | _ -> (exp, attrs)
-  else (exp, attrs)
+(* let transform_general_handler _ ((exp, attrs) : expr) : expr =
+   if attrs.handlerKind = Some MultiShot || attrs.handlerKind = Some SingleShot
+   then
+     match exp with
+     | Handle
+         ( x,
+           fname,
+           (FullFun (fun_name, es1, hs, tm_args, ty, es2, exp_body), fattrs),
+           exp_handle ) ->
+         let new_handler = mk_fun_2 fun_name (fun_name ^ "_jb") TBuiltin "unused" TBuiltin exp_body
+         in
+         let body_wrapper = mk_fun_2 (fun_name ^ "_body_wrapper") (fun_name ^ "_jb") TBuiltin "unused" TBuiltin exp_handle
+         let new_body = mk_let (fun_name ^ "_body") body_wrapper (mk_apply (mk_var (fun_name ^ "_body")) [mk_var (fun_name ^ "_jb"); mk_var "unused"])
+         in
+         ( Handle
+             (x, fname, (handler_wrapper, fattrs), body_wrapper),
+           attrs )
+     | _ -> (exp, attrs)
+   else (exp, attrs) *)
 
 let chain_let l (e : expr) =
   List.fold_right
@@ -267,7 +244,7 @@ let expand_hvar_and_funarg state ((exp, attrs) : expr) : expr =
             ( Aux
                 (match[@warning "-partial-match"] attrs.handlerKind with
                 | Some Abortive -> ReifyFixedContext
-                | Some Multishot | Some SingleShot -> ReifyContextIndirection
+                | Some MultiShot | Some SingleShot -> ReifyContextIndirection
                 | Some TailResumptive -> Noop),
               { default_attrs with ty = TBuiltin } ),
             { attrs with skipDef = attrs.handlerKind = Some TailResumptive } );
@@ -363,12 +340,16 @@ let transform_reify_context state ((exp, attrs) : expr) : expr =
               new_e2 ),
           attrs )
   | Let (x, isTop, (Aux ReifyContextIndirection, aattrs), e2) ->
-      ( Let
-          ( x ^ "_wrapper",
-            isTop,
-            mk_fun_0 ("_" ^ x ^ "_wrapper") e2,
-            mk_apply_0 (mk_var (x ^ "_wrapper")) ),
-        attrs )
+      mk_let (x ^ "_reification")
+        (mk_fun_2 ~ty:TUnit
+           ("_" ^ x ^ "_reification")
+           x TBuiltin "env"
+           (TCustom ("_" ^ x ^ "_reification" ^ "_env_t*"))
+           e2)
+        (mk_apply_2 ~ty:TUnit
+           (mk_builtin_fun "mp_prompt")
+           (mk_var (x ^ "_reification"))
+           (mk_aux ReifyEnvironment))
   | _ -> (exp, attrs)
 
 let transform_handler _ ((exp, attrs) : expr) : expr =
@@ -414,7 +395,13 @@ let add_env_for_recursive_function state ((exp, attrs) : expr) : expr =
       exp
     in
     ( FullFun
-        (x, es1, hs, tm_args, ty, es2, mk_let (x ^ "_env") (mk_var "env") body),
+        ( x,
+          es1,
+          hs,
+          tm_args,
+          ty,
+          es2,
+          mk_let ~ty:TBuiltin (x ^ "_env") (mk_var ~ty:TBuiltin "env") body ),
       attrs )
   else (exp, attrs)
 

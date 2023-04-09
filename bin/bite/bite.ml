@@ -60,7 +60,7 @@ let wrap_syntax_errors parser lex =
   | Failure _ -> syntax_error ~loc:(location_of_lex lex) "unrecognised symbol"
   | _ -> syntax_error ~loc:(location_of_lex lex) "syntax error"
 
-let compile eff_defs = function
+let compile (eff_defs : Syntax.f_ENV) = function
   | Syntax.Expr ((exp', attrs) as exp) ->
       (* check the type of [exp], compile it, and run it. *)
       let ((exp', _) as exp) = Type_check.type_of eff_defs [] [] [] exp in
@@ -78,8 +78,8 @@ let compile eff_defs = function
         ( Printf.sprintf "%s" (Formatter.expr_to_string exp),
           Printf.sprintf "%s" (String.concat "\n" env_structs_string) ^ code )
       )
-  | Syntax.Decl_eff (x, ty) ->
-      ( (x, ty) :: eff_defs,
+  | Syntax.Decl_eff (x, kind, ty) ->
+      ( (x, (kind, ty)) :: eff_defs,
         (Format.asprintf "eff %s = %t@." x (Print.ty ty), "") )
 
 let use_file ctx filename =

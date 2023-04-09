@@ -28,7 +28,7 @@ let codeGen exp : string =
   let rec codeGen_rec ((exp, attrs) : expr) : string =
     if
       LibmpromptCodeGen.is_handle exp
-      && (attrs.handlerKind = Some Multishot
+      && (attrs.handlerKind = Some MultiShot
          || attrs.handlerKind = Some SingleShot)
     then
       LibmpromptCodeGen.generalHandlerCodeGen (exp, attrs) codeGen_rec
@@ -41,7 +41,7 @@ let codeGen exp : string =
           | ReifyFixedContext -> "({ jmp_buf tmp_buf; &tmp_buf; });"
           | Noop -> "Noop"
           | _ -> failwith "Aux not implemented")
-      | Unit -> ""
+      | Unit -> "0"
       | Var x ->
           if attrs.isBuiltin then x
           else codeGen_var x (Option.get attrs.varDepth)
@@ -151,7 +151,7 @@ let codeGen exp : string =
                      %s;\n\
                      }"
                     c2 c1 handler_var_name c3 exp_handle_code "return jmpret;"
-            | Multishot | SingleShot -> exp_handle_code
+            | MultiShot | SingleShot -> exp_handle_code
           in
           (if attrs.cfDest = Continue then "({" else "")
           ^ exp_handle_code
@@ -208,10 +208,12 @@ let codeGen exp : string =
       if can_be_returned exp then
         match attrs.cfDest with
         | Return ->
-            (if attrs.recursiveCallFunName <> None then
-             "__attribute__((musttail))"
-            else "")
-            ^ "return " ^ code ^ ";"
+            if attrs.ty = TUnit then code ^ ";"
+            else
+              (if attrs.recursiveCallFunName <> None then
+               "__attribute__((musttail))"
+              else "")
+              ^ "return " ^ code ^ ";"
         | Continue -> code
       else code
   in

@@ -20,7 +20,7 @@ let update_is_in_general_handler state ((exp, attrs) : expr) =
   match exp with
   | FullFun (x, es1, hs, tm_args, ty, es2, exp_body) ->
       if
-        attrs.handlerKind = Some Multishot
+        attrs.handlerKind = Some MultiShot
         || attrs.handlerKind = Some SingleShot
       then { state with is_in_general_handler = true }
       else state

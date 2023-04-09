@@ -1,6 +1,6 @@
 
-eff Fork : ∀[].∀{}.(∀[].∀{lyield:Yield, lfork:Fork}.() -> Unit_[~lyield,~lfork]) -> Unit_[];;
-eff Yield : ∀[].∀{}.() -> Unit_[];;
+eff Fork SS : ∀[].∀{}.(∀[].∀{lyield:Yield, lfork:Fork}.() -> Unit_[~lyield,~lfork]) -> Unit_[];;
+eff Yield SS : ∀[].∀{}.() -> Unit_[];;
 
 
 dcl partialResult := 0 in
